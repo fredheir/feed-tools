@@ -3,6 +3,16 @@
   "user_preferences": {
     "sources": [
       {
+        "name": "facebook",
+        "enabled": true,
+        "default": false,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "/tmp/feed-assets",
+          "save_dir": "/tmp/feed-archive"
+        }
+      },
+      {
         "name": "x",
         "enabled": true,
         "default": true,
@@ -29,7 +39,12 @@
     },
     "curation": {
       "default_mode": "mask",
-      "preferred_categories": ["Coding", "Politics", "Finance"],
+      "preferred_categories": [
+        "Coding",
+        "Politics",
+        "Finance",
+        "Friends and Family"
+      ],
       "allow_multi_tab_views": true,
       "target_items_per_tab": 10,
       "fallback_category": "Other",

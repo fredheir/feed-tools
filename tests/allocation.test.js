@@ -6,6 +6,7 @@ import {
   assignCategories,
   groupPickedRowsByCategory,
   loadAllocation,
+  mergeAllocations,
   saveAllocation,
 } from "../lib/allocation.js";
 
@@ -79,5 +80,50 @@ describe("allocation helpers", () => {
 
     saveAllocation(allocationPath, allocation);
     expect(loadAllocation(allocationPath)).toEqual(allocation);
+  });
+
+  test("merges per-source allocations for combined documents", () => {
+    const document = {
+      source: "combined",
+      items: [
+        { id: "facebook:a", source: "facebook" },
+        { id: "x:b", source: "x" },
+        { id: "linkedin:c", source: "linkedin" },
+      ],
+    };
+
+    const allocation = mergeAllocations(document, [
+      { items: { "facebook:a": { category: "Friends and Family" } } },
+      { items: { "x:b": { category: "Coding" } } },
+    ]);
+
+    expect(allocation).toEqual({
+      version: 1,
+      source: "combined",
+      items: {
+        "facebook:a": { category: "Friends and Family" },
+        "x:b": { category: "Coding" },
+      },
+    });
+  });
+
+  test("mergeAllocations ignores entries for items not present in the document", () => {
+    const document = {
+      source: "combined",
+      items: [{ id: "x:a", source: "x" }],
+    };
+
+    const allocation = mergeAllocations(document, [
+      {
+        items: {
+          "x:a": { category: "Coding" },
+          "x:b": { category: "Politics" },
+        },
+      },
+    ]);
+
+    expect(allocation.items).toEqual({
+      "x:a": { category: "Coding" },
+    });
   });
 });

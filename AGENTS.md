@@ -26,7 +26,7 @@
   `if corepack enable fails in a read-only environment, install pnpm with npm into ~/.local and prepend ~/.local/bin to PATH`
   `after pnpm install, run pnpm approve-builds and approve agent-browser if builds are blocked`
   `bin/* scripts call agent-browser directly; ensure node_modules/.bin is on PATH or invoke via pnpm exec`
-  `sandboxed /tmp output may not be visible to the host browser; write output HTML to a host-visible path when needed`
+  `/tmp` inside a sandbox is isolated from the host filesystem. The browser opens file:// URLs against the _host_ `/tmp`, so assets and HTML written to the sandbox `/tmp` will not be found. Fix: update `config.json` so `assets_dir` and `save_dir` point to host-accessible paths (e.g. inside the repo dir), and write output HTML there too. This affects images, profile pictures, and card previews — not just the HTML file itself.
 - Supported platforms:
   `x`
   `linkedin`
