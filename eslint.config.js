@@ -19,4 +19,14 @@ module.exports = [
       "no-console": "off",
     },
   },
+  {
+    files: ["tests/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 ];

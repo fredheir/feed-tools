@@ -5,16 +5,40 @@
   "type": "commonjs",
   "packageManager": "pnpm@10.14.0",
   "scripts": {
+    "prepare": "husky",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run lint && pnpm run format:check"
+    "test": "vitest run",
+    "deadcode": "knip",
+    "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode"
+  },
+  "knip": {
+    "entry": [
+      "lib/capture-cli.js",
+      "lib/render-cli.js",
+      "lib/refresh-cli.js"
+    ],
+    "project": [
+      "lib/**/*.js",
+      "sources/**/*.js",
+      "bin/*"
+    ],
+    "ignoreDependencies": [
+      "agent-browser",
+      "@commitlint/cli"
+    ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^9.39.1",
     "agent-browser": "^0.23.4",
     "eslint": "^9.39.1",
     "globals": "^16.4.0",
-    "prettier": "^3.6.2"
+    "husky": "^9.1.7",
+    "knip": "^6.1.1",
+    "prettier": "^3.6.2",
+    "vitest": "^4.1.2"
   }
 }

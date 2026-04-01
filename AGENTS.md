@@ -50,7 +50,6 @@
   `lib/browser.js`
   `lib/assets.js`
   `lib/mask.js`
-  `lib/render.js`
   `lib/render-html.js`
   `lib/render-item.js`
   `lib/render-css.js`
