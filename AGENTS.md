@@ -13,6 +13,7 @@
   `render`
   `curation`
   `summary`
+- If `config.json` does not exist, do not ask about render settings, archive paths, or other technical defaults unless the user explicitly cares. Start from `config.json.example`, interview for feed/content preferences, and keep the technical defaults.
 - Minimal setup:
   `install node+npm+pnpm`
   `pnpm install`
@@ -20,6 +21,12 @@
   `pnpm exec agent-browser --auto-connect get url`
   `log into x.com in the browser agent-browser uses`
   `log into linkedin.com in the browser agent-browser uses`
+- Setup gotchas:
+  `SSH clone may fail in sandboxed environments; use HTTPS with gh auth token if needed`
+  `if corepack enable fails in a read-only environment, install pnpm with npm into ~/.local and prepend ~/.local/bin to PATH`
+  `after pnpm install, run pnpm approve-builds and approve agent-browser if builds are blocked`
+  `bin/* scripts call agent-browser directly; ensure node_modules/.bin is on PATH or invoke via pnpm exec`
+  `sandboxed /tmp output may not be visible to the host browser; write output HTML to a host-visible path when needed`
 - Supported platforms:
   `x`
   `linkedin`
