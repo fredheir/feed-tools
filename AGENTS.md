@@ -1,17 +1,34 @@
 # Feed Tool
 
 - Read `config.json` first.
-- If `config.json` does not exist, ask the user how to populate:
-  `sources`
-  `render`
-  `curation`
-  `summary`
+- If `config.json` does not exist, interview the user before proceeding:
+  1. Copy `config.json.example` to `config.json`.
+  2. Ask the user:
+     - What platforms do you follow? (x, etc.)
+     - What topics/areas of interest should feed curation prioritise?
+       (these become `curation.preferred_categories`)
+     - Any instructions for how summaries should read?
+       (becomes `summary.custom_instructions`)
+  3. Update `config.json` with their answers. Do not ask about render settings,
+     archive paths, or other technical defaults — use the example values.
 - Minimal setup:
   `install node+npm+pnpm`
   `pnpm install`
   `ensure chrome/chromium is installed`
   `pnpm exec agent-browser --auto-connect get url`
   `log into x.com in the browser agent-browser uses`
+- Setup gotchas:
+  - SSH clone often fails in sandboxed environments. Use HTTPS with gh auth token:
+    `GH_TOKEN=$(gh auth token) && git clone https://x-access-token:${GH_TOKEN}@github.com/OWNER/REPO.git`
+  - If `corepack enable` fails (read-only fs), install pnpm via:
+    `npm install -g pnpm --prefix ~/.local`
+    Then prepend `~/.local/bin` to PATH for every shell invocation.
+  - After `pnpm install`, approve agent-browser build scripts:
+    `pnpm approve-builds` (select agent-browser)
+  - All `bin/*` scripts call `agent-browser` directly. Ensure `node_modules/.bin` is on PATH
+    or invoke via `pnpm exec`.
+  - `/tmp` inside a sandbox may not be visible to the host browser. Write output HTML
+    to a host-accessible path (e.g. the repo dir) and open from there.
 - Supported platforms:
   `x`
 - Entry points:
