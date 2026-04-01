@@ -1,6 +1,13 @@
 # Feed Tool
 
-- Read `config.json` first.
+- Agent success criteria:
+  `install necessary tools`
+  `interview the user and create config.json if it does not exist`
+  `access the necessary feeds`
+  `tailor output to the user's config`
+  `open the rendered file in a new browser tab`
+- Read `config.json` in full before making capture, curation, summary, or rendering decisions.
+- Use `config.json.example` as the default starting point when creating `config.json`.
 - If `config.json` does not exist, ask the user how to populate:
   `sources`
   `render`
@@ -12,10 +19,18 @@
   `ensure chrome/chromium is installed`
   `pnpm exec agent-browser --auto-connect get url`
   `log into x.com in the browser agent-browser uses`
+  `log into linkedin.com in the browser agent-browser uses`
 - Supported platforms:
   `x`
+  `linkedin`
 - Entry points:
   `feed-capture <source> ...`
+  `feed-combine <output-json> <input-json>...`
+  `feed-list <input-json> [limit]`
+  `feed-list <input-json> [limit] [--allocation FILE] [--unclassified]`
+  `feed-allocate <input-json> [--allocation FILE] [--category Label:rows]`
+  `feed-mask <input-json> <output-mask> [--tab Label:rows] [--summary-file FILE] [--summary TEXT]`
+  `feed-prune <input-json> [output-json] [--in-place] [--keep ids] [--drop ids]`
   `feed-render <input-json> [--mask <mask-json>] <output-html>`
   `feed-view <source> [limit] [--assets-dir DIR] [--save-dir DIR] [--ids 1,2,3]`
   `feed-open <path-or-url>`
@@ -27,8 +42,12 @@
   `item.source_item_id` is the source-native stable id
 - Preferences file:
   `config.json`
+- Default config template:
+  `config.json.example`
 - Curation inject point:
-  `capture -> agent writes mask -> render`
+  `capture -> agent classifies uncategorized items -> agent selects rows -> tool writes mask -> render`
+- Use `feed-combine` to build multi-source documents instead of ad hoc shell pipelines.
+- Use `feed-prune` to clean current or derived feed documents instead of manually editing JSON.
 - Capture merge behavior:
   `feed-capture` automatically merges new items into current state and emits the merged document
 - Archive layout:
@@ -41,6 +60,9 @@
 - `summary` is the primary high-signal output: write what matters most for this user in this feed if they only read one thing.
 - Follow `user_preferences.summary.custom_instructions` closely.
 - Agent may populate `tabs` for multiple categories.
+- Follow `user_preferences.curation.target_items_per_tab` as a target, not a hard minimum.
+- Follow `user_preferences.curation.relevance_policy` strictly; do not pad tabs with weak items just to hit the target.
+- Follow `user_preferences.curation.fallback_category` for selected items that have not been explicitly classified yet.
 - Extended mask shape:
   `{ "summary": "...", "tabs": [{ "label": "Coding", "groups": [{ "label": "Agent workflows", "item_ids": ["x:2039234243222769835"] }] }] }`
 - Source adapters:
@@ -62,7 +84,13 @@
   `feed-render /tmp/feed.json --ids x:2039234243222769835,x:2039118568252707144 /tmp/feed.html`
   `feed-open /tmp/feed.html`
 - Tabbed curated flow:
-  `agent writes /tmp/feed-mask.json with summary + tabs`
+  `agent reads config.json in full`
+  `feed-capture x > /tmp/feed.json`
+  `feed-list /tmp/feed.json --unclassified`
+  `agent classifies unclassified or newly-relevant posts with feed-allocate`
+  `if a new category is added, rerun classification for items that should move into it`
+  `agent selects rows in preferred order`
+  `feed-mask /tmp/feed.json /tmp/feed-mask.json --pick 1,4,9,5,2`
   `feed-render /tmp/feed.json --mask /tmp/feed-mask.json /tmp/feed.html`
   `feed-open /tmp/feed.html`
 - Refresh current view:

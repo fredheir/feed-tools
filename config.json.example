@@ -39,7 +39,7 @@
       "default_style": "concise",
       "populate_on_request_only": true,
       "custom_instructions": "Avoid empty framing and generic scene-setting. Do not write lead-ins like 'the highest-signal items' or 'this refresh centers on'. Write one flat bullet per category with concrete highlights only.",
-      "purpose": "Top highlights for this user if they only read the summary.",
+      "purpose": "Top highlights for this user if they only read one thing.",
       "prefer_minimal_agent_writing": true
     }
   },

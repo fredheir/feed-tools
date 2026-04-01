@@ -15,7 +15,12 @@
   },
   "knip": {
     "entry": [
+      "lib/allocate-cli.js",
       "lib/capture-cli.js",
+      "lib/combine-cli.js",
+      "lib/list-cli.js",
+      "lib/mask-cli.js",
+      "lib/prune-cli.js",
       "lib/render-cli.js",
       "lib/refresh-cli.js"
     ],

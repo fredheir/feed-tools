@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const { ensureTab, evalJson, evalText } = require("../../lib/browser");
-const { downloadDocumentAssets } = require("../../lib/assets");
-const { mergeDocuments } = require("../../lib/merge");
 const {
-  ensureSourceStorage,
-  getSourceStoragePaths,
-} = require("../../lib/storage");
+  ensureTab,
+  reloadCurrentTab,
+  evalJson,
+  evalText,
+} = require("../../lib/browser");
+const { runSourceCapture } = require("../../lib/source-capture");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -234,13 +233,10 @@ function buildExtractionScript(limit) {
       const media = getEmbeddedMedia(article);
 
       return {
-        id: source_item_id ? \`x:\${source_item_id}\` : \`x:row:\${idx + 1}\`,
         source: "x",
         source_item_id,
         index: idx + 1,
-        handle,
         url,
-        text,
         author: {
           handle,
           display_name: null,
@@ -256,16 +252,6 @@ function buildExtractionScript(limit) {
           thread_line_x: line?.x || null,
         },
         embedded_links: getEmbeddedLinks(article),
-        profile_image_url,
-        embedded_media: media,
-        preview_cards: cards,
-        reply_count: stats.reply,
-        repost_count: stats.share,
-        like_count: stats.like,
-        view_count: stats.view,
-        has_thread_line: Boolean(line),
-        thread_line_height: line?.height || null,
-        thread_line_x: line?.x || null,
       };
     });
 
@@ -278,47 +264,35 @@ function buildExtractionScript(limit) {
         thread: {
           ...item.thread,
           child_candidate_index: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].index : null,
-          child_candidate_handle: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].handle : null,
+          child_candidate_handle: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].author.handle : null,
           child_candidate_url: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].url : null,
           relationship_confidence: item.thread.has_thread_line && idx < items.length - 1 ? "medium" : null
-        },
-        child_candidate_index: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].index : null,
-        child_candidate_handle: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].handle : null,
-        child_candidate_url: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].url : null,
-        relationship_confidence: item.thread.has_thread_line && idx < items.length - 1 ? "medium" : null
+        }
       }))
     });
   })()`;
 }
 
-async function captureX({
-  limit = 12,
-  assetsDir = "",
-  saveDir = "/tmp/feed-archive",
-}) {
+async function captureDocument({ limit = 12 }) {
   ensureTab("https://x.com/", "https://x.com/home");
+  reloadCurrentTab();
+  await sleep(5000);
   evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
   })()`);
   await sleep(3000);
 
-  let document = evalJson(buildExtractionScript(limit));
-  if (assetsDir) {
-    document = await downloadDocumentAssets(document, assetsDir);
-  }
+  return evalJson(buildExtractionScript(limit));
+}
 
-  const paths = getSourceStoragePaths(saveDir, "x", document.captured_at);
-  ensureSourceStorage(paths);
-  fs.writeFileSync(paths.snapshotPath, JSON.stringify(document, null, 2));
-  fs.writeFileSync(paths.latestPath, JSON.stringify(document, null, 2));
+const xSource = {
+  name: "x",
+  captureDocument,
+};
 
-  const existingCurrent = fs.existsSync(paths.currentPath)
-    ? JSON.parse(fs.readFileSync(paths.currentPath, "utf8"))
-    : null;
-  const merged = mergeDocuments(existingCurrent, document);
-  fs.writeFileSync(paths.currentPath, JSON.stringify(merged, null, 2));
-  return merged;
+async function captureX(options) {
+  return runSourceCapture(xSource, options);
 }
 
 module.exports = {
