@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || $# -ne 1 ]]; then
+  cat <<'EOF'
+Usage: feed-open <path-or-url>
+EOF
+  exit 0
+fi
+
+target="$1"
+if [[ "$target" != *://* ]]; then
+  target="file://$(realpath "$target")"
+fi
+
+agent-browser --auto-connect tab new "$target"

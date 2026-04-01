@@ -1,0 +1,20 @@
+{
+  "name": "@markolo/feed-tools",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm run lint && pnpm run format:check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "agent-browser": "^0.23.4",
+    "eslint": "^9.39.1",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2"
+  }
+}

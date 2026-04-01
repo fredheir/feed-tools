@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "user_preferences": {
+    "sources": [
+      {
+        "name": "x",
+        "enabled": true,
+        "default": true,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "/tmp/feed-assets",
+          "save_dir": "/tmp/feed-archive"
+        }
+      }
+    ],
+    "render": {
+      "show_summary": true,
+      "show_tabs": true
+    },
+    "curation": {
+      "default_mode": "mask",
+      "preferred_categories": ["Coding", "Politics", "Finance"],
+      "allow_multi_tab_views": true
+    },
+    "summary": {
+      "default_style": "concise",
+      "populate_on_request_only": true,
+      "custom_instructions": "Avoid empty framing and generic scene-setting. Do not write lead-ins like 'the highest-signal items' or 'this refresh centers on'. Write one flat bullet per category with concrete highlights only.",
+      "purpose": "Top highlights for this user if they only read the summary.",
+      "prefer_minimal_agent_writing": true
+    }
+  },
+  "summary": {
+    "notes": "User-editable preferences live under user_preferences."
+  }
+}
