@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildAgentBrowserArgs,
   getRuntimeBrowserOptions,
+  sanitizeAgentBrowserOutput,
 } from "../lib/browser.js";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -89,5 +90,13 @@ describe("buildAgentBrowserArgs", () => {
       autoConnect: false,
       headed: false,
     });
+  });
+
+  test("strips repeated daemon args warnings from agent-browser output", () => {
+    expect(
+      sanitizeAgentBrowserOutput(`⚠ --args ignored: daemon already running. Use 'agent-browser close' first to restart with new options.
+{"ok":true}
+`),
+    ).toBe('{"ok":true}');
   });
 });

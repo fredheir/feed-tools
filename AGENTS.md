@@ -21,9 +21,8 @@
 4. Default to the user's existing Chrome via CDP. (check with ss -tlnp | grep 9222)
 5. If the user's browser exposes remote debugging on `127.0.0.1:9222`, set `capture.browser.cdp` to `9222` in `config.json` and reuse that browser
 6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`
-7. Before the first `feed-capture` against a CDP browser, prime the daemon with `agent-browser --cdp 9222 snapshot`
-8. Default `capture.browser.args` to `["--no-sandbox"]`
-9. Access each platform specified in `config.json`
+7. Default `capture.browser.args` to `["--no-sandbox"]`
+8. Access each platform specified in `config.json`
 
 ## Setup gotchas
 
@@ -40,6 +39,7 @@
 
 - This is alpha software. You will likely need to make proactive fixes. If you encounter friction, take out an issue on github, or better a PR with a verified fix.
 - If you are in a sandbox and hit errors with assets not being found, ask findmnt -T <path> for the mount target/source and use that to construct the right path to open in the user's browser.
+- If the first CDP command stalls, try `agent-browser --cdp 9222 snapshot` once to warm the daemon. A snapshot timeout is not fatal if `feed-capture` succeeds immediately afterward.
 
 ## Supported platforms
 
