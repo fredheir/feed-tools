@@ -33,10 +33,12 @@
 - Entry points:
   `feed-capture <source> ...`
   `feed-combine <output-json> <input-json>...`
+  `feed-curate <output-json> [--source NAME]... [--limit N] [--exclude-seen] [--exclude-completed] [--unclassified]`
   `feed-list <input-json> [limit]`
-  `feed-list <input-json> [limit] [--allocation FILE] [--unclassified]`
-  `feed-allocate <input-json> [--allocation FILE] [--category Label:rows]`
+  `feed-list <input-json> [limit] [--unclassified]`
+  `feed-allocate <input-json> [--category Label:rows]`
   `feed-mask <input-json> <output-mask> [--tab Label:rows] [--summary-file FILE] [--summary TEXT]`
+  `--allocation FILE` is a legacy override; default classification state now lives in sqlite
   `feed-prune <input-json> [output-json] [--in-place] [--keep ids] [--drop ids]`
   `feed-render <input-json> [--mask <mask-json>] <output-html>`
   `feed-view <source> [limit] [--assets-dir DIR] [--save-dir DIR] [--ids 1,2,3]`
@@ -49,6 +51,8 @@
   `item.source_item_id` is the source-native stable id
 - Preferences file:
   `config.json`
+- Persistent state:
+  merged items, seen/completed flags, and allocation/classification live in `<save_dir>/feed.sqlite`
 - Default config template:
   `config.json.example`
 - Curation inject point:
@@ -92,12 +96,9 @@
   `feed-open /tmp/feed.html`
 - Tabbed curated flow:
   `agent reads config.json in full`
-  `feed-capture x > /tmp/feed.json`
-  `feed-list /tmp/feed.json --unclassified`
-  `agent classifies unclassified or newly-relevant posts with feed-allocate`
-  `if a new category is added, rerun classification for items that should move into it`
-  `agent selects rows in preferred order`
-  `feed-mask /tmp/feed.json /tmp/feed-mask.json --pick 1,4,9,5,2`
+  `feed-curate /tmp/feed.json --source x --unclassified`
+  `feed-allocate /tmp/feed.json --category Coding:1,4 --category Politics:2`
+  `feed-mask /tmp/feed.json /tmp/feed-mask.json --pick 1,4,2`
   `feed-render /tmp/feed.json --mask /tmp/feed-mask.json /tmp/feed.html`
   `feed-open /tmp/feed.html`
 - Refresh current view:

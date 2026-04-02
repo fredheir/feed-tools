@@ -5,7 +5,9 @@ import { afterEach, describe, expect, test } from "vitest";
 import {
   exportDocumentsFromDb,
   getDatabasePath,
+  loadAllocationFromDb,
   persistSourceDocument,
+  saveAllocationToDb,
 } from "../lib/sqlite-store.js";
 import { DatabaseSync } from "node:sqlite";
 
@@ -96,5 +98,48 @@ describe("sqlite store", () => {
     });
 
     expect(exported.items.map((item) => item.id)).toEqual(["x:1"]);
+  });
+
+  test("stores and loads item category allocations in sqlite", () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-tools-db-"));
+    tempDirs.push(saveDir);
+
+    const document = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-03T10:00:00Z",
+      items: [
+        { id: "x:1", source: "x", content: { text: "first" } },
+        { id: "x:2", source: "x", content: { text: "second" } },
+      ],
+    };
+    persistSourceDocument(saveDir, {
+      sourceName: "x",
+      document,
+    });
+
+    saveAllocationToDb(saveDir, document, {
+      version: 1,
+      source: "x",
+      items: {
+        "x:1": {
+          category: "Coding",
+          updated_at: "2026-04-03T12:00:00Z",
+        },
+      },
+    });
+
+    const allocation = loadAllocationFromDb(saveDir, document);
+    expect(allocation).toEqual({
+      version: 1,
+      source: "x",
+      items: {
+        "x:1": {
+          source: "x",
+          category: "Coding",
+          updated_at: "2026-04-03T12:00:00Z",
+        },
+      },
+    });
   });
 });
