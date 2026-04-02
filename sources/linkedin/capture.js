@@ -7,6 +7,7 @@ const {
   evalJson,
   evalText,
 } = require("../../lib/browser");
+const { getPreferredItemKey } = require("../../lib/item-shape");
 const { runSourceCapture } = require("../../lib/source-capture");
 
 function sleep(ms) {
@@ -493,10 +494,10 @@ async function captureDocument({ limit = 12 }) {
   function mergeBatch(document) {
     for (const item of document?.items || []) {
       if (!isLinkedInItemWorthKeeping(item)) continue;
-      const key =
-        item.source_item_id ||
-        item.url ||
-        `${item.author?.handle || ""}\n${item.content?.text || ""}`;
+      const key = getPreferredItemKey(item, {
+        source: "linkedin",
+        index: item.index,
+      });
       if (!key || seen.has(key)) continue;
       seen.add(key);
       collectedItems.push(item);

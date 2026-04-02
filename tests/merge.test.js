@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { mergeDocuments } from "../lib/merge.js";
 import { resolveSelectionList } from "../lib/selection.js";
+import { getSyntheticItemId } from "../lib/item-shape.js";
 
 describe("mergeDocuments", () => {
   test("deduplicates by stable id and increments capture metadata", () => {
@@ -217,5 +218,67 @@ describe("mergeDocuments", () => {
 
     const merged = mergeDocuments(oldDoc, newDoc);
     expect(merged.items).toHaveLength(2);
+  });
+
+  test("synthetic ids stay stable when a fallback item moves rows", () => {
+    const first = getSyntheticItemId(
+      {
+        source: "facebook",
+        author: { handle: "Alice" },
+        content: { text: "Same post body" },
+      },
+      "facebook",
+      { index: 1 },
+    );
+    const second = getSyntheticItemId(
+      {
+        source: "facebook",
+        author: { handle: "Alice" },
+        content: { text: "Same post body" },
+      },
+      "facebook",
+      { index: 9 },
+    );
+
+    expect(first).toBe(second);
+  });
+
+  test("prefers canonical urls over synthetic ids when aligning fallback items", () => {
+    const oldDoc = {
+      schema_version: 1,
+      source: "facebook",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "facebook:synthetic:aaa",
+          source: "facebook",
+          url: "https://www.facebook.com/alex/posts/pfbid123/?__tn__=-R",
+          author: { handle: "Alex" },
+          content: { text: "hello" },
+          first_seen_at: "2026-04-01T00:00:00Z",
+          last_seen_at: "2026-04-01T00:00:00Z",
+          capture_count: 1,
+        },
+      ],
+    };
+    const newDoc = {
+      schema_version: 1,
+      source: "facebook",
+      captured_at: "2026-04-02T00:00:00Z",
+      items: [
+        {
+          id: "facebook:synthetic:bbb",
+          source: "facebook",
+          url: "https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Falex%2Fposts%2Fpfbid123&show_text=true",
+          author: { handle: "Alex" },
+          content: { text: "updated" },
+        },
+      ],
+    };
+
+    const merged = mergeDocuments(oldDoc, newDoc);
+    expect(merged.items).toHaveLength(1);
+    expect(merged.items[0].content.text).toBe("updated");
+    expect(merged.items[0].capture_count).toBe(2);
   });
 });

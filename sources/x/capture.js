@@ -7,6 +7,7 @@ const {
   evalJson,
   evalText,
 } = require("../../lib/browser");
+const { getPreferredItemKey } = require("../../lib/item-shape");
 const { runSourceCapture } = require("../../lib/source-capture");
 
 function sleep(ms) {
@@ -283,7 +284,18 @@ async function captureDocument({ limit = 12 }) {
   })()`);
   await sleep(3000);
 
-  return evalJson(buildExtractionScript(limit));
+  const document = evalJson(buildExtractionScript(limit));
+  const seen = new Set();
+  document.items = (document.items || []).filter((item) => {
+    const key = getPreferredItemKey(item, {
+      source: "x",
+      index: item.index,
+    });
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return document;
 }
 
 const xSource = {

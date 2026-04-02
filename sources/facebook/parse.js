@@ -11,6 +11,11 @@ function extractFacebookSourceItemId(url) {
       return redirected ? extractFacebookSourceItemId(redirected) : null;
     }
 
+    if (host === "facebook.com" && parsed.pathname === "/plugins/post.php") {
+      const wrappedHref = parsed.searchParams.get("href");
+      return wrappedHref ? extractFacebookSourceItemId(wrappedHref) : null;
+    }
+
     if (host !== "facebook.com" && !host.endsWith(".facebook.com")) {
       return null;
     }
@@ -41,6 +46,19 @@ function extractFacebookSourceItemId(url) {
   } catch {
     return null;
   }
+}
+
+function extractHrefFromHtml(html) {
+  const source = String(html || "");
+  const href =
+    source.match(/<a[^>]+href="([^"]+)"/i)?.[1] ||
+    source.match(/href="([^"]+)"/i)?.[1] ||
+    null;
+  return href ? href.replace(/&amp;/g, "&") : null;
+}
+
+function isFacebookPermalinkUrl(url) {
+  return Boolean(extractFacebookSourceItemId(url));
 }
 
 function scoreFacebookItemQuality(item) {
@@ -212,9 +230,11 @@ module.exports = {
   cleanAuthorHeading,
   cleanBodyText,
   extractCardFromLabel,
+  extractHrefFromHtml,
   extractFacebookSourceItemId,
   extractImageSrcFromHtml,
   isAgeLabel,
+  isFacebookPermalinkUrl,
   isFacebookItemWorthKeeping,
   isFacebookStopHeading,
   isNoiseStaticText,

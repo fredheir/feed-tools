@@ -4,6 +4,7 @@ import {
   isFacebookItemWorthKeeping,
   scoreFacebookItemQuality,
 } from "../sources/facebook/capture.js";
+import { canonicalizeItemUrl } from "../lib/item-shape.js";
 
 describe("extractFacebookSourceItemId", () => {
   test("extracts profile post identifiers", () => {
@@ -38,9 +39,32 @@ describe("extractFacebookSourceItemId", () => {
     ).toBe("reel:987654321");
   });
 
+  test("extracts ids from facebook plugin embed urls", () => {
+    expect(
+      extractFacebookSourceItemId(
+        "https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Falexander.etkind%2Fposts%2Fpfbid0TQKi5xS119xFbjZtcFVBoZjMX4qiWq3ZWEpe5gACXNi4E3obo6tnxUqVe77rTDD7l&show_text=true&width=500",
+      ),
+    ).toBe(
+      "posts:pfbid0TQKi5xS119xFbjZtcFVBoZjMX4qiWq3ZWEpe5gACXNi4E3obo6tnxUqVe77rTDD7l",
+    );
+  });
+
   test("ignores generic profile links", () => {
     expect(extractFacebookSourceItemId("https://www.facebook.com/rolfef")).toBe(
       null,
+    );
+  });
+});
+
+describe("facebook url canonicalization", () => {
+  test("unwraps facebook plugin post href values", () => {
+    expect(
+      canonicalizeItemUrl(
+        "facebook",
+        "https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Falexander.etkind%2Fposts%2Fpfbid0TQKi5xS119xFbjZtcFVBoZjMX4qiWq3ZWEpe5gACXNi4E3obo6tnxUqVe77rTDD7l&show_text=true&width=500",
+      ),
+    ).toBe(
+      "https://www.facebook.com/alexander.etkind/posts/pfbid0TQKi5xS119xFbjZtcFVBoZjMX4qiWq3ZWEpe5gACXNi4E3obo6tnxUqVe77rTDD7l",
     );
   });
 });

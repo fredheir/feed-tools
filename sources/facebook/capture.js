@@ -8,14 +8,20 @@ const {
   snapshotText,
   getHtml,
 } = require("../../lib/browser");
+const {
+  canonicalizeItemUrl,
+  getPreferredItemKey,
+} = require("../../lib/item-shape");
 const { runSourceCapture } = require("../../lib/source-capture");
 const {
   cleanAuthorHeading,
   cleanBodyText,
   extractCardFromLabel,
   extractFacebookSourceItemId,
+  extractHrefFromHtml,
   extractImageSrcFromHtml,
   isAgeLabel,
+  isFacebookPermalinkUrl,
   isFacebookItemWorthKeeping,
   isFacebookStopHeading,
   isNoiseStaticText,
@@ -84,6 +90,7 @@ function parsePostBlock(lines, index) {
     embedded_links: [],
     _media_refs: [],
     _author_image_ref: findAuthorImageRef(lines, index, authorName),
+    _link_refs: [],
   };
 
   const contentParts = [];
@@ -157,6 +164,12 @@ function parsePostBlock(lines, index) {
 
     if (line.type === "link") {
       const label = cleanBodyText(line.label);
+      if (line.ref) {
+        item._link_refs.push({
+          ref: line.ref,
+          label,
+        });
+      }
       if (
         !label ||
         label === authorName ||
@@ -245,6 +258,8 @@ function parseSnapshotDocument(snapshot, limit) {
 
 function enrichFacebookItem(item) {
   const media = [];
+  const embeddedLinks = [];
+  const seenEmbeddedLinks = new Set();
   for (const ref of item._media_refs || []) {
     try {
       const html = getHtml(`@${ref.ref}`);
@@ -267,14 +282,46 @@ function enrichFacebookItem(item) {
     } catch {}
   }
 
+  let permalinkUrl = item.url || null;
+  let sourceItemId = item.source_item_id || null;
+  for (const linkRef of item._link_refs || []) {
+    if (!linkRef?.ref) continue;
+    try {
+      const html = getHtml(`@${linkRef.ref}`);
+      const href = canonicalizeItemUrl("facebook", extractHrefFromHtml(html));
+      if (!href) continue;
+
+      if (!permalinkUrl && isFacebookPermalinkUrl(href)) {
+        permalinkUrl = href;
+        sourceItemId = extractFacebookSourceItemId(href) || sourceItemId;
+        continue;
+      }
+
+      if (isFacebookPermalinkUrl(href)) continue;
+
+      const kind = href.includes("facebook.com") ? "entity" : "link";
+      if (seenEmbeddedLinks.has(href)) continue;
+      seenEmbeddedLinks.add(href);
+      embeddedLinks.push({
+        href,
+        text: linkRef.label || null,
+        kind,
+      });
+    } catch {}
+  }
+
   return {
     ...item,
+    source_item_id: sourceItemId,
+    url: permalinkUrl,
     author: {
       ...(item.author || {}),
       profile_image_url: profileImageUrl,
     },
+    embedded_links: embeddedLinks,
     media,
     _author_image_ref: undefined,
+    _link_refs: undefined,
     _media_refs: undefined,
   };
 }
@@ -297,10 +344,10 @@ async function captureDocument({ limit = 12 }) {
     for (const rawItem of document.items || []) {
       const item = enrichFacebookItem(rawItem);
       if (!isFacebookItemWorthKeeping(item)) continue;
-      const key =
-        item.source_item_id ||
-        item.url ||
-        `${item.author?.handle || ""}\n${item.content?.text || ""}`;
+      const key = getPreferredItemKey(item, {
+        source: "facebook",
+        index: item.index,
+      });
       if (!key || seen.has(key)) continue;
       seen.add(key);
       collectedItems.push(item);
