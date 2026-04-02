@@ -6,12 +6,7 @@ All notable changes to this repo will be documented in this file.
 
 ## [0.1.1] - 2026-04-02
 
-### Fixed
-
-- Fixed GitHub Actions test execution so CLI tests no longer depend on a hardcoded local checkout path or a user-specific repo layout, and instead derive the repository root dynamically and run via the active Node executable.
-- Fixed CLI test configuration setup by allowing tests to point the toolchain at a temporary config file through `FEED_TOOLS_CONFIG`, so CI no longer fails simply because `config.json` is intentionally absent from the repo.
-- Fixed dead-code validation by removing genuinely unused exports from selection, source registry, and source adapter modules instead of suppressing the warnings, keeping `knip` green without hiding real unused surface area.
-- Fixed `feed-render` tests so they pass `--no-open`, preventing browser tabs from opening during local and CI test runs.
+No user-facing changes.
 
 ## [0.1.0] - 2026-04-02
 
