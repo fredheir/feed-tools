@@ -269,7 +269,10 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
         `document.querySelectorAll('[data-testid^="feedItem-by-"]').length > ${knownDomItems}`,
         2500,
       );
-    } catch {}
+    } catch (err) {
+      // Timed out waiting for new feed rows; continue scrolling.
+      void err;
+    }
     mergeBatch(browser.evalJson(buildExtractionScript(limit)));
     stagnantPasses =
       collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;

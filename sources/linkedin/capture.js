@@ -551,7 +551,9 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
         `(document.querySelector("main")?.scrollHeight || document.scrollingElement?.scrollHeight || 0) > ${beforeMetrics.scrollHeight}`,
         2500,
       );
-    } catch {}
+    } catch (err) {
+      void err;
+    }
     mergeBatch(browser.evalJson(buildExtractionScript(limit)));
     stagnantPasses =
       collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;

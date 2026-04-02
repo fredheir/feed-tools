@@ -111,8 +111,7 @@ function buildExtractionScript(limit) {
       return Boolean(
         item?.author?.handle &&
         item?.content?.text &&
-        item?.url &&
-        item?.author?.profile_image_url
+        item?.url
       );
     }
 
@@ -289,7 +288,11 @@ function buildExtractionScript(limit) {
           thread_line_x: line?.x || null,
         },
         embedded_links: getEmbeddedLinks(article),
-        capture_incomplete: false,
+        capture_incomplete: !isHydratedItem({
+          author: { handle, profile_image_url },
+          content: { text },
+          url,
+        }),
       };
     });
 
@@ -407,15 +410,20 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
     if (
       !bestDocument ||
       (candidate.items || []).length > (bestDocument.items || []).length ||
-      (((candidate.meta || {}).hydrated_count || 0) >
-        (((bestDocument.meta || {}).hydrated_count || 0)))
+      ((candidate.meta || {}).hydrated_count || 0) >
+        ((bestDocument.meta || {}).hydrated_count || 0)
     ) {
       bestDocument = candidate;
     }
     if ((candidate.items || []).length >= limit) break;
   }
 
-  const document = bestDocument || { schema_version: 1, source: "x", captured_at: new Date().toISOString(), items: [] };
+  const document = bestDocument || {
+    schema_version: 1,
+    source: "x",
+    captured_at: new Date().toISOString(),
+    items: [],
+  };
   const seen = new Set();
   document.items = (document.items || []).filter((item) => {
     const key = getPreferredItemKey(item, {

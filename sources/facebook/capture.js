@@ -261,7 +261,10 @@ function enrichFacebookItem(item, browser) {
         alt: ref.alt || null,
         media_kind: "image",
       });
-    } catch {}
+    } catch (err) {
+      // Snapshot ref missing or DOM changed while resolving media.
+      void err;
+    }
   }
 
   let profileImageUrl = item.author?.profile_image_url || null;
@@ -269,7 +272,10 @@ function enrichFacebookItem(item, browser) {
     try {
       const html = browser.getHtml(`@${item._author_image_ref}`);
       profileImageUrl = extractImageSrcFromHtml(html) || profileImageUrl;
-    } catch {}
+    } catch (err) {
+      // Author image ref may be stale or missing.
+      void err;
+    }
   }
 
   let permalinkUrl = item.url || null;
@@ -297,7 +303,9 @@ function enrichFacebookItem(item, browser) {
         text: linkRef.label || null,
         kind,
       });
-    } catch {}
+    } catch (err) {
+      void err;
+    }
   }
 
   return {
@@ -398,7 +406,9 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
         `(document.scrollingElement?.scrollHeight || document.body?.scrollHeight || 0) > ${beforeHeight}`,
         2500,
       );
-    } catch {}
+    } catch (err) {
+      void err;
+    }
     mergeBatch(captureFacebookSnapshot(browser));
     stagnantPasses =
       collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
