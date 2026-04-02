@@ -32,6 +32,10 @@
 - Keep `assets_dir`, `save_dir`, and rendered HTML under the repo, not `/tmp`.
 - For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
 
+## Troubleshooting
+
+This is alpha software. You will likely need to make proactive fixes. If you encounter friction, take out an issue on github, or better a PR with a verified fix.
+
 ## Supported platforms
 
 - facebook

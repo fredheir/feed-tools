@@ -6,7 +6,9 @@ All notable changes to this repo will be documented in this file.
 
 ## [0.1.1] - 2026-04-02
 
-No user-facing changes.
+### Fixed
+
+- Fixed a capture-time item deduplication bug by importing `getPreferredItemKey` in `source-capture.js`, preventing a runtime failure when collecting unique items.
 
 ## [0.1.0] - 2026-04-02
 

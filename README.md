@@ -1,6 +1,6 @@
 Feed Tools helps an agent collect, classify, and render a bespoke social feed based on a user's preferences.
 
-## QUick start
+## Quick start
 
 Paste the block below into Claude or Codex:
 
@@ -9,6 +9,8 @@ Start by cloning this repository:
 
 gh repo clone fredheir/feed-tools
 https://github.com/fredheir/feed-tools.git
+
+Place this in the user's workspace, not in a sandbox - files should be accessible for the html rendering process.
 
 Then read AGENTS.md and follow the instructions.
 
