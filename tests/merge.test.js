@@ -183,6 +183,25 @@ describe("mergeDocuments", () => {
     expect(resolveSelectionList(document, "2,x:a")).toEqual(["x:b", "x:a"]);
   });
 
+  test("supports explicit-first ordering with all appended in row order", () => {
+    const document = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        { id: "x:a", author: { handle: "@a" }, content: { text: "A" } },
+        { id: "x:b", author: { handle: "@b" }, content: { text: "B" } },
+        { id: "x:c", author: { handle: "@c" }, content: { text: "C" } },
+      ],
+    };
+
+    expect(resolveSelectionList(document, "3,1,all")).toEqual([
+      "x:c",
+      "x:a",
+      "x:b",
+    ]);
+  });
+
   test("prefers synthetic keys over generic linkedin company post urls", () => {
     const oldDoc = {
       schema_version: 1,

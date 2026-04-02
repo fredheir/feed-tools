@@ -19,6 +19,7 @@ Ask me questions about my preferences:
 - which categories I want
 - whether I want tabs or a single grouped feed
 - how concise or opinionated the summary should be
+- whether I want ranked or unranked feed.
 
 Use that to create the config.
 
@@ -29,6 +30,9 @@ Use the current core flow:
 - feed-curate
 - if needed, feed-classify
 - feed-render
+
+As a follow up after the inital run you could offer to render a feed about a particular topic (see Topic Flow).
+
 ```
 
 ## What the repo does

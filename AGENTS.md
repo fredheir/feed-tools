@@ -129,3 +129,25 @@ feed-curate --sources x,bluesky --matches 'trump,donald,maga,white house,potus,p
 # feed-classify --category Politics:14,18 --category Coding:2
 feed-render --summary 'US forces ...[insight from content]'
 ```
+
+### Ranked flow
+
+Use this when you want curated ordering instead of plain row order.
+
+- Rank candidate root rows after `feed-curate` and before `feed-render`.
+- `--pick` order is the display order within each tab.
+- Thread children expand automatically from the selected root row.
+- Pass root rows only. Do not list thread children separately unless you intentionally want to override thread order.
+- Suggested score:
+  `likes + reposts*2 + views*0.001`
+- If you want only a partial ordering override, append `all` to the pick list.
+  Example:
+  `--pick 8,5,12,1,3,all`
+  This pins rows `8,5,12,1,3` first, then appends every unlisted row in normal row order.
+
+```sh
+feed-capture x bluesky
+feed-curate --sources x,bluesky
+# feed-classify --category "Tech & AI:1,3" --category "Politics:5,8,12"
+feed-render --pick 8,5,12,1,3,all --tab
+```
