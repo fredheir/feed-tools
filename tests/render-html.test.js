@@ -52,4 +52,42 @@ describe("renderDocument", () => {
     expect(html).toContain('id="feed-platform-1" checked');
     expect(html).toContain('class="platform-filter-group"');
   });
+
+  test("renders threaded x replies after the original post", () => {
+    const html = renderDocument({
+      schema_version: 1,
+      source: "combined",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "x:reply",
+          source: "x",
+          index: 2,
+          url: "https://x.com/a/status/2",
+          author: { handle: "@a" },
+          content: { text: "Reply" },
+          stats: {},
+          media: [],
+          cards: [],
+          thread: {},
+        },
+        {
+          id: "x:root",
+          source: "x",
+          index: 1,
+          url: "https://x.com/a/status/1",
+          author: { handle: "@a" },
+          content: { text: "Original" },
+          stats: {},
+          media: [],
+          cards: [],
+          thread: {
+            child_candidate_url: "https://x.com/a/status/2",
+          },
+        },
+      ],
+    });
+
+    expect(html.indexOf("Original")).toBeLessThan(html.indexOf("Reply"));
+  });
 });

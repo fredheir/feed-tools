@@ -8,6 +8,7 @@ const { runSourceCapture } = require("../../lib/source-capture");
 function buildExtractionScript(limit) {
   return `(() => {
     const limit = ${JSON.stringify(limit)};
+    const maxArticles = Math.max(limit * 3, limit);
 
     function textOf(node) {
       return (node?.innerText || node?.textContent || "").replace(/\\s+/g, " ").trim();
@@ -55,7 +56,7 @@ function buildExtractionScript(limit) {
 
     function getEmbeddedLinks(article) {
       const links = Array.from(article.querySelectorAll("a[href]"));
-      const articleUrl = article.querySelector("time")?.closest("a")?.href || null;
+      const articleUrl = getStatusUrl(article);
       const seen = new Set();
       const out = [];
       for (const link of links) {
@@ -72,6 +73,47 @@ function buildExtractionScript(limit) {
         out.push({ href, text, kind });
       }
       return out;
+    }
+
+    function getStatusUrl(article) {
+      const timeLink = article.querySelector("time")?.closest("a[href]");
+      if (timeLink?.href) return timeLink.href;
+
+      const statusLink = Array.from(article.querySelectorAll("a[href]")).find((link) => {
+        const href = link.href || "";
+        return (
+          /\\/status\\/\\d+$/.test(href) &&
+          !/\\/analytics$/.test(href) &&
+          !/\\/status\\/\\d+\\/(photo|video)\\/\\d+$/.test(href)
+        );
+      });
+      return statusLink?.href || null;
+    }
+
+    function getProfileImageUrl(article) {
+      const avatarImg =
+        article.querySelector('[data-testid="Tweet-User-Avatar"] img[src]') ||
+        article.querySelector('[data-testid^="UserAvatar-Container-"] img[src]');
+      if (avatarImg?.src) return avatarImg.src;
+
+      const fallback = Array.from(article.querySelectorAll("img[src]")).find((img) => {
+        const src = img.src || "";
+        return (
+          src.includes("pbs.twimg.com/profile_images/") ||
+          /_normal\\./.test(src) ||
+          /_mini\\./.test(src)
+        );
+      });
+      return fallback?.src || null;
+    }
+
+    function isHydratedItem(item) {
+      return Boolean(
+        item?.author?.handle &&
+        item?.content?.text &&
+        item?.url &&
+        item?.author?.profile_image_url
+      );
     }
 
     function getEmbeddedMedia(article) {
@@ -112,7 +154,7 @@ function buildExtractionScript(limit) {
     function getPreviewCards(article) {
       const links = Array.from(article.querySelectorAll("a[href]"));
       const roleLinks = Array.from(article.querySelectorAll('[role="link"]'));
-      const articleUrl = article.querySelector("time")?.closest("a")?.href || null;
+      const articleUrl = getStatusUrl(article);
       const seen = new Set();
       const out = [];
 
@@ -160,7 +202,10 @@ function buildExtractionScript(limit) {
             });
             seen.add(href);
           }
-        } catch {}
+        } catch (err) {
+          // Skip malformed URLs from DOM (e.g. relative or invalid href).
+          void err;
+        }
       }
 
       for (const block of roleLinks) {
@@ -206,14 +251,14 @@ function buildExtractionScript(limit) {
       };
     }
 
-    const articles = Array.from(document.querySelectorAll("article")).slice(0, limit);
+    const articles = Array.from(document.querySelectorAll("article")).slice(0, maxArticles);
     const items = articles.map((article, idx) => {
       const handle = Array.from(article.querySelectorAll('a[href^="/"]'))
         .find((a) => textOf(a).startsWith("@"))
         ?.textContent?.trim() || null;
-      const url = article.querySelector("time")?.closest("a")?.href || null;
+      const url = getStatusUrl(article);
       const source_item_id = url ? (url.match(/\\/status\\/(\\d+)/)?.[1] || null) : null;
-      const profile_image_url = article.querySelector('img[src*="pbs.twimg.com/profile_images/"]')?.src || null;
+      const profile_image_url = getProfileImageUrl(article);
       const text = multilineTextOf(article.querySelector('[data-testid="tweetText"]')) || multilineTextOf(article).slice(0, 280);
       const line = findThreadLine(article);
       const stats = getStats(article);
@@ -244,23 +289,32 @@ function buildExtractionScript(limit) {
           thread_line_x: line?.x || null,
         },
         embedded_links: getEmbeddedLinks(article),
+        capture_incomplete: false,
       };
     });
+
+    const hydrated = items.filter((item) => isHydratedItem(item));
+    const incomplete = items.filter((item) => !isHydratedItem(item));
 
     return JSON.stringify({
       schema_version: 1,
       source: "x",
       captured_at: new Date().toISOString(),
-      items: items.map((item, idx) => ({
+      items: hydrated.slice(0, limit).map((item, idx) => ({
         ...item,
         thread: {
           ...item.thread,
-          child_candidate_index: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].index : null,
-          child_candidate_handle: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].author.handle : null,
-          child_candidate_url: item.thread.has_thread_line && idx < items.length - 1 ? items[idx + 1].url : null,
-          relationship_confidence: item.thread.has_thread_line && idx < items.length - 1 ? "medium" : null
+          child_candidate_index: item.thread.has_thread_line && idx < hydrated.length - 1 ? hydrated[idx + 1].index : null,
+          child_candidate_handle: item.thread.has_thread_line && idx < hydrated.length - 1 ? hydrated[idx + 1].author.handle : null,
+          child_candidate_url: item.thread.has_thread_line && idx < hydrated.length - 1 ? hydrated[idx + 1].url : null,
+          relationship_confidence: item.thread.has_thread_line && idx < hydrated.length - 1 ? "medium" : null
         }
-      }))
+      })),
+      meta: {
+        article_count: articles.length,
+        hydrated_count: hydrated.length,
+        incomplete_count: incomplete.length
+      }
     });
   })()`;
 }
@@ -268,11 +322,11 @@ function buildExtractionScript(limit) {
 function prepareXFeed(browser) {
   const shortWait = jitterTimeout(900, 300);
   const mediumWait = jitterTimeout(1600, 500);
+  const hydrationWait = jitterTimeout(3500, 900);
   browser.ensureTab(
     ["https://x.com/", "https://twitter.com/"],
     "https://x.com/home",
   );
-  browser.reloadCurrentTab();
   browser.tryWaitForFunction("document.readyState === 'complete'", shortWait);
   browser.tryWaitForFunction(
     `(() => {
@@ -281,6 +335,25 @@ function prepareXFeed(browser) {
       return articleCount > 0 || text.includes("For you") || text.includes("Following");
     })()`,
     mediumWait,
+  );
+  browser.tryWaitForFunction(
+    `(() => {
+      const articles = Array.from(document.querySelectorAll('article')).slice(0, 6);
+      if (articles.length === 0) return false;
+      return articles.some((article) => {
+        const hasText = Boolean(article.querySelector('[data-testid="tweetText"]'));
+        const hasAvatar = Boolean(
+          article.querySelector('[data-testid="Tweet-User-Avatar"] img[src]') ||
+          article.querySelector('img[src*="pbs.twimg.com/profile_images/"]')
+        );
+        const hasStatusLink = Array.from(article.querySelectorAll('a[href]')).some((link) => {
+          const href = link.href || '';
+          return /\\/status\\/\\d+$/.test(href) && !/\\/analytics$/.test(href);
+        });
+        return hasText && hasAvatar && hasStatusLink;
+      });
+    })()`,
+    hydrationWait,
   );
   browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -294,17 +367,55 @@ function prepareXFeed(browser) {
     })()`,
     jitterTimeout(900, 300),
   );
+  browser.tryWaitForFunction(
+    `(() => {
+      const articles = Array.from(document.querySelectorAll('article')).slice(0, 6);
+      if (articles.length === 0) return false;
+      return articles.filter((article) => {
+        const hasText = Boolean(article.querySelector('[data-testid="tweetText"]'));
+        const hasAvatar = Boolean(
+          article.querySelector('[data-testid="Tweet-User-Avatar"] img[src]') ||
+          article.querySelector('img[src*="pbs.twimg.com/profile_images/"]')
+        );
+        const hasStatusLink = Array.from(article.querySelectorAll('a[href]')).some((link) => {
+          const href = link.href || '';
+          return /\\/status\\/\\d+$/.test(href) && !/\\/analytics$/.test(href);
+        });
+        return hasText && hasAvatar && hasStatusLink;
+      }).length >= Math.min(3, articles.length);
+    })()`,
+    hydrationWait,
+  );
 }
 
 async function captureDocument({ limit = 12, browserOptions = {} }) {
   const browser = createBrowserSession(browserOptions);
   prepareXFeed(browser);
 
-  const document = browser.evalJson(buildExtractionScript(limit));
-  if ((document.items || []).length === 0) {
-    prepareXFeed(browser);
-    Object.assign(document, browser.evalJson(buildExtractionScript(limit)));
+  let bestDocument = null;
+  const attempts = [
+    { waitMs: 0, allowReload: false },
+    { waitMs: jitterTimeout(1200, 400), allowReload: false },
+    { waitMs: jitterTimeout(2200, 600), allowReload: false },
+  ];
+
+  for (const attempt of attempts) {
+    if (attempt.waitMs > 0) browser.waitMilliseconds(attempt.waitMs);
+    if (attempt.allowReload) prepareXFeed(browser);
+
+    const candidate = browser.evalJson(buildExtractionScript(limit));
+    if (
+      !bestDocument ||
+      (candidate.items || []).length > (bestDocument.items || []).length ||
+      (((candidate.meta || {}).hydrated_count || 0) >
+        (((bestDocument.meta || {}).hydrated_count || 0)))
+    ) {
+      bestDocument = candidate;
+    }
+    if ((candidate.items || []).length >= limit) break;
   }
+
+  const document = bestDocument || { schema_version: 1, source: "x", captured_at: new Date().toISOString(), items: [] };
   const seen = new Set();
   document.items = (document.items || []).filter((item) => {
     const key = getPreferredItemKey(item, {
