@@ -23,6 +23,16 @@
         }
       },
       {
+        "name": "bluesky",
+        "enabled": true,
+        "default": false,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "/tmp/feed-assets",
+          "save_dir": "/tmp/feed-archive"
+        }
+      },
+      {
         "name": "linkedin",
         "enabled": true,
         "default": false,
