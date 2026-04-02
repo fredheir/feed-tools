@@ -29,18 +29,20 @@
   `/tmp` inside a sandbox is isolated from the host filesystem. The browser opens file:// URLs against the _host_ `/tmp`, so assets and HTML written to the sandbox `/tmp` will not be found. Fix: update `config.json` so `assets_dir` and `save_dir` point to host-accessible paths (e.g. inside the repo dir), and write output HTML there too. This affects images, profile pictures, and card previews — not just the HTML file itself.
 - Supported platforms:
   `x`
+  `bluesky`
   `linkedin`
 - Entry points:
   `feed-capture <source> ...`
   `feed-combine <output-json> <input-json>...`
-  `feed-curate <output-json> [--source NAME]... [--limit N] [--exclude-seen] [--exclude-completed] [--unclassified]`
+  `feed-curate <output-json> [--sources name1,name2,...] [--limit N] [--exclude-seen] [--exclude-completed] [--unclassified]`
+  `feed-override <output-json> [--sources name1,name2,...] [--match REGEX]...`
   `feed-list <input-json> [limit]`
   `feed-list <input-json> [limit] [--unclassified]`
   `feed-allocate <input-json> [--category Label:rows]`
-  `feed-mask <input-json> <output-mask> [--tab Label:rows] [--summary-file FILE] [--summary TEXT]`
+  `feed-mask <input-json> [output-mask] [--pick rows|all] [--tab Label:rows] [--summary-file FILE] [--summary TEXT]`
   `--allocation FILE` is a legacy override; default classification state now lives in sqlite
   `feed-prune <input-json> [output-json] [--in-place] [--keep ids] [--drop ids]`
-  `feed-render <input-json> [--mask <mask-json>] <output-html>`
+  `feed-render <input-json> [output-html] [--mask <mask-json>]`
   `feed-view <source> [limit] [--assets-dir DIR] [--save-dir DIR] [--ids 1,2,3]`
   `feed-open <path-or-url>`
   `feed-refresh [source] --mask <mask-json> <output-html>`
@@ -57,6 +59,8 @@
   `config.json.example`
 - Curation inject point:
   `capture -> agent classifies uncategorized items -> agent selects rows -> tool writes mask -> render`
+  For topical or user-directed curation, curation happens through the mask: run `feed-override` to inspect recent posts per source plus optional regex matches, then select rows and apply `feed-mask --pick ...`.
+  Use a keyword battery, not a single keyword. If first-pass hits surface new current-affairs terms, names, places, or organizations that should have been in the battery, run a second pass with an expanded battery before selecting rows.
 - Use `feed-combine` to build multi-source documents instead of ad hoc shell pipelines.
 - Use `feed-prune` to clean current or derived feed documents instead of manually editing JSON.
 - Capture merge behavior:
@@ -87,20 +91,28 @@
   `lib/render-item.js`
   `lib/render-css.js`
   `lib/merge.js`
-- X flow:
-  `feed-view x`
+- Default flow:
+  `feed-view`
 - Minimal curated flow:
   `feed-capture x > /tmp/feed.json`
   `agent replies with item ids`
-  `feed-render /tmp/feed.json --ids x:2039234243222769835,x:2039118568252707144 /tmp/feed.html`
+  `feed-mask /tmp/feed.json --tab Picks:x:2039234243222769835,x:2039118568252707144 --summary 'Selected posts relevant to the current ask.'`
+  `feed-render /tmp/feed.json /tmp/feed.html`
   `feed-open /tmp/feed.html`
 - Tabbed curated flow:
   `agent reads config.json in full`
-  `feed-curate /tmp/feed.json --source x --unclassified`
+  `feed-curate /tmp/feed.json --unclassified`
   `feed-allocate /tmp/feed.json --category Coding:1,4 --category Politics:2`
-  `feed-mask /tmp/feed.json /tmp/feed-mask.json --pick 1,4,2`
-  `feed-render /tmp/feed.json --mask /tmp/feed-mask.json /tmp/feed.html`
+  `feed-mask /tmp/feed.json --pick 1,4,2 --summary 'Curated highlights organized into the configured categories.'`
+  `feed-render /tmp/feed.json /tmp/feed.html`
   `feed-open /tmp/feed.html`
+- Topic override flow:
+  `feed-override /tmp/override.json --matches 'trump,donald,maga,white house,potus,president,administration,gop,republican'`
+  `if first-pass hits reveal better current-affairs terms, rerun feed-override with an expanded matches battery`
+  `agent selects rows from recent sections, topical hits, and adjacent candidates`
+  `feed-mask /tmp/override.json --pick 27 --summary 'Topical override focused on the user request, using relevance-ranked recent and adjacent posts.'`
+  `feed-render /tmp/override.json`
+  `feed-open /tmp/override.html`
 - Refresh current view:
   `feed-refresh x --mask /tmp/feed-mask.json /tmp/feed.html`
   `feed-open /tmp/feed.html`

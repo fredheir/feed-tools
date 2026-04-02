@@ -74,4 +74,56 @@ describe("feed-curate", () => {
     expect(stdout).toContain("Coding");
     expect(stdout).toContain("x:1");
   });
+
+  test("prints a classification prompt for uncategorized items", () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-curate-test-"));
+    tempDirs.push(saveDir);
+    const outputPath = path.join(saveDir, "workset.json");
+
+    persistSourceDocument(saveDir, {
+      sourceName: "x",
+      document: {
+        schema_version: 1,
+        source: "x",
+        captured_at: "2026-04-03T10:00:00Z",
+        items: [
+          {
+            id: "x:2",
+            source: "x",
+            author: { handle: "@uncat" },
+            content: { text: "Uncategorized post text" },
+            stats: { like: "7", share: "2", view: "100" },
+            url: "https://x.com/uncat/status/2",
+          },
+        ],
+      },
+    });
+
+    const stdout = execFileSync(
+      "node",
+      [
+        "./lib/curate-cli.js",
+        outputPath,
+        "--save-dir",
+        saveDir,
+        "--source",
+        "x",
+        "--unclassified",
+      ],
+      {
+        cwd: "/home/rolf/Projects/feed-tools",
+        encoding: "utf8",
+      },
+    );
+
+    expect(stdout).toContain("ERROR: classification step incomplete.");
+    expect(stdout).toContain(
+      "Requested categories: Friends and Family, Coding, Politics, Finance. Fallback: Other.",
+    );
+    expect(stdout).toContain(
+      "respond concisely with --category Label:rows assignments only",
+    );
+    expect(stdout).toContain("x\tx:2\t@uncat\tUncategorized post text");
+    expect(stdout).toContain("https://x.com/uncat/status/2");
+  });
 });

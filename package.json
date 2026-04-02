@@ -24,6 +24,7 @@
       "lib/list-cli.js",
       "lib/mask-cli.js",
       "lib/open-cli.js",
+      "lib/override-cli.js",
       "lib/prune-cli.js",
       "lib/render-cli.js",
       "lib/refresh-cli.js",
