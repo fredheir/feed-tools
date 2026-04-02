@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   persistSourceDocument,
   saveAllocationToDb,
@@ -125,5 +125,163 @@ describe("feed-curate", () => {
     );
     expect(stdout).toContain("x\tx:2\t@uncat\tUncategorized post text");
     expect(stdout).toContain("https://x.com/uncat/status/2");
+  });
+
+  test("fails selection flow when uncategorized items exist", () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-curate-test-"));
+    tempDirs.push(saveDir);
+    const outputPath = path.join(saveDir, "workset.json");
+
+    persistSourceDocument(saveDir, {
+      sourceName: "x",
+      document: {
+        schema_version: 1,
+        source: "x",
+        captured_at: "2026-04-03T10:00:00Z",
+        items: [
+          {
+            id: "x:3",
+            source: "x",
+            author: { handle: "@uncat" },
+            content: { text: "Needs category" },
+            stats: {},
+          },
+        ],
+      },
+    });
+
+    const result = spawnSync(
+      "node",
+      ["./lib/curate-cli.js", outputPath, "--save-dir", saveDir, "--source", "x"],
+      {
+        cwd: "/home/rolf/Projects/feed-tools",
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(2);
+    expect(result.stdout).toContain("ERROR: classification step incomplete.");
+    expect(result.stdout).toContain("respond concisely with --category Label:rows assignments only");
+  });
+
+  test("prints render context on successful curate", () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-curate-test-"));
+    tempDirs.push(saveDir);
+    const outputPath = path.join(saveDir, "workset.json");
+
+    const document = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-03T10:00:00Z",
+      items: [
+        {
+          id: "x:4",
+          source: "x",
+          author: { handle: "@uncat" },
+          content: { text: "Needs category" },
+          stats: {},
+        },
+      ],
+    };
+    persistSourceDocument(saveDir, {
+      sourceName: "x",
+      document,
+    });
+    saveAllocationToDb(saveDir, document, {
+      version: 1,
+      source: "x",
+      items: {
+        "x:4": {
+          category: "Politics",
+          updated_at: "2026-04-03T12:00:00Z",
+        },
+      },
+    });
+
+    const stdout = execFileSync(
+      "node",
+      [
+        "./lib/curate-cli.js",
+        outputPath,
+        "--save-dir",
+        saveDir,
+        "--source",
+        "x",
+      ],
+      {
+        cwd: "/home/rolf/Projects/feed-tools",
+        encoding: "utf8",
+      },
+    );
+
+    expect(stdout).toContain("Render context:");
+    expect(stdout).toContain("show_summary=");
+    expect(stdout).toContain("preferred_categories=");
+    expect(stdout).toContain("Politics");
+    expect(stdout).toContain("x:4");
+  });
+
+  test("filters row output with repeated --matches batteries", () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-curate-test-"));
+    tempDirs.push(saveDir);
+    const outputPath = path.join(saveDir, "workset.json");
+
+    const document = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-03T10:00:00Z",
+      items: [
+        {
+          id: "x:5",
+          source: "x",
+          author: { handle: "@oil" },
+          content: { text: "Iran war is moving oil markets" },
+          stats: {},
+          url: "https://x.com/oil/status/5",
+        },
+        {
+          id: "x:6",
+          source: "x",
+          author: { handle: "@code" },
+          content: { text: "new compiler release" },
+          stats: {},
+          url: "https://x.com/code/status/6",
+        },
+      ],
+    };
+    persistSourceDocument(saveDir, {
+      sourceName: "x",
+      document,
+    });
+    saveAllocationToDb(saveDir, document, {
+      version: 1,
+      source: "x",
+      items: {
+        "x:5": { category: "Politics", updated_at: "2026-04-03T12:00:00Z" },
+        "x:6": { category: "Coding", updated_at: "2026-04-03T12:00:00Z" },
+      },
+    });
+
+    const stdout = execFileSync(
+      "node",
+      [
+        "./lib/curate-cli.js",
+        outputPath,
+        "--save-dir",
+        saveDir,
+        "--source",
+        "x",
+        "--matches",
+        "iran,oil,war",
+      ],
+      {
+        cwd: "/home/rolf/Projects/feed-tools",
+        encoding: "utf8",
+      },
+    );
+
+    expect(stdout).toContain("x:5");
+    expect(stdout).not.toContain("x:6");
+    expect(stdout).toContain("hits:");
   });
 });
