@@ -4,6 +4,24 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-02
+
+### Added
+
+- Added mount-aware browser file opening so rendered feeds opened from bind-mounted or sandboxed workspaces resolve to a host-visible `file://` path instead of failing when Chrome cannot see the sandbox path ([754b9c45](https://github.com/fredheir/feed-tools/commit/754b9c45d4765b3e198ab37dc44b9d592d71218c)).
+- Added `prek`-backed pre-commit hooks for `eslint`, `prettier --check`, and `knip`, so formatting and dead-code regressions are blocked before they reach CI instead of only failing after push ([2219703a](https://github.com/fredheir/feed-tools/commit/2219703a24d33e9d2973d76098d05b61c159bc76)).
+
+### Changed
+
+- Changed browser setup so `capture.browser.cdp` is treated as mutually exclusive with `capture.browser.headed` and `capture.browser.auto_connect`, preventing misleading config combinations that could stall startup or silently ignore the intended connection mode ([754b9c45](https://github.com/fredheir/feed-tools/commit/754b9c45d4765b3e198ab37dc44b9d592d71218c)).
+- Changed ranked rendering selection so `feed-render --pick` now supports explicit-first ordering with `...,all`, allowing operators to pin hand-ranked rows first and then append every remaining row in natural order instead of choosing between a strict subset and plain row order ([2219703a](https://github.com/fredheir/feed-tools/commit/2219703a24d33e9d2973d76098d05b61c159bc76)).
+- Changed operator guidance and CLI help around CDP warmup, rendered asset paths, and `--pick` ordering so first-run setup is clearer when working with an existing browser session or a sandboxed workspace ([772ad608](https://github.com/fredheir/feed-tools/commit/772ad60878aba2f481f795cc0c8fa34adccf6467)).
+
+### Fixed
+
+- Fixed a capture-time item deduplication bug by importing `getPreferredItemKey` in `source-capture.js`, preventing a runtime failure when collecting unique items ([0cd53507](https://github.com/fredheir/feed-tools/commit/0cd535078b592296f53b117603bdac95d0f26ea7)).
+- Fixed browser command output by stripping repeated `agent-browser` daemon warnings about ignored `--args`, so capture and render flows no longer flood logs with duplicate noise once a daemon is already running ([772ad608](https://github.com/fredheir/feed-tools/commit/772ad60878aba2f481f795cc0c8fa34adccf6467)).
+
 ## [0.1.1] - 2026-04-02
 
 ### Fixed
