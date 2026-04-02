@@ -16,8 +16,10 @@
   "knip": {
     "entry": [
       "lib/allocate-cli.js",
+      "lib/backfill-cli.js",
       "lib/capture-cli.js",
       "lib/combine-cli.js",
+      "lib/export-cli.js",
       "lib/list-cli.js",
       "lib/mask-cli.js",
       "lib/prune-cli.js",

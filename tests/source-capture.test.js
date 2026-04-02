@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { runSourceCapture } from "../lib/source-capture.js";
+import { exportDocumentsFromDb, getDatabasePath } from "../lib/sqlite-store.js";
 
 const tempDirs = [];
 
@@ -59,5 +60,11 @@ describe("runSourceCapture", () => {
     expect(fs.existsSync(currentPath)).toBe(true);
     const persisted = JSON.parse(fs.readFileSync(currentPath, "utf8"));
     expect(persisted.items[0].id).toBe("demo:42");
+
+    const dbPath = getDatabasePath(saveDir);
+    expect(fs.existsSync(dbPath)).toBe(true);
+
+    const exported = exportDocumentsFromDb(saveDir, { sources: ["demo"] });
+    expect(exported).toEqual(document);
   });
 });
