@@ -30,6 +30,7 @@
 - After `pnpm install`, run `pnpm approve-builds` and approve `agent-browser` if builds are blocked.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
 - Keep `assets_dir`, `save_dir`, and rendered HTML under the repo, not `/tmp`.
+- For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
 
 ## Supported platforms
 
@@ -73,7 +74,8 @@ feed-render  [input-json] [output-html] [--pick rows|all] [--tab] [--summary TEX
 - `feed-curate` exports a sqlite-backed workset, prints row-numbered selection output, and prints the relevant render/curation/summary config fields the agent should follow
 - If uncategorized rows exist in the current result set, `feed-curate` must fail and force classification before selection continues
 - Use `feed-classify --category Label:rows` to write category assignments back into sqlite
-- Category assignment requires manual reasoning by the (sub)agent(s). Read the uncategorized rows and assign explicit categories deliberately
+- Category assignment requires manual reasoning by the (sub)agent(s). Read the uncategorized rows and assign explicit categories deliberately.
+- Use ADs for sponsored-feeling promos, growth bait, product pushing, marked ads, anything that appears to be a promotion or marketing.
 - `feed-render` groups by category by default, applies the default mask if present, accepts optional subset and summary flags directly, writes HTML, and opens it
 - `--tab` toggles category selectors on; without `--tab`, items are grouped by category inline in a single feed
 - Default paths:
@@ -112,7 +114,7 @@ feed-render
 
 ```sh
 feed-capture x bluesky
-feed-curate --sources x,bluesky --matches 'trump,donald,maga,white house,potus,president,administration,gop,republican' 
+feed-curate --sources x,bluesky --matches 'trump,donald,maga,white house,potus,president,administration,gop,republican'
 # if feed-curate errors with uncategorized rows in this result set:
 # feed-classify --category Politics:14,18 --category Coding:2
 feed-render --summary 'US forces ...[insight from content]'
