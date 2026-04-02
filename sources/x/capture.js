@@ -1,18 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const {
-  ensureTab,
-  reloadCurrentTab,
-  evalJson,
-  evalText,
-} = require("../../lib/browser");
+const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
 const { getPreferredItemKey } = require("../../lib/item-shape");
 const { runSourceCapture } = require("../../lib/source-capture");
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function buildExtractionScript(limit) {
   return `(() => {
@@ -274,17 +265,46 @@ function buildExtractionScript(limit) {
   })()`;
 }
 
-async function captureDocument({ limit = 12 }) {
-  ensureTab("https://x.com/", "https://x.com/home");
-  reloadCurrentTab();
-  await sleep(5000);
-  evalText(`(() => {
+function prepareXFeed(browser) {
+  const shortWait = jitterTimeout(900, 300);
+  const mediumWait = jitterTimeout(1600, 500);
+  browser.ensureTab(
+    ["https://x.com/", "https://twitter.com/"],
+    "https://x.com/home",
+  );
+  browser.reloadCurrentTab();
+  browser.tryWaitForFunction("document.readyState === 'complete'", shortWait);
+  browser.tryWaitForFunction(
+    `(() => {
+      const articleCount = document.querySelectorAll('article').length;
+      const text = document.body?.innerText || "";
+      return articleCount > 0 || text.includes("For you") || text.includes("Following");
+    })()`,
+    mediumWait,
+  );
+  browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
   })()`);
-  await sleep(3000);
+  browser.tryWaitForFunction(
+    `(() => {
+      const articleCount = document.querySelectorAll('article').length;
+      const text = document.body?.innerText || "";
+      return articleCount > 0 || text.includes("For you") || text.includes("Following");
+    })()`,
+    jitterTimeout(900, 300),
+  );
+}
 
-  const document = evalJson(buildExtractionScript(limit));
+async function captureDocument({ limit = 12, browserOptions = {} }) {
+  const browser = createBrowserSession(browserOptions);
+  prepareXFeed(browser);
+
+  const document = browser.evalJson(buildExtractionScript(limit));
+  if ((document.items || []).length === 0) {
+    prepareXFeed(browser);
+    Object.assign(document, browser.evalJson(buildExtractionScript(limit)));
+  }
   const seen = new Set();
   document.items = (document.items || []).filter((item) => {
     const key = getPreferredItemKey(item, {
@@ -309,4 +329,5 @@ async function captureX(options) {
 
 module.exports = {
   captureX,
+  prepareXFeed,
 };

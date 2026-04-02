@@ -1,18 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const {
-  ensureTab,
-  reloadCurrentTab,
-  evalJson,
-  evalText,
-} = require("../../lib/browser");
+const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
 const { getPreferredItemKey } = require("../../lib/item-shape");
 const { runSourceCapture } = require("../../lib/source-capture");
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function extractLinkedInSourceItemId(url) {
   if (!url) return null;
@@ -473,11 +464,24 @@ function buildExtractionScript(limit) {
   })()`;
 }
 
-async function captureDocument({ limit = 12 }) {
-  ensureTab("https://www.linkedin.com/feed", "https://www.linkedin.com/feed/");
-  reloadCurrentTab();
-  await sleep(5000);
-  evalText(`(() => {
+function prepareLinkedInFeed(browser) {
+  const shortWait = jitterTimeout(900, 300);
+  const mediumWait = jitterTimeout(1600, 500);
+  browser.ensureTab(
+    "https://www.linkedin.com/feed",
+    "https://www.linkedin.com/feed/",
+  );
+  browser.reloadCurrentTab();
+  browser.tryWaitForFunction("document.readyState === 'complete'", shortWait);
+  browser.tryWaitForFunction(
+    `(() => {
+      const hasMain = Boolean(document.querySelector("main"));
+      const text = document.body?.innerText || "";
+      return hasMain || text.includes("Start a post") || text.includes("Feed");
+    })()`,
+    mediumWait,
+  );
+  browser.evalText(`(() => {
     const main = document.querySelector("main");
     if (main) {
       main.scrollTo({ top: 0, behavior: "instant" });
@@ -486,7 +490,19 @@ async function captureDocument({ limit = 12 }) {
     }
     return JSON.stringify({ ok: true });
   })()`);
-  await sleep(3000);
+  browser.tryWaitForFunction(
+    `(() => {
+      const actions = document.querySelectorAll('main a[href], main button').length;
+      const text = document.body?.innerText || "";
+      return actions > 0 || text.includes("Start a post") || text.includes("Comment");
+    })()`,
+    jitterTimeout(900, 300),
+  );
+}
+
+async function captureDocument({ limit = 12, browserOptions = {} }) {
+  const browser = createBrowserSession(browserOptions);
+  prepareLinkedInFeed(browser);
 
   const collectedItems = [];
   const seen = new Set();
@@ -504,7 +520,11 @@ async function captureDocument({ limit = 12 }) {
     }
   }
 
-  mergeBatch(evalJson(buildExtractionScript(limit)));
+  mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+  if (collectedItems.length === 0) {
+    prepareLinkedInFeed(browser);
+    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+  }
 
   const scrollPasses = Math.max(4, Math.min(14, limit + 2));
   let stagnantPasses = 0;
@@ -514,7 +534,10 @@ async function captureDocument({ limit = 12 }) {
     index += 1
   ) {
     const beforeCount = collectedItems.length;
-    evalText(`(() => {
+    const beforeMetrics = browser.evalJson(`(() => JSON.stringify({
+      scrollHeight: document.querySelector("main")?.scrollHeight || document.scrollingElement?.scrollHeight || 0
+    }))()`);
+    browser.evalText(`(() => {
       const main = document.querySelector("main");
       if (main) {
         main.scrollBy({ top: Math.round(main.clientHeight * 0.75), behavior: "instant" });
@@ -523,8 +546,13 @@ async function captureDocument({ limit = 12 }) {
       window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
       return JSON.stringify({ ok: true, target: "window", y: window.scrollY });
     })()`);
-    await sleep(1800);
-    mergeBatch(evalJson(buildExtractionScript(limit)));
+    try {
+      browser.waitForFunction(
+        `(document.querySelector("main")?.scrollHeight || document.scrollingElement?.scrollHeight || 0) > ${beforeMetrics.scrollHeight}`,
+        2500,
+      );
+    } catch {}
+    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
     stagnantPasses =
       collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
   }
@@ -550,5 +578,6 @@ module.exports = {
   captureLinkedIn,
   extractLinkedInSourceItemId,
   isLinkedInItemWorthKeeping,
+  prepareLinkedInFeed,
   scoreLinkedInItemQuality,
 };

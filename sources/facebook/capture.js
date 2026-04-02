@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-const {
-  ensureTab,
-  reloadCurrentTab,
-  evalText,
-  snapshotText,
-  getHtml,
-} = require("../../lib/browser");
+const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
 const {
   canonicalizeItemUrl,
   getPreferredItemKey,
@@ -28,10 +22,6 @@ const {
   parseSnapshotLine,
   scoreFacebookItemQuality,
 } = require("./parse");
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function findAuthorImageRef(lines, index, authorName) {
   for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
@@ -256,13 +246,13 @@ function parseSnapshotDocument(snapshot, limit) {
   };
 }
 
-function enrichFacebookItem(item) {
+function enrichFacebookItem(item, browser) {
   const media = [];
   const embeddedLinks = [];
   const seenEmbeddedLinks = new Set();
   for (const ref of item._media_refs || []) {
     try {
-      const html = getHtml(`@${ref.ref}`);
+      const html = browser.getHtml(`@${ref.ref}`);
       const src = extractImageSrcFromHtml(html);
       if (!src) continue;
       media.push({
@@ -277,7 +267,7 @@ function enrichFacebookItem(item) {
   let profileImageUrl = item.author?.profile_image_url || null;
   if (item._author_image_ref) {
     try {
-      const html = getHtml(`@${item._author_image_ref}`);
+      const html = browser.getHtml(`@${item._author_image_ref}`);
       profileImageUrl = extractImageSrcFromHtml(html) || profileImageUrl;
     } catch {}
   }
@@ -287,7 +277,7 @@ function enrichFacebookItem(item) {
   for (const linkRef of item._link_refs || []) {
     if (!linkRef?.ref) continue;
     try {
-      const html = getHtml(`@${linkRef.ref}`);
+      const html = browser.getHtml(`@${linkRef.ref}`);
       const href = canonicalizeItemUrl("facebook", extractHrefFromHtml(html));
       if (!href) continue;
 
@@ -326,15 +316,43 @@ function enrichFacebookItem(item) {
   };
 }
 
-async function captureDocument({ limit = 12 }) {
-  ensureTab("https://www.facebook.com/", "https://www.facebook.com/");
-  reloadCurrentTab();
-  await sleep(5000);
-  evalText(`(() => {
+function captureFacebookSnapshot(browser) {
+  try {
+    return browser.snapshotText(["-c", "-s", "main"]);
+  } catch {
+    return browser.snapshotText(["-c"]);
+  }
+}
+
+function prepareFacebookFeed(browser) {
+  const shortWait = jitterTimeout(900, 300);
+  const mediumWait = jitterTimeout(1600, 500);
+  browser.ensureTab("https://www.facebook.com/", "https://www.facebook.com/");
+  browser.reloadCurrentTab();
+  browser.tryWaitForFunction("document.readyState === 'complete'", shortWait);
+  browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
   })()`);
-  await sleep(3000);
+  browser.tryWaitForFunction(
+    `(() => {
+      const text = document.body?.innerText || "";
+      const feedishText =
+        text.includes("Feed posts") ||
+        text.includes("What's on your mind") ||
+        text.includes("Create story") ||
+        text.includes("Reels");
+      const feedishDom =
+        document.querySelectorAll('[role="feed"], [role="article"], div[aria-posinset]').length > 0;
+      return feedishText || feedishDom;
+    })()`,
+    mediumWait,
+  );
+}
+
+async function captureDocument({ limit = 12, browserOptions = {} }) {
+  const browser = createBrowserSession(browserOptions);
+  prepareFacebookFeed(browser);
 
   const collectedItems = [];
   const seen = new Set();
@@ -342,7 +360,7 @@ async function captureDocument({ limit = 12 }) {
   function mergeBatch(snapshot) {
     const document = parseSnapshotDocument(snapshot, limit * 2);
     for (const rawItem of document.items || []) {
-      const item = enrichFacebookItem(rawItem);
+      const item = enrichFacebookItem(rawItem, browser);
       if (!isFacebookItemWorthKeeping(item)) continue;
       const key = getPreferredItemKey(item, {
         source: "facebook",
@@ -354,7 +372,11 @@ async function captureDocument({ limit = 12 }) {
     }
   }
 
-  mergeBatch(snapshotText(["-c"]));
+  mergeBatch(captureFacebookSnapshot(browser));
+  if (collectedItems.length === 0) {
+    prepareFacebookFeed(browser);
+    mergeBatch(captureFacebookSnapshot(browser));
+  }
 
   const scrollPasses = Math.max(3, Math.min(8, limit));
   let stagnantPasses = 0;
@@ -364,12 +386,20 @@ async function captureDocument({ limit = 12 }) {
     index += 1
   ) {
     const beforeCount = collectedItems.length;
-    evalText(`(() => {
+    const beforeHeight = browser.evalJson(`(() => JSON.stringify({
+      scrollHeight: document.scrollingElement?.scrollHeight || document.body?.scrollHeight || 0
+    }))()`).scrollHeight;
+    browser.evalText(`(() => {
       window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
       return JSON.stringify({ ok: true, y: window.scrollY });
     })()`);
-    await sleep(1800);
-    mergeBatch(snapshotText(["-c"]));
+    try {
+      browser.waitForFunction(
+        `(document.scrollingElement?.scrollHeight || document.body?.scrollHeight || 0) > ${beforeHeight}`,
+        2500,
+      );
+    } catch {}
+    mergeBatch(captureFacebookSnapshot(browser));
     stagnantPasses =
       collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
   }
@@ -395,5 +425,6 @@ module.exports = {
   captureFacebook,
   extractFacebookSourceItemId,
   isFacebookItemWorthKeeping,
+  prepareFacebookFeed,
   scoreFacebookItemQuality,
 };

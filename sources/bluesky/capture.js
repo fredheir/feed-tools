@@ -1,18 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const {
-  ensureTab,
-  reloadCurrentTab,
-  evalJson,
-  evalText,
-} = require("../../lib/browser");
+const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
 const { getPreferredItemKey } = require("../../lib/item-shape");
 const { runSourceCapture } = require("../../lib/source-capture");
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function extractBlueskySourceItemId(url) {
   if (!url) return null;
@@ -194,15 +185,48 @@ function buildExtractionScript(limit) {
   })()`;
 }
 
-async function captureDocument({ limit = 12 }) {
-  ensureTab("https://bsky.app/", "https://bsky.app/");
-  reloadCurrentTab();
-  await sleep(5000);
-  evalText(`(() => {
+function prepareBlueskyFeed(browser) {
+  const shortWait = jitterTimeout(900, 300);
+  const mediumWait = jitterTimeout(1600, 500);
+  browser.ensureTab("https://bsky.app/", "https://bsky.app/");
+  const existingFeedState = browser.evalJson(`(() => JSON.stringify({
+    url: location.href,
+    feedItems: document.querySelectorAll('[data-testid^="feedItem-by-"]').length,
+    text: document.body?.innerText || ""
+  }))()`);
+  if (
+    String(existingFeedState.url || "").startsWith("https://bsky.app/") &&
+    Number(existingFeedState.feedItems || 0) > 0
+  ) {
+    return;
+  }
+  browser.reloadCurrentTab();
+  browser.tryWaitForFunction("document.readyState === 'complete'", shortWait);
+  browser.tryWaitForFunction(
+    `(() => {
+      const feedItems = document.querySelectorAll('[data-testid^="feedItem-by-"]').length;
+      const text = document.body?.innerText || "";
+      return feedItems > 0 || text.includes("Home") || text.includes("Discover");
+    })()`,
+    mediumWait,
+  );
+  browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
   })()`);
-  await sleep(2500);
+  browser.tryWaitForFunction(
+    `(() => {
+      const feedItems = document.querySelectorAll('[data-testid^="feedItem-by-"]').length;
+      const text = document.body?.innerText || "";
+      return feedItems > 0 || text.includes("Home") || text.includes("Discover");
+    })()`,
+    jitterTimeout(900, 300),
+  );
+}
+
+async function captureDocument({ limit = 12, browserOptions = {} }) {
+  const browser = createBrowserSession(browserOptions);
+  prepareBlueskyFeed(browser);
 
   const collectedItems = [];
   const seen = new Set();
@@ -219,7 +243,11 @@ async function captureDocument({ limit = 12 }) {
     }
   }
 
-  mergeBatch(evalJson(buildExtractionScript(limit)));
+  mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+  if (collectedItems.length === 0) {
+    prepareBlueskyFeed(browser);
+    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+  }
 
   const scrollPasses = Math.max(4, Math.min(12, limit + 2));
   let stagnantPasses = 0;
@@ -229,12 +257,20 @@ async function captureDocument({ limit = 12 }) {
     index += 1
   ) {
     const beforeCount = collectedItems.length;
-    evalText(`(() => {
+    const knownDomItems = browser.evalJson(`(() => JSON.stringify({
+      count: document.querySelectorAll('[data-testid^="feedItem-by-"]').length
+    }))()`).count;
+    browser.evalText(`(() => {
       window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
       return JSON.stringify({ ok: true, y: window.scrollY });
     })()`);
-    await sleep(1800);
-    mergeBatch(evalJson(buildExtractionScript(limit)));
+    try {
+      browser.waitForFunction(
+        `document.querySelectorAll('[data-testid^="feedItem-by-"]').length > ${knownDomItems}`,
+        2500,
+      );
+    } catch {}
+    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
     stagnantPasses =
       collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
   }
@@ -259,4 +295,5 @@ async function captureBluesky(options) {
 module.exports = {
   captureBluesky,
   extractBlueskySourceItemId,
+  prepareBlueskyFeed,
 };

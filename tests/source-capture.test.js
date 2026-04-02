@@ -17,10 +17,12 @@ describe("runSourceCapture", () => {
   test("normalizes and persists merged source documents", async () => {
     const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-tools-test-"));
     tempDirs.push(saveDir);
+    const seenOptions = [];
 
     const adapter = {
       name: "demo",
-      async captureDocument() {
+      async captureDocument(options) {
+        seenOptions.push(options);
         return {
           captured_at: "2026-04-03T10:00:00Z",
           items: [
@@ -36,7 +38,19 @@ describe("runSourceCapture", () => {
       },
     };
 
-    const document = await runSourceCapture(adapter, { saveDir });
+    const document = await runSourceCapture(adapter, {
+      saveDir,
+      browserOptions: { session: "demo-session", autoConnect: false },
+    });
+
+    expect(seenOptions).toHaveLength(1);
+    expect(seenOptions[0]).toMatchObject({
+      limit: 12,
+      browserOptions: {
+        session: "demo-session",
+        autoConnect: false,
+      },
+    });
 
     expect(document.source).toBe("demo");
     expect(document.items).toHaveLength(1);
