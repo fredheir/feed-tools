@@ -34,6 +34,7 @@ describe("renderDocument", () => {
         },
       ],
       mask: {
+        tabbed: false,
         tabs: [
           { label: "Coding", groups: [{ label: "Coding", item_ids: ["x:1"] }] },
           {

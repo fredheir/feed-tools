@@ -18,7 +18,9 @@ afterEach(() => {
 
 describe("feed-classify", () => {
   test("writes category assignments to sqlite", () => {
-    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-classify-test-"));
+    const saveDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "feed-classify-test-"),
+    );
     tempDirs.push(saveDir);
     const outputPath = path.join(saveDir, "workset.json");
     const document = {
@@ -40,7 +42,11 @@ describe("feed-classify", () => {
       sourceName: "x",
       document,
     });
-    fs.writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`, "utf8");
+    fs.writeFileSync(
+      outputPath,
+      `${JSON.stringify(document, null, 2)}\n`,
+      "utf8",
+    );
 
     execFileSync(
       "node",

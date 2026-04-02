@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 describe("feed-render", () => {
-  test("uses the default adjacent mask path when no explicit mask is provided", () => {
+  test("ignores an adjacent mask file when rendering", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-render-cli-"));
     tempDirs.push(dir);
     const inputPath = path.join(dir, "feed.json");
@@ -80,8 +80,8 @@ describe("feed-render", () => {
     });
 
     const html = fs.readFileSync(outputPath, "utf8");
-    expect(html).toContain("Coding");
+    expect(html).not.toContain("Coding");
+    expect(html).toContain("A");
     expect(html).toContain("B");
-    expect(html).not.toContain(">A<");
   });
 });

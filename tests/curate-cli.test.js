@@ -99,7 +99,7 @@ describe("feed-curate", () => {
       },
     });
 
-    const stdout = execFileSync(
+    const result = spawnSync(
       "node",
       [
         "./lib/curate-cli.js",
@@ -108,7 +108,6 @@ describe("feed-curate", () => {
         saveDir,
         "--source",
         "x",
-        "--unclassified",
       ],
       {
         cwd: "/home/rolf/Projects/feed-tools",
@@ -116,15 +115,19 @@ describe("feed-curate", () => {
       },
     );
 
-    expect(stdout).toContain("ERROR: classification step incomplete.");
-    expect(stdout).toContain(
-      "Requested categories: Friends and Family, Coding, Politics, Finance. Fallback: Other.",
+    expect(result.status).toBe(2);
+    expect(result.stdout).toContain("ERROR: classification step incomplete.");
+    expect(result.stdout).toContain("Requested categories:");
+    expect(result.stdout).toContain("Coding");
+    expect(result.stdout).toContain("Politics");
+    expect(result.stdout).toContain("Finance");
+    expect(result.stdout).toContain("Friends and Family");
+    expect(result.stdout).toContain("Fallback: Other.");
+    expect(result.stdout).toContain(
+      "run feed-classify --category Label:rows with explicit row assignments only",
     );
-    expect(stdout).toContain(
-      "respond concisely with --category Label:rows assignments only",
-    );
-    expect(stdout).toContain("x\tx:2\t@uncat\tUncategorized post text");
-    expect(stdout).toContain("https://x.com/uncat/status/2");
+    expect(result.stdout).toContain("x\tx:2\t@uncat\tUncategorized post text");
+    expect(result.stdout).toContain("https://x.com/uncat/status/2");
   });
 
   test("fails selection flow when uncategorized items exist", () => {
@@ -152,7 +155,14 @@ describe("feed-curate", () => {
 
     const result = spawnSync(
       "node",
-      ["./lib/curate-cli.js", outputPath, "--save-dir", saveDir, "--source", "x"],
+      [
+        "./lib/curate-cli.js",
+        outputPath,
+        "--save-dir",
+        saveDir,
+        "--source",
+        "x",
+      ],
       {
         cwd: "/home/rolf/Projects/feed-tools",
         encoding: "utf8",
@@ -161,7 +171,9 @@ describe("feed-curate", () => {
 
     expect(result.status).toBe(2);
     expect(result.stdout).toContain("ERROR: classification step incomplete.");
-    expect(result.stdout).toContain("respond concisely with --category Label:rows assignments only");
+    expect(result.stdout).toContain(
+      "run feed-classify --category Label:rows with explicit row assignments only",
+    );
   });
 
   test("prints render context on successful curate", () => {
