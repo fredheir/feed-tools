@@ -44,6 +44,19 @@ describe("buildAgentBrowserArgs", () => {
     expect(args).toEqual(["--auto-connect", "get", "url"]);
   });
 
+  test("treats cdp as mutually exclusive with headed and auto-connect", () => {
+    const args = buildAgentBrowserArgs(
+      {
+        cdp: "9222",
+        headed: true,
+        autoConnect: true,
+      },
+      ["snapshot", "-i"],
+    );
+
+    expect(args).toEqual(["--cdp", "9222", "snapshot", "-i"]);
+  });
+
   test("strips startup-only options from runtime session reuse", () => {
     const runtime = getRuntimeBrowserOptions({
       auto_connect: false,
@@ -60,6 +73,20 @@ describe("buildAgentBrowserArgs", () => {
       statePath: null,
       profile: null,
       args: [],
+      headed: false,
+    });
+  });
+
+  test("normalizes cdp config to disable headed and auto-connect", () => {
+    const runtime = getRuntimeBrowserOptions({
+      cdp: "9222",
+      auto_connect: true,
+      headed: true,
+    });
+
+    expect(runtime).toMatchObject({
+      cdp: "9222",
+      autoConnect: false,
       headed: false,
     });
   });

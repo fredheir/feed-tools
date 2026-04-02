@@ -20,21 +20,26 @@
 3. Ensure chrome/chromium is installed
 4. Default to the user's existing Chrome via CDP. (check with ss -tlnp | grep 9222)
 5. If the user's browser exposes remote debugging on `127.0.0.1:9222`, set `capture.browser.cdp` to `9222` in `config.json` and reuse that browser
-6. Default `capture.browser.args` to `["--no-sandbox"]`
-7. Access each platform specified in `config.json`
+6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`
+7. Before the first `feed-capture` against a CDP browser, prime the daemon with `agent-browser --cdp 9222 snapshot`
+8. Default `capture.browser.args` to `["--no-sandbox"]`
+9. Access each platform specified in `config.json`
 
 ## Setup gotchas
 
 - SSH clone may fail in sandboxed environments; use HTTPS with `gh auth token` if needed.
 - If `corepack enable` fails in a read-only environment, install pnpm with npm into `~/.local` and prepend `~/.local/bin` to `PATH`.
 - After `pnpm install`, run `pnpm approve-builds` and approve `agent-browser` if builds are blocked (its interactive).
+- If `pnpm approve-builds` blocks in a non-TTY environment, run `node node_modules/agent-browser/scripts/postinstall.js` directly.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
 - Keep `assets_dir`, `save_dir`, and rendered HTML under the repo, not `/tmp`.
+- Open `./var/feed.html` directly in a browser so relative `feed-assets/` paths resolve; do not rely on a file viewer that fails to serve sibling directories.
 - For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
 
 ## Troubleshooting
 
-This is alpha software. You will likely need to make proactive fixes. If you encounter friction, take out an issue on github, or better a PR with a verified fix.
+- This is alpha software. You will likely need to make proactive fixes. If you encounter friction, take out an issue on github, or better a PR with a verified fix.
+- If you are in a sandbox and hit errors with assets not being found, ask findmnt -T <path> for the mount target/source and use that to construct the right path to open in the user's browser.
 
 ## Supported platforms
 
