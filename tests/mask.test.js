@@ -203,4 +203,60 @@ describe("applyMask", () => {
     expect(masked.items.map((item) => item.id)).toEqual(["x:new"]);
     expect(masked.mask.item_ids).toEqual(["x:new"]);
   });
+
+  test("preserves explicit selection order across sources when expanding masks", () => {
+    const doc = {
+      schema_version: 1,
+      source: "combined",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "facebook:1",
+          source: "facebook",
+          index: 1,
+          url: "https://facebook.com/posts/1",
+          thread: {},
+        },
+        {
+          id: "x:1",
+          source: "x",
+          index: 2,
+          url: "https://x.com/a/status/1",
+          thread: {},
+        },
+        {
+          id: "bluesky:1",
+          source: "bluesky",
+          index: 3,
+          url: "https://bsky.app/profile/a/post/1",
+          thread: {},
+        },
+      ],
+    };
+
+    const masked = applyMask(doc, {
+      tabs: [
+        {
+          label: "Politics",
+          groups: [
+            {
+              label: "Politics",
+              item_ids: ["bluesky:1", "x:1", "facebook:1"],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(masked.items.map((item) => item.id)).toEqual([
+      "bluesky:1",
+      "x:1",
+      "facebook:1",
+    ]);
+    expect(masked.mask.tabs[0].groups[0].item_ids).toEqual([
+      "bluesky:1",
+      "x:1",
+      "facebook:1",
+    ]);
+  });
 });
