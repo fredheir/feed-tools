@@ -15,20 +15,10 @@
   },
   "knip": {
     "entry": [
-      "lib/allocate-cli.js",
-      "lib/backfill-cli.js",
       "lib/capture-cli.js",
-      "lib/combine-cli.js",
+      "lib/classify-cli.js",
       "lib/curate-cli.js",
-      "lib/export-cli.js",
-      "lib/list-cli.js",
-      "lib/mask-cli.js",
-      "lib/open-cli.js",
-      "lib/override-cli.js",
-      "lib/prune-cli.js",
-      "lib/render-cli.js",
-      "lib/refresh-cli.js",
-      "lib/view-cli.js"
+      "lib/render-cli.js"
     ],
     "project": [
       "lib/**/*.js",
