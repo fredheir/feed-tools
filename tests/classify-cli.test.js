@@ -50,7 +50,14 @@ describe("feed-classify", () => {
 
     execFileSync(
       "node",
-      ["./lib/classify-cli.js", outputPath, "--category", "Politics:1"],
+      [
+        "./lib/classify-cli.js",
+        outputPath,
+        "--save-dir",
+        saveDir,
+        "--category",
+        "Politics:1",
+      ],
       {
         cwd: "/home/rolf/Projects/feed-tools",
         encoding: "utf8",
