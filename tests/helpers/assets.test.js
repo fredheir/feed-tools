@@ -1,0 +1,88 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { downloadDocumentAssets } from "../../lib/assets.js";
+
+const tempDirs = [];
+const originalFetch = global.fetch;
+
+afterEach(() => {
+  global.fetch = originalFetch;
+  vi.restoreAllMocks();
+  for (const dir of tempDirs.splice(0)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+describe("downloadDocumentAssets", () => {
+  test("downloads author, media, and card assets into the assets directory", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get(name) {
+          return name === "content-type" ? "image/png" : null;
+        },
+      },
+      async arrayBuffer() {
+        return Uint8Array.from([1, 2, 3]).buffer;
+      },
+    }));
+
+    const document = {
+      items: [
+        {
+          index: 1,
+          author: { profile_image_url: "https://example.com/profile" },
+          media: [{ src: "https://example.com/media.jpg" }],
+          cards: [{ image_url: "https://example.com/card" }],
+        },
+      ],
+    };
+
+    await downloadDocumentAssets(document, assetsDir);
+
+    expect(document.items[0].author.profile_image_local).toContain(assetsDir);
+    expect(document.items[0].media[0].local_src).toContain(assetsDir);
+    expect(document.items[0].cards[0].image_local).toContain(assetsDir);
+    expect(fs.existsSync(document.items[0].author.profile_image_local)).toBe(
+      true,
+    );
+    expect(fs.existsSync(document.items[0].media[0].local_src)).toBe(true);
+    expect(fs.existsSync(document.items[0].cards[0].image_local)).toBe(true);
+  });
+
+  test("falls back to placeholders or original urls when downloads fail", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    global.fetch = vi.fn(async () => {
+      throw new Error("offline");
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const document = {
+      items: [
+        {
+          index: 2,
+          author: { profile_image_url: "https://example.com/profile" },
+          media: [{ src: "https://example.com/media.jpg" }],
+          cards: [{ image_url: "https://example.com/card" }],
+        },
+      ],
+    };
+
+    await downloadDocumentAssets(document, assetsDir);
+
+    expect(document.items[0].author.profile_image_local).toMatch(
+      /^data:image\/svg\+xml/,
+    );
+    expect(document.items[0].media[0].local_src).toBe(
+      "https://example.com/media.jpg",
+    );
+    expect(document.items[0].cards[0].image_local).toBe(
+      "https://example.com/card",
+    );
+  });
+});

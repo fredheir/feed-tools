@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "user_preferences": {
+    "sources": [
+      {
+        "name": "facebook",
+        "enabled": true,
+        "default": false,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "./var/feed-assets",
+          "save_dir": "./var/feed-archive",
+          "browser": {
+            "cdp": "9222",
+            "auto_connect": false,
+            "headed": true,
+            "args": ["--no-sandbox"]
+          }
+        }
+      },
+      {
+        "name": "x",
+        "enabled": true,
+        "default": true,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "./var/feed-assets",
+          "save_dir": "./var/feed-archive",
+          "browser": {
+            "cdp": "9222",
+            "auto_connect": false,
+            "headed": true,
+            "args": ["--no-sandbox"]
+          }
+        }
+      },
+      {
+        "name": "bluesky",
+        "enabled": true,
+        "default": false,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "./var/feed-assets",
+          "save_dir": "./var/feed-archive",
+          "browser": {
+            "cdp": "9222",
+            "auto_connect": false,
+            "headed": true,
+            "args": ["--no-sandbox"]
+          }
+        }
+      },
+      {
+        "name": "linkedin",
+        "enabled": true,
+        "default": false,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "./var/feed-assets",
+          "save_dir": "./var/feed-archive",
+          "browser": {
+            "cdp": "9222",
+            "auto_connect": false,
+            "headed": true,
+            "args": ["--no-sandbox"]
+          }
+        }
+      }
+    ],
+    "render": {
+      "show_summary": true,
+      "show_tabs": true
+    },
+    "curation": {
+      "default_mode": "mask",
+      "preferred_categories": [
+        "Coding",
+        "Politics",
+        "Finance",
+        "Friends and Family"
+      ],
+      "allow_multi_tab_views": true,
+      "target_items_per_tab": 10,
+      "fallback_category": "Other",
+      "relevance_policy": "Aim for about 10 items per tab, but do not pad with weak or irrelevant items. It is better to show fewer than 10 than to dilute the tab."
+    },
+    "summary": {
+      "default_style": "concise",
+      "populate_on_request_only": true,
+      "custom_instructions": "Avoid empty framing and generic scene-setting. Do not write lead-ins like 'the highest-signal items' or 'this refresh centers on'. Write one flat bullet per category with concrete highlights only.",
+      "purpose": "Top highlights for this user if they only read one thing.",
+      "prefer_minimal_agent_writing": true
+    }
+  },
+  "summary": {
+    "notes": "User-editable preferences live under user_preferences."
+  }
+}

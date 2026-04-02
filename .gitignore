@@ -1,0 +1,9 @@
+config.json
+node_modules/
+.tmp/
+var/
+.desloppify/
+.agents/skills/desloppify/
+.codex
+scorecard.png
+.changelog-audit-cursor
