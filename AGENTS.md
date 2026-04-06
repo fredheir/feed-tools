@@ -13,6 +13,17 @@
 - Preferences file: `config.json`
 - Default config template: `config.json.example`
 
+## Cloning (private repo)
+
+```sh
+# SSH
+git clone git@github.com:fredheir/feed-tools.git
+# GitHub CLI
+gh repo clone fredheir/feed-tools
+# HTTPS with token (sandboxed/keyless environments)
+git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
+```
+
 ## Minimal setup
 
 1. Install node + npm + pnpm
@@ -26,7 +37,7 @@
 
 ## Setup gotchas
 
-- SSH clone may fail in sandboxed environments; use HTTPS with `gh auth token` if needed.
+- SSH clone requires a GitHub SSH key; in sandboxed or keyless environments use the HTTPS-with-token method from the Cloning section above.
 - If `corepack enable` fails in a read-only environment, install pnpm with npm into `~/.local` and prepend `~/.local/bin` to `PATH`.
 - After `pnpm install`, run `pnpm approve-builds` and approve `agent-browser` if builds are blocked (its interactive).
 - If `pnpm approve-builds` blocks in a non-TTY environment, run `node node_modules/agent-browser/scripts/postinstall.js` directly.
