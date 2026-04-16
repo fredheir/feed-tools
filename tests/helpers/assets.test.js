@@ -8,9 +8,20 @@ import { downloadDocumentAssets } from "../../lib/assets.js";
 const tempDirs = [];
 const originalFetch = global.fetch;
 const repoRoot = path.resolve(import.meta.dirname, "../..");
+const originalPath = process.env.PATH || "";
+
+function prependFakeBin(commands) {
+  const binDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-bin-"));
+  tempDirs.push(binDir);
+  for (const command of commands) {
+    fs.writeFileSync(path.join(binDir, command), "");
+  }
+  process.env.PATH = `${binDir}${path.delimiter}${originalPath}`;
+}
 
 afterEach(() => {
   global.fetch = originalFetch;
+  process.env.PATH = originalPath;
   vi.restoreAllMocks();
   fs.rmSync(path.join(repoRoot, "chrome-profile"), {
     recursive: true,
