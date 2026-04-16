@@ -71,7 +71,7 @@ Then set `"cdp": "9222"` in each source's `capture.browser` block and omit `head
 
 ## Troubleshooting
 
-- This is alpha software. You will likely need to make proactive fixes. If you encounter friction, take out an issue on github, or better a PR with a verified fix.
+- Expect to make proactive fixes. If you hit friction, open an issue or send a verified PR.
 - If you are in a sandbox and hit errors with assets not being found, ask findmnt -T <path> for the mount target/source and use that to construct the right path to open in the user's browser.
 - If the first CDP command stalls, try `agent-browser --cdp 9222 snapshot` once to warm the daemon. A snapshot timeout is not fatal if `feed-capture` succeeds immediately afterward.
 
