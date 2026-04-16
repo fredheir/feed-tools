@@ -58,6 +58,10 @@ describe("feed-capture-cic prep", () => {
   test("rejects unknown source", () => {
     expect(() => run(["prep", "nonexistent"])).toThrow();
   });
+
+  test("rejects prototype-chain keys", () => {
+    expect(() => run(["prep", "toString"])).toThrow();
+  });
 });
 
 describe("feed-capture-cic extract", () => {
@@ -90,6 +94,10 @@ describe("feed-capture-cic extract", () => {
 
   test("rejects unsupported source", () => {
     expect(() => run(["extract", "facebook"])).toThrow();
+  });
+
+  test("rejects prototype-chain keys", () => {
+    expect(() => run(["extract", "toString"])).toThrow();
   });
 });
 
@@ -143,6 +151,24 @@ describe("feed-capture-cic ingest", () => {
 
   test("rejects missing json file", () => {
     expect(() => run(["ingest", "x", "/nonexistent.json"])).toThrow();
+  });
+
+  test("rejects unknown source before ingest", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cic-test-"));
+    const jsonFile = join(tmp, "capture.json");
+
+    writeFileSync(
+      jsonFile,
+      JSON.stringify({
+        schema_version: 1,
+        source: "x",
+        captured_at: new Date().toISOString(),
+        items: [],
+      }),
+    );
+
+    expect(() => run(["ingest", "xs", jsonFile])).toThrow();
+    expect(() => run(["ingest", "toString", jsonFile])).toThrow();
   });
 });
 
