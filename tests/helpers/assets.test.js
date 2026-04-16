@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import childProcess from "node:child_process";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { downloadDocumentAssets } from "../../lib/assets.js";
 
@@ -84,5 +85,52 @@ describe("downloadDocumentAssets", () => {
     expect(document.items[0].cards[0].image_local).toBe(
       "https://example.com/card",
     );
+  });
+
+  test("downloads local x video assets with yt-dlp when video media is present", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get(name) {
+          return name === "content-type" ? "image/jpeg" : null;
+        },
+      },
+      async arrayBuffer() {
+        return Uint8Array.from([4, 5, 6]).buffer;
+      },
+    }));
+
+    const downloadedVideo = path.join(assetsDir, "video-7-abcd1234.mp4");
+    fs.writeFileSync(downloadedVideo, Uint8Array.from([1, 2, 3]));
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(() => {
+      return `${downloadedVideo}\n`;
+    });
+
+    const document = {
+      items: [
+        {
+          index: 7,
+          source: "x",
+          url: "https://x.com/example/status/123",
+          author: {},
+          media: [
+            {
+              src: "https://pbs.twimg.com/ext_tw_video_thumb/123/img/poster.jpg",
+              href: "https://x.com/example/status/123",
+              media_kind: "video",
+            },
+          ],
+          cards: [],
+        },
+      ],
+    };
+
+    await downloadDocumentAssets(document, assetsDir);
+
+    expect(document.items[0].media[0].local_video_src).toBe(downloadedVideo);
+    expect(document.items[0].media[0].local_src).toContain(assetsDir);
+    expect(fs.existsSync(document.items[0].media[0].local_src)).toBe(true);
   });
 });
