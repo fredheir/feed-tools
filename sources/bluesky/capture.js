@@ -242,7 +242,7 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
   const seen = new Set();
 
   function mergeBatch(document) {
-    collectUniqueItems(document?.items, {
+    collectUniqueItems(document.items, {
       seen,
       sourceName: "bluesky",
       target: collectedItems,
@@ -307,6 +307,7 @@ const source = {
 const prepareFeed = prepareBlueskyFeed;
 
 module.exports = {
+  buildExtractionScript,
   source,
   prepareFeed,
   extractBlueskySourceItemId,

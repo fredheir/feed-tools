@@ -518,7 +518,7 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
   const seen = new Set();
 
   function mergeBatch(document) {
-    collectUniqueItems(document?.items, {
+    collectUniqueItems(document.items, {
       seen,
       sourceName: "linkedin",
       target: collectedItems,
@@ -588,6 +588,7 @@ const source = {
 const prepareFeed = prepareLinkedInFeed;
 
 module.exports = {
+  buildExtractionScript,
   source,
   prepareFeed,
   extractLinkedInSourceItemId,

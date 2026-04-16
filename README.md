@@ -12,7 +12,7 @@ https://github.com/fredheir/feed-tools.git
 
 Place this in the user's workspace, not in a sandbox - files should be accessible for the html rendering process.
 
-Then read AGENTS.md and follow the instructions.
+Then read [AGENTS.md](./AGENTS.md) and follow the instructions.
 
 Ask me questions about my preferences:
 - which platforms I care about
@@ -31,13 +31,13 @@ Use the current core flow:
 - if needed, feed-classify
 - feed-render
 
-As a follow up after the inital run you could offer to render a feed about a particular topic (see Topic Flow).
+After the initial run, offer to render a feed about a particular topic (see Topic Flow).
 
 ```
 
 ## What the repo does
 
-- Captures feeds from `x`, `facebook`, `linkedin`, and `bluesky`
+- Captures feeds from `x`, `facebook`, `linkedin`, `bluesky`, and `tiktok`
 - Persists feed state in sqlite under `./var/feed-archive`
 - Supports row-based curation and explicit classification before rendering
 - Renders a local HTML feed under `./var/feed.html`
@@ -45,6 +45,6 @@ As a follow up after the inital run you could offer to render a feed about a par
 
 ## First-run notes
 
-- Read [AGENTS.md](/home/rolf/Projects/feed-tools/AGENTS.md) before doing anything else
+- Read [AGENTS.md](./AGENTS.md) before doing anything else
 - Keep generated state and output under `./var`
 - Expect the main working files to be `./var/feed.json`, `./var/feed.html`, and `./var/feed-archive/feed.sqlite`

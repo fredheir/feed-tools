@@ -90,4 +90,37 @@ describe("renderDocument", () => {
 
     expect(html.indexOf("Original")).toBeLessThan(html.indexOf("Reply"));
   });
+
+  test("injects viewport autoplay script for rendered videos", () => {
+    const html = renderDocument({
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "x:1",
+          source: "x",
+          index: 1,
+          url: "https://x.com/a/status/1",
+          author: { handle: "@a" },
+          content: { text: "Video" },
+          stats: {},
+          media: [
+            {
+              media_kind: "video",
+              href: "https://x.com/a/status/1",
+              local_src: "feed-assets/poster.jpg",
+              local_video_src: "feed-assets/video.mp4",
+            },
+          ],
+          cards: [],
+          thread: {},
+        },
+      ],
+    });
+
+    expect(html).toContain("IntersectionObserver");
+    expect(html).toContain('document.querySelectorAll(".media-video")');
+    expect(html).toContain("video.play()");
+  });
 });

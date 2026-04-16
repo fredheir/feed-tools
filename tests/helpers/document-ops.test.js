@@ -36,6 +36,15 @@ describe("document ops", () => {
     ]);
   });
 
+  test("rejects malformed document inputs with explicit errors", () => {
+    expect(() => combineDocuments(null)).toThrow(
+      "Expected an array of standardized feed documents",
+    );
+    expect(() => pruneDocument(null, { drop: "x:1" })).toThrow(
+      "Expected standardized feed document with .items array in pruneDocument",
+    );
+  });
+
   test("prunes documents with keep and drop selections", () => {
     const document = {
       schema_version: 1,

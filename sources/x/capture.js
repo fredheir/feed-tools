@@ -107,7 +107,24 @@ function buildExtractionScript(limit) {
           /_mini\\./.test(src)
         );
       });
-      return fallback?.src || null;
+      if (fallback?.src) return fallback.src;
+
+      // Fallback: extract from background-image CSS (works in CiC where
+      // the security filter strips <img> elements but leaves CSS intact).
+      const avatarContainer =
+        article.querySelector('[data-testid="Tweet-User-Avatar"]') ||
+        article.querySelector('[data-testid^="UserAvatar-Container-"]');
+      if (avatarContainer) {
+        const divs = Array.from(avatarContainer.querySelectorAll("div"));
+        for (const div of divs) {
+          const bg = getComputedStyle(div).backgroundImage;
+          if (bg && bg !== "none" && bg.includes("profile_images")) {
+            const match = bg.match(/url\\("?([^")]+)"?\\)/);
+            if (match) return match[1];
+          }
+        }
+      }
+      return null;
     }
 
     function isHydratedItem(item) {
@@ -270,6 +287,7 @@ function buildExtractionScript(limit) {
         if (fallbackQuote) cards.push(fallbackQuote);
       }
       const media = getEmbeddedMedia(article);
+      for (const m of media) { if (!m.href && url) m.href = url; }
 
       return {
         source: "x",
@@ -457,6 +475,7 @@ const source = {
 const prepareFeed = prepareXFeed;
 
 module.exports = {
+  buildExtractionScript,
   source,
   prepareFeed,
 };

@@ -41,22 +41,21 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 - If `corepack enable` fails in a read-only environment, install pnpm with npm into `~/.local` and prepend `~/.local/bin` to `PATH`.
 - After `pnpm install`, run `pnpm approve-builds` and approve `agent-browser` if builds are blocked (its interactive).
 - If `pnpm approve-builds` blocks in a non-TTY environment, run `node node_modules/agent-browser/scripts/postinstall.js` directly.
-- In sandboxed or ephemeral environments, do not rely on `~` for Chrome binaries or profiles because home is wiped between sessions.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
 - Keep `assets_dir`, `save_dir`, and rendered HTML under the repo, not `/tmp`.
 - Open `./var/feed.html` directly in a browser so relative `feed-assets/` paths resolve; do not rely on a file viewer that fails to serve sibling directories.
 - For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
 
-## Sandbox browser fallback
+## Sandbox / ephemeral environment
 
-If the sandbox cannot access the user's main browser outside it, install Chrome inside the persistent workspace and keep the profile there too.
+Home (`~`) is wiped between sessions. Install Chrome and keep the profile in the **persistent workspace folder** (wherever the repo lives):
 
 ```sh
 wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
 dpkg -x /tmp/chrome.deb <WORKSPACE>/chrome-install
 ```
 
-Start Chrome with `setsid nohup`; a plain `&` may die when the shell exits between tool calls.
+Daemonize with `setsid nohup` — plain `&` dies when the shell exits between tool calls:
 
 ```sh
 DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
@@ -75,7 +74,7 @@ DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chro
 
 ## Troubleshooting
 
-- This is alpha software. You will likely need to make proactive fixes. If you encounter friction, take out an issue on github, or better a PR with a verified fix.
+- Expect to make proactive fixes. If you hit friction, open an issue or send a verified PR.
 - If you are in a sandbox and hit errors with assets not being found, ask findmnt -T <path> for the mount target/source and use that to construct the right path to open in the user's browser.
 - If the first CDP command stalls, try `agent-browser --cdp 9222 snapshot` once to warm the daemon. A snapshot timeout is not fatal if `feed-capture` succeeds immediately afterward.
 
@@ -85,6 +84,7 @@ DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chro
 - x
 - bluesky
 - linkedin
+- tiktok
 
 ## Core entry points
 
@@ -145,6 +145,78 @@ feed-render  [input-json] [output-html] [--pick rows|all] [--tab] [--summary TEX
 
 - Source adapters: `sources/<source>/capture.js`
 - Shared code: `lib/config.js`, `lib/browser.js`, `lib/assets.js`, `lib/mask.js`, `lib/render-html.js`, `lib/render-item.js`, `lib/render-css.js`, `lib/merge.js`
+
+## Claude in Chrome (CiC) capture
+
+An alternative to the CDP/agent-browser capture path. Instead of
+launching or connecting to a headless browser, the agent drives the
+user's real Chrome via Cowork's Claude in Chrome MCP tools.
+
+### When to use CiC
+
+- The user's browser is already authenticated on the target platforms
+- No CDP daemon or headless Chrome is available
+- Running inside Cowork / Claude Desktop with the Chrome connector enabled
+
+### Supported sources
+
+`x`, `bluesky`, `linkedin`. Facebook is not supported because its
+adapter relies on accessibility-tree snapshots (`snapshotText`), which
+have no direct CiC equivalent yet.
+
+### CLI
+
+```text
+feed-capture-cic prep <source>
+feed-capture-cic extract <source> [limit]
+feed-capture-cic ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
+```
+
+### Agent orchestration flow
+
+```
+# 1. Get navigation + ready-check metadata
+prep=$(./bin/feed-capture-cic prep x)
+
+# 2. Navigate via CiC MCP
+#    → mcp__Claude_in_Chrome__navigate({ url: prep.url, tabId })
+
+# 3. Run each readyCheck via CiC javascript_tool
+#    → mcp__Claude_in_Chrome__javascript_tool({ text: check, tabId })
+
+# 4. Scroll to top
+#    → mcp__Claude_in_Chrome__javascript_tool({ text: prep.scrollTopScript, tabId })
+
+# 5. Get extraction script and run it via console.log channel
+script=$(./bin/feed-capture-cic extract x 30)
+#    The CiC security filter blocks URL-containing JSON in return values.
+#    Wrap the script to output via console.log, which is unfiltered:
+#    → mcp__Claude_in_Chrome__javascript_tool({
+#        text: 'console.log("CIC_DATA:" + (' + script + '))',
+#        tabId
+#      })
+#    → mcp__Claude_in_Chrome__read_console_messages({
+#        tabId, pattern: "CIC_DATA", clear: true
+#      })
+#    → strip prefix, save result JSON to ./var/cic-capture.json
+
+# 6. (Optional) Scroll loop for more items
+#    → mcp__Claude_in_Chrome__javascript_tool({ text: prep.scrollDownScript, tabId })
+#    → re-run extraction via same console.log pattern, merge results
+
+# 7. Ingest into the standard pipeline
+./bin/feed-capture-cic ingest x ./var/cic-capture.json
+
+# 8. Continue with normal curation
+./bin/feed-curate --sources x
+./bin/feed-render --tab
+```
+
+### Config
+
+No special config is needed. CiC capture reads the same `config.json`
+for `assets_dir`, `save_dir`, and curation settings. The `browser`
+block is ignored when using the CiC path.
 
 ## Example flows
 

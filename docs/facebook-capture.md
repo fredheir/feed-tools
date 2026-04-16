@@ -1,12 +1,10 @@
 # Facebook Capture Patterns
 
-This source is not maintained from generic DOM text scraping. Facebook obfuscates
-the timestamp/status line and broad container text pulls in garbage.
-
 Use the compact `agent-browser snapshot -c` output as the primary structure
-signal.
+signal. Broad container text pulls in noise, and the timestamp/status line is
+obfuscated.
 
-Verified feed pattern:
+Feed pattern:
 
 1. `heading(level=3) "Feed posts"` marks the start of the main feed region.
 2. Each post starts with `heading(level=4)` for the author or page name.

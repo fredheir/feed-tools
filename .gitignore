@@ -7,3 +7,6 @@ var/
 .codex
 scorecard.png
 .changelog-audit-cursor
+chrome-install/
+chrome-profile/
+chrome.log

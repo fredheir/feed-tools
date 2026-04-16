@@ -282,7 +282,7 @@ function enrichFacebookItem(item, browser) {
   let permalinkUrl = item.url || null;
   let sourceItemId = item.source_item_id || null;
   for (const linkRef of item._link_refs || []) {
-    if (!linkRef?.ref) continue;
+    if (!linkRef.ref) continue;
     try {
       const html = browser.getHtml(`@${linkRef.ref}`);
       const href = canonicalizeItemUrl("facebook", extractHrefFromHtml(html));

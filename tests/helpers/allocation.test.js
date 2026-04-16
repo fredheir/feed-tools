@@ -114,6 +114,12 @@ describe("allocation helpers", () => {
     expect(assigned.items["x:1"].updated_at).toEqual(expect.any(String));
   });
 
+  test("rejects invalid documents in helper entry points", () => {
+    expect(() => assignCategories(null, { items: {} }, [])).toThrow(
+      "Expected standardized feed document with .items array in assignCategories",
+    );
+  });
+
   test("groups picked rows by category with preferred ordering", () => {
     const document = {
       schema_version: 1,
@@ -142,6 +148,21 @@ describe("allocation helpers", () => {
 
     expect(
       groupPickedRowsByCategory(document, allocation, "1,2", {
+        preferredCategories: ["ADs"],
+      }),
+    ).toEqual([
+      {
+        label: "ADs",
+        groups: [{ label: "ADs", item_ids: ["linkedin:1"] }],
+      },
+      {
+        label: "Coding",
+        groups: [{ label: "Coding", item_ids: ["x:1"] }],
+      },
+    ]);
+
+    expect(
+      groupPickedRowsByCategory(document, allocation, ["1", "2"], {
         preferredCategories: ["ADs"],
       }),
     ).toEqual([
