@@ -65,9 +65,12 @@ DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chro
   > <WORKSPACE>/chrome.log 2>&1 &
 ```
 
-`DISPLAY=:0` works out of the box; no Xvfb needed. Confirm CDP is up: `curl -sf http://127.0.0.1:9222/json/version`.
-
-Then set `"cdp": "9222"` in each source's `capture.browser` block and omit `headed`/`auto_connect`.
+- `DISPLAY=:0` should work without Xvfb in the sandbox environments this project targets.
+- Confirm CDP is up with `curl -sf http://127.0.0.1:9222/json/version`.
+- Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet.
+- Because `--user-data-dir=<WORKSPACE>/chrome-profile` is stored in the persistent workspace, those sign-ins should usually persist for future sessions and be a one-off setup step.
+- Then set `"cdp": "9222"` in each source's `capture.browser` block.
+- When `capture.browser.cdp` is set, omit `headed` and `auto_connect`.
 
 ## Troubleshooting
 
