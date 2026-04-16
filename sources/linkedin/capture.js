@@ -588,6 +588,7 @@ const source = {
 const prepareFeed = prepareLinkedInFeed;
 
 module.exports = {
+  buildExtractionScript,
   source,
   prepareFeed,
   extractLinkedInSourceItemId,

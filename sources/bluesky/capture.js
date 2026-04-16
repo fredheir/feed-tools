@@ -307,6 +307,7 @@ const source = {
 const prepareFeed = prepareBlueskyFeed;
 
 module.exports = {
+  buildExtractionScript,
   source,
   prepareFeed,
   extractBlueskySourceItemId,

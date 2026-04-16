@@ -46,6 +46,29 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 - Open `./var/feed.html` directly in a browser so relative `feed-assets/` paths resolve; do not rely on a file viewer that fails to serve sibling directories.
 - For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
 
+## Sandbox / ephemeral environment
+
+Home (`~`) is wiped between sessions. Install Chrome and keep the profile in the **persistent workspace folder** (wherever the repo lives):
+
+```sh
+wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
+dpkg -x /tmp/chrome.deb <WORKSPACE>/chrome-install
+```
+
+Daemonize with `setsid nohup` — plain `&` dies when the shell exits between tool calls:
+
+```sh
+DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir=<WORKSPACE>/chrome-profile \
+  --no-sandbox \
+  > <WORKSPACE>/chrome.log 2>&1 &
+```
+
+`DISPLAY=:0` works out of the box; no Xvfb needed. Confirm CDP is up: `curl -sf http://127.0.0.1:9222/json/version`.
+
+Then set `"cdp": "9222"` in each source's `capture.browser` block and omit `headed`/`auto_connect`.
+
 ## Troubleshooting
 
 - This is alpha software. You will likely need to make proactive fixes. If you encounter friction, take out an issue on github, or better a PR with a verified fix.
@@ -118,6 +141,78 @@ feed-render  [input-json] [output-html] [--pick rows|all] [--tab] [--summary TEX
 
 - Source adapters: `sources/<source>/capture.js`
 - Shared code: `lib/config.js`, `lib/browser.js`, `lib/assets.js`, `lib/mask.js`, `lib/render-html.js`, `lib/render-item.js`, `lib/render-css.js`, `lib/merge.js`
+
+## Claude in Chrome (CiC) capture
+
+An alternative to the CDP/agent-browser capture path. Instead of
+launching or connecting to a headless browser, the agent drives the
+user's real Chrome via Cowork's Claude in Chrome MCP tools.
+
+### When to use CiC
+
+- The user's browser is already authenticated on the target platforms
+- No CDP daemon or headless Chrome is available
+- Running inside Cowork / Claude Desktop with the Chrome connector enabled
+
+### Supported sources
+
+`x`, `bluesky`, `linkedin`. Facebook is not supported because its
+adapter relies on accessibility-tree snapshots (`snapshotText`), which
+have no direct CiC equivalent yet.
+
+### CLI
+
+```text
+feed-capture-cic prep <source>
+feed-capture-cic extract <source> [limit]
+feed-capture-cic ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
+```
+
+### Agent orchestration flow
+
+```
+# 1. Get navigation + ready-check metadata
+prep=$(./bin/feed-capture-cic prep x)
+
+# 2. Navigate via CiC MCP
+#    → mcp__Claude_in_Chrome__navigate({ url: prep.url, tabId })
+
+# 3. Run each readyCheck via CiC javascript_tool
+#    → mcp__Claude_in_Chrome__javascript_tool({ text: check, tabId })
+
+# 4. Scroll to top
+#    → mcp__Claude_in_Chrome__javascript_tool({ text: prep.scrollTopScript, tabId })
+
+# 5. Get extraction script and run it via console.log channel
+script=$(./bin/feed-capture-cic extract x 30)
+#    The CiC security filter blocks URL-containing JSON in return values.
+#    Wrap the script to output via console.log, which is unfiltered:
+#    → mcp__Claude_in_Chrome__javascript_tool({
+#        text: 'console.log("CIC_DATA:" + (' + script + '))',
+#        tabId
+#      })
+#    → mcp__Claude_in_Chrome__read_console_messages({
+#        tabId, pattern: "CIC_DATA", clear: true
+#      })
+#    → strip prefix, save result JSON to ./var/cic-capture.json
+
+# 6. (Optional) Scroll loop for more items
+#    → mcp__Claude_in_Chrome__javascript_tool({ text: prep.scrollDownScript, tabId })
+#    → re-run extraction via same console.log pattern, merge results
+
+# 7. Ingest into the standard pipeline
+./bin/feed-capture-cic ingest x ./var/cic-capture.json
+
+# 8. Continue with normal curation
+./bin/feed-curate --sources x
+./bin/feed-render --tab
+```
+
+### Config
+
+No special config is needed. CiC capture reads the same `config.json`
+for `assets_dir`, `save_dir`, and curation settings. The `browser`
+block is ignored when using the CiC path.
 
 ## Example flows
 

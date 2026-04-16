@@ -17,6 +17,7 @@
   "knip": {
     "entry": [
       "lib/capture-cli.js",
+      "lib/cic-capture-cli.js",
       "lib/classify-cli.js",
       "lib/curate-cli.js",
       "lib/render-cli.js"
