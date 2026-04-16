@@ -114,15 +114,10 @@ function scoreInstagramItemQuality(item) {
 
 function isInstagramItemWorthKeeping(item) {
   if (!item) return false;
-  if (!item.source_item_id && !item.url && !hasRenderableInstagramMedia(item)) {
+  if (!item.url || !item.source_item_id) {
     return false;
   }
-  if (item.source_item_id) return true;
-  return (
-    scoreInstagramItemQuality(item) >= 3 &&
-    textOrEmpty(item?.author?.handle) &&
-    textOrEmpty(item?.content?.text)
-  );
+  return true;
 }
 
 module.exports = {

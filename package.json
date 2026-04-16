@@ -12,7 +12,8 @@
     "precommit": "prek run --all-files --stage pre-commit",
     "test": "vitest run",
     "deadcode": "knip",
-    "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode"
+    "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode",
+    "setup:yt-dlp": "uv tool install --force 'yt-dlp[default,curl-cffi]'"
   },
   "knip": {
     "entry": [
@@ -29,6 +30,9 @@
     ],
     "ignoreDependencies": [
       "agent-browser"
+    ],
+    "ignoreBinaries": [
+      "uv"
     ]
   },
   "devDependencies": {

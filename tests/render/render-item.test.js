@@ -73,4 +73,22 @@ describe("renderItemCard", () => {
 
     expect(html).toContain("Open on TikTok");
   });
+
+  test("does not emit an empty stats link when item url is missing", () => {
+    const html = renderItemCard({
+      id: "instagram:synthetic:1",
+      source: "instagram",
+      index: 1,
+      url: null,
+      author: { handle: "@demo" },
+      content: { text: "Caption" },
+      stats: {},
+      media: [],
+      cards: [],
+      thread: {},
+    });
+
+    expect(html).not.toContain('class="stats-link"');
+    expect(html).not.toContain('href=""');
+  });
 });

@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { prepareFeed } from "../sources/instagram/capture.js";
+import { normalizeInstagramCandidate } from "../sources/instagram/capture.js";
 import {
   extractInstagramSourceItemId,
+  isInstagramItemWorthKeeping,
   isInstagramPermalinkUrl,
   isInstagramProfileUrl,
 } from "../sources/instagram/parse.js";
@@ -50,6 +52,18 @@ describe("instagram parse helpers", () => {
     expect(isInstagramProfileUrl("/fredheir/")).toBe(true);
     expect(isInstagramProfileUrl("/explore/")).toBe(false);
   });
+
+  test("rejects instagram items that do not have a usable permalink", () => {
+    expect(
+      isInstagramItemWorthKeeping({
+        source_item_id: null,
+        url: null,
+        author: { handle: "@brand" },
+        content: { text: "Buy now" },
+        media: [{ src: "https://example.com/image.jpg" }],
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("instagram capture bootstrap", () => {
@@ -66,5 +80,20 @@ describe("instagram capture bootstrap", () => {
     expect(
       browser.calls.filter(([name]) => name === "tryWaitForFunction").length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe("instagram capture integration", () => {
+  test("derives source_item_id from permalink before filtering", () => {
+    const item = normalizeInstagramCandidate({
+      source: "instagram",
+      source_item_id: null,
+      url: "https://www.instagram.com/p/DW6Oe10jEFH/",
+      author: { handle: "@example" },
+      content: { text: "caption" },
+      media: [],
+    });
+
+    expect(item.source_item_id).toBe("p:DW6Oe10jEFH");
   });
 });

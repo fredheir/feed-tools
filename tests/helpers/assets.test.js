@@ -233,6 +233,9 @@ describe("downloadDocumentAssets", () => {
         return Uint8Array.from([7, 8, 9]).buffer;
       },
     }));
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(() => {
+      throw new Error("yt-dlp disabled in tests");
+    });
 
     const document = {
       items: [

@@ -13,6 +13,14 @@ const {
   isInstagramItemWorthKeeping,
 } = require("./parse");
 
+function normalizeInstagramCandidate(item) {
+  return {
+    ...item,
+    source_item_id:
+      extractInstagramSourceItemId(item?.url) || item?.source_item_id,
+  };
+}
+
 function instagramIsPermalink(url) {
   if (!url) return false;
   try {
@@ -24,25 +32,16 @@ function instagramIsPermalink(url) {
 }
 
 function instagramIsProfile(url) {
-  const RESERVED_PROFILE_SEGMENTS = new Set([
-    "",
-    "accounts",
-    "about",
-    "api",
-    "developer",
-    "direct",
-    "explore",
-    "legal",
-    "reels",
-    "stories",
-    "web",
-  ]);
   if (!url) return false;
   try {
     const parsed = new URL(url, "https://www.instagram.com");
+    if (parsed.hostname && !/instagram\.com$/i.test(parsed.hostname))
+      return false;
     const match = parsed.pathname.match(/^\/([^/?#]+)\/?$/);
     if (!match) return false;
-    return !RESERVED_PROFILE_SEGMENTS.has(match[1].toLowerCase());
+    return !/^(accounts|about|api|developer|direct|explore|legal|reels|stories|web)$/i.test(
+      match[1],
+    );
   } catch {
     return false;
   }
@@ -227,7 +226,7 @@ function buildExtractionScript(limit) {
 
         return {
           source: "instagram",
-          source_item_id: permalinkUrl ? permalinkUrl.match(/\\/(p|reel|tv)\\/([^/?#]+)/)?.slice(1, 3).join(":") || null : null,
+          source_item_id: null,
           index: idx + 1,
           url: permalinkUrl,
           author: {
@@ -316,6 +315,7 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
       seen,
       sourceName: "instagram",
       target: collectedItems,
+      mapItem: normalizeInstagramCandidate,
       shouldInclude: isInstagramItemWorthKeeping,
     });
   }
@@ -330,21 +330,15 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
     index += 1
   ) {
     const beforeCount = collectedItems.length;
-    const beforeArticleCount = browser.evalJson(`(() => JSON.stringify({
-      articleCount: document.querySelectorAll('main article').length
-    }))()`).articleCount;
-    browser.evalText(`(() => {
+    const { beforeArticleCount } = browser.evalJson(`(() => {
+      const beforeArticleCount = document.querySelectorAll('main article').length;
       window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
-      return JSON.stringify({ ok: true, y: window.scrollY });
+      return JSON.stringify({ beforeArticleCount });
     })()`);
-    try {
-      browser.waitForFunction(
-        `document.querySelectorAll('main article').length > ${Number(beforeArticleCount) || 0}`,
-        3000,
-      );
-    } catch (error) {
-      void error;
-    }
+    browser.tryWaitForFunction(
+      `document.querySelectorAll('main article').length > ${Number(beforeArticleCount) || 0}`,
+      3000,
+    );
     mergeBatch(browser.evalJson(buildExtractionScript(limit)));
     stagnantPasses =
       collectedItems.length === beforeCount ? stagnantPasses + 1 : 0;
@@ -354,11 +348,7 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
     schema_version: 1,
     source: "instagram",
     captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit).map((item) => ({
-      ...item,
-      source_item_id:
-        extractInstagramSourceItemId(item.url) || item.source_item_id,
-    })),
+    items: collectedItems.slice(0, limit).map(normalizeInstagramCandidate),
   };
 
   assertAuthenticatedCapture(
@@ -383,6 +373,7 @@ const source = {
 const prepareFeed = prepareInstagramFeed;
 
 module.exports = {
+  normalizeInstagramCandidate,
   source,
   prepareFeed,
 };

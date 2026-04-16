@@ -367,8 +367,8 @@ function buildExtractionScript(limit) {
       return out;
     }
 
-    function getCards(root, permalinkUrl) {
-      const external = getEmbeddedLinks(root, permalinkUrl).find((link) => link.kind === "link");
+    function getCards(embeddedLinks) {
+      const external = embeddedLinks.find((link) => link.kind === "link");
       if (!external) return [];
       return [
         {
@@ -402,7 +402,7 @@ function buildExtractionScript(limit) {
       const stats = getStats(root);
       const media = getMedia(root, authorImageUrl);
       const embeddedLinks = getEmbeddedLinks(root, url);
-      const cards = getCards(root, url);
+      const cards = getCards(embeddedLinks);
 
       return {
         source: "linkedin",
