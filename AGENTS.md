@@ -41,10 +41,37 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 - If `corepack enable` fails in a read-only environment, install pnpm with npm into `~/.local` and prepend `~/.local/bin` to `PATH`.
 - After `pnpm install`, run `pnpm approve-builds` and approve `agent-browser` if builds are blocked (its interactive).
 - If `pnpm approve-builds` blocks in a non-TTY environment, run `node node_modules/agent-browser/scripts/postinstall.js` directly.
+- In sandboxed or ephemeral environments, do not rely on `~` for Chrome binaries or profiles because home is wiped between sessions.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
 - Keep `assets_dir`, `save_dir`, and rendered HTML under the repo, not `/tmp`.
 - Open `./var/feed.html` directly in a browser so relative `feed-assets/` paths resolve; do not rely on a file viewer that fails to serve sibling directories.
 - For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
+
+## Sandbox browser fallback
+
+If the sandbox cannot access the user's main browser outside it, install Chrome inside the persistent workspace and keep the profile there too.
+
+```sh
+wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
+dpkg -x /tmp/chrome.deb <WORKSPACE>/chrome-install
+```
+
+Start Chrome with `setsid nohup`; a plain `&` may die when the shell exits between tool calls.
+
+```sh
+DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir=<WORKSPACE>/chrome-profile \
+  --no-sandbox \
+  > <WORKSPACE>/chrome.log 2>&1 &
+```
+
+- `DISPLAY=:0` should work without Xvfb in the sandbox environments this project targets.
+- Confirm CDP is up with `curl -sf http://127.0.0.1:9222/json/version`.
+- Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet.
+- Because `--user-data-dir=<WORKSPACE>/chrome-profile` is stored in the persistent workspace, those sign-ins should usually persist for future sessions and be a one-off setup step.
+- Then set `"cdp": "9222"` in each source's `capture.browser` block.
+- When `capture.browser.cdp` is set, omit `headed` and `auto_connect`.
 
 ## Troubleshooting
 
