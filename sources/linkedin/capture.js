@@ -2,6 +2,7 @@
 "use strict";
 
 const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
+const { buildBrowserRuntimeScript } = require("../browser-runtime/core");
 const {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
@@ -62,28 +63,10 @@ function isLinkedInItemWorthKeeping(item) {
 }
 
 function buildExtractionScript(limit) {
-  return `(() => {
-    const limit = ${JSON.stringify(limit)};
+  return buildBrowserRuntimeScript(
+    limit,
+    `
     const ACTION_LABELS = ["Like", "Comment", "Repost", "Send"];
-
-    function textOf(node) {
-      return (node?.innerText || node?.textContent || "").replace(/\\s+/g, " ").trim();
-    }
-
-    function multilineTextOf(node) {
-      return (node?.innerText || node?.textContent || "")
-        .split(/\\n+/)
-        .map((line) => line.replace(/[ \\t]+/g, " ").trim())
-        .filter(Boolean)
-        .join("\\n");
-    }
-
-    function linesOf(node) {
-      return multilineTextOf(node)
-        .split("\\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-    }
 
     function cleanAuthorName(value) {
       return String(value || "")
@@ -464,7 +447,8 @@ function buildExtractionScript(limit) {
       captured_at: new Date().toISOString(),
       items,
     });
-  })()`;
+    `,
+  );
 }
 
 function prepareLinkedInFeed(browser) {

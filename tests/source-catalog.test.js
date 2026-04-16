@@ -10,6 +10,7 @@ describe("source catalog", () => {
     expect(SUPPORTED_SOURCES).toEqual([
       "bluesky",
       "facebook",
+      "instagram",
       "linkedin",
       "tiktok",
       "x",

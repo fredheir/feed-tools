@@ -2,6 +2,7 @@
 "use strict";
 
 const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
+const { buildBrowserRuntimeScript } = require("../browser-runtime/core");
 const {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
@@ -21,21 +22,9 @@ function extractBlueskySourceItemId(url) {
 }
 
 function buildExtractionScript(limit) {
-  return `(() => {
-    const limit = ${JSON.stringify(limit)};
-
-    function textOf(node) {
-      return (node?.innerText || node?.textContent || "").replace(/\\s+/g, " ").trim();
-    }
-
-    function multilineTextOf(node) {
-      return (node?.innerText || node?.textContent || "")
-        .split(/\\n+/)
-        .map((line) => line.replace(/[ \\t]+/g, " ").trim())
-        .filter(Boolean)
-        .join("\\n");
-    }
-
+  return buildBrowserRuntimeScript(
+    limit,
+    `
     function getPostUrl(item) {
       return (
         Array.from(item.querySelectorAll('a[href]'))
@@ -185,7 +174,8 @@ function buildExtractionScript(limit) {
       captured_at: new Date().toISOString(),
       items,
     });
-  })()`;
+    `,
+  );
 }
 
 function prepareBlueskyFeed(browser) {

@@ -19,6 +19,22 @@
         }
       },
       {
+        "name": "instagram",
+        "enabled": true,
+        "default": false,
+        "capture": {
+          "default_limit": 12,
+          "assets_dir": "./var/feed-assets",
+          "save_dir": "./var/feed-archive",
+          "browser": {
+            "cdp": "9222",
+            "auto_connect": false,
+            "headed": true,
+            "args": ["--no-sandbox"]
+          }
+        }
+      },
+      {
         "name": "x",
         "enabled": true,
         "default": true,

@@ -81,6 +81,7 @@ DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chro
 ## Supported platforms
 
 - facebook
+- instagram
 - x
 - bluesky
 - linkedin

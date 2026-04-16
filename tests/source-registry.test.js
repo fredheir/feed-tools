@@ -11,6 +11,7 @@ describe("source registry", () => {
     expect(listSupportedSources()).toEqual([
       "bluesky",
       "facebook",
+      "instagram",
       "linkedin",
       "tiktok",
       "x",

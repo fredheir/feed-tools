@@ -2,33 +2,16 @@
 "use strict";
 
 const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
+const { buildBrowserRuntimeScript } = require("../browser-runtime/core");
 const {
   assertFeedUrlAccessible,
   collectUniqueItems,
 } = require("../../lib/source-capture");
 
 function buildExtractionScript(limit) {
-  return `(() => {
-    const limit = ${JSON.stringify(limit)};
-
-    function textOf(node) {
-      return (node?.innerText || node?.textContent || "").replace(/\\s+/g, " ").trim();
-    }
-
-    function normalizeCount(value) {
-      const text = String(value ?? "").replace(/\\s+/g, " ").trim();
-      return text || null;
-    }
-
-    function makeAbsolute(url) {
-      if (!url) return null;
-      try {
-        return new URL(url, "https://www.tiktok.com").toString();
-      } catch {
-        return null;
-      }
-    }
-
+  return buildBrowserRuntimeScript(
+    limit,
+    `
     function getUniversalItems() {
       const items = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"];
       return Array.isArray(items) ? items : [];
@@ -47,14 +30,14 @@ function buildExtractionScript(limit) {
         for (const challenge of Array.isArray(item.challenges) ? item.challenges : []) {
           if (!challenge?.title) continue;
           embeddedLinks.push({
-            href: makeAbsolute("/tag/" + challenge.title.replace(/^#/, "")),
+            href: makeAbsoluteUrl("/tag/" + challenge.title.replace(/^#/, ""), "https://www.tiktok.com"),
             text: "#" + challenge.title.replace(/^#/, ""),
             kind: "entity",
           });
         }
         if (item.music?.id) {
           embeddedLinks.push({
-            href: makeAbsolute("/music/" + (item.music.title || "original-sound").replace(/\\s+/g, "-").toLowerCase() + "-" + item.music.id),
+            href: makeAbsoluteUrl("/music/" + (item.music.title || "original-sound").replace(/\\s+/g, "-").toLowerCase() + "-" + item.music.id, "https://www.tiktok.com"),
             text: item.music.title || "original sound",
             kind: "entity",
           });
@@ -125,7 +108,8 @@ function buildExtractionScript(limit) {
         dom_count: document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length,
       },
     });
-  })()`;
+    `,
+  );
 }
 
 function prepareTikTokFeed(browser) {
