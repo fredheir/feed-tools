@@ -5,6 +5,14 @@ function createBrowserStub(existingFeedState) {
   const calls = [];
   return {
     calls,
+    getCurrentUrl() {
+      calls.push(["getCurrentUrl"]);
+      return existingFeedState.url;
+    },
+    snapshotText() {
+      calls.push(["snapshotText"]);
+      return existingFeedState.text;
+    },
     ensureTab(...args) {
       calls.push(["ensureTab", ...args]);
     },
@@ -44,7 +52,7 @@ describe("x capture bootstrap", () => {
 
   test("reloads and waits when the current page is not yet a usable feed", () => {
     const browser = createBrowserStub({
-      url: "https://x.com/i/flow/login",
+      url: "https://x.com/home",
       articleCount: 0,
       feedItems: 0,
       text: "",

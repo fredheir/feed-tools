@@ -129,7 +129,7 @@ function parseSnapshotLine(rawLine) {
 
 function isFacebookStopHeading(line) {
   return (
-    line?.type === "heading" &&
+    line.type === "heading" &&
     ((line.level === 3 &&
       [
         "Reels",
