@@ -133,4 +133,113 @@ describe("downloadDocumentAssets", () => {
     expect(document.items[0].media[0].local_src).toContain(assetsDir);
     expect(fs.existsSync(document.items[0].media[0].local_src)).toBe(true);
   });
+
+  test("transcodes unsupported downloaded video codecs for browser playback", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get(name) {
+          return name === "content-type" ? "image/jpeg" : null;
+        },
+      },
+      async arrayBuffer() {
+        return Uint8Array.from([4, 5, 6]).buffer;
+      },
+    }));
+
+    const downloadedVideo = path.join(assetsDir, "video-3-abcd1234.mp4");
+    const transcodedVideo = path.join(
+      assetsDir,
+      "video-3-abcd1234-browser.mp4",
+    );
+    fs.writeFileSync(downloadedVideo, Uint8Array.from([1, 2, 3]));
+
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(
+      (command, args) => {
+        const joined = [command, ...(args || [])].join(" ");
+        if (joined.includes("after_move:filepath")) {
+          return `${downloadedVideo}\n`;
+        }
+        if (joined.includes("-show_entries")) {
+          return JSON.stringify({ streams: [{ codec_name: "hevc" }] });
+        }
+        if (joined.includes("-c:v libx264")) {
+          fs.writeFileSync(transcodedVideo, Uint8Array.from([7, 8, 9]));
+          return "";
+        }
+        return "";
+      },
+    );
+
+    const document = {
+      items: [
+        {
+          index: 3,
+          source: "tiktok",
+          url: "https://www.tiktok.com/@demo/video/123",
+          author: {},
+          media: [
+            {
+              src: "https://example.com/cover.jpg",
+              href: "https://www.tiktok.com/@demo/video/123",
+              media_kind: "video",
+            },
+          ],
+          cards: [],
+        },
+      ],
+    };
+
+    await downloadDocumentAssets(document, assetsDir);
+
+    expect(document.items[0].media[0].local_video_src).toBe(transcodedVideo);
+    expect(fs.existsSync(transcodedVideo)).toBe(true);
+  });
+
+  test("downloads direct video sources when media provides a video_src", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    global.fetch = vi.fn(async (url) => ({
+      ok: true,
+      headers: {
+        get(name) {
+          if (name !== "content-type") return null;
+          return String(url).includes(".mp4") ? "video/mp4" : "image/jpeg";
+        },
+      },
+      async arrayBuffer() {
+        return Uint8Array.from([7, 8, 9]).buffer;
+      },
+    }));
+
+    const document = {
+      items: [
+        {
+          index: 2,
+          source: "tiktok",
+          url: "https://www.tiktok.com/@demo/video/123",
+          author: {},
+          media: [
+            {
+              src: "https://example.com/cover.jpg",
+              video_src: "https://example.com/video.mp4",
+              href: "https://www.tiktok.com/@demo/video/123",
+              media_kind: "video",
+            },
+          ],
+          cards: [],
+        },
+      ],
+    };
+
+    await downloadDocumentAssets(document, assetsDir);
+
+    expect(document.items[0].media[0].local_video_src).toContain(assetsDir);
+    expect(document.items[0].media[0].local_video_src.endsWith(".mp4")).toBe(
+      true,
+    );
+    expect(document.items[0].media[0].local_src).toContain(assetsDir);
+  });
 });

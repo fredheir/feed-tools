@@ -12,6 +12,7 @@ describe("source registry", () => {
       "bluesky",
       "facebook",
       "linkedin",
+      "tiktok",
       "x",
     ]);
   });

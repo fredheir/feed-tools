@@ -7,7 +7,13 @@ import {
 
 describe("source catalog", () => {
   test("exposes the canonical supported source list", () => {
-    expect(SUPPORTED_SOURCES).toEqual(["bluesky", "facebook", "linkedin", "x"]);
+    expect(SUPPORTED_SOURCES).toEqual([
+      "bluesky",
+      "facebook",
+      "linkedin",
+      "tiktok",
+      "x",
+    ]);
     expect(listSupportedSources()).toEqual(SUPPORTED_SOURCES);
   });
 

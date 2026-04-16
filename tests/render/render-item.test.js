@@ -49,4 +49,28 @@ describe("renderItemCard", () => {
     expect(html).toContain('poster="feed-assets/poster.jpg"');
     expect(html).toContain("Open on X");
   });
+
+  test("uses the correct platform label for non-x local videos", () => {
+    const html = renderItemCard({
+      id: "tiktok:1",
+      source: "tiktok",
+      index: 1,
+      url: "https://www.tiktok.com/@demo/video/1",
+      author: { handle: "@demo" },
+      content: { text: "TikTok video" },
+      stats: {},
+      media: [
+        {
+          media_kind: "video",
+          href: "https://www.tiktok.com/@demo/video/1",
+          local_src: "feed-assets/poster.jpg",
+          local_video_src: "feed-assets/video.mp4",
+        },
+      ],
+      cards: [],
+      thread: {},
+    });
+
+    expect(html).toContain("Open on TikTok");
+  });
 });

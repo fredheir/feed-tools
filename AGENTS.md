@@ -81,6 +81,7 @@ Then set `"cdp": "9222"` in each source's `capture.browser` block and omit `head
 - x
 - bluesky
 - linkedin
+- tiktok
 
 ## Core entry points
 
