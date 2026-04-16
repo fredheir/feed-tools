@@ -119,7 +119,7 @@ function buildExtractionScript(limit) {
         for (const div of divs) {
           const bg = getComputedStyle(div).backgroundImage;
           if (bg && bg !== "none" && bg.includes("profile_images")) {
-            const match = bg.match(/url\\("?([^")+]+)"?\\)/);
+            const match = bg.match(/url\\("?([^")]+)"?\\)/);
             if (match) return match[1];
           }
         }
