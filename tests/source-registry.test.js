@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  getBootstrapHandler,
   getCaptureHandler,
   isSupportedSource,
   listSupportedSources,
@@ -19,6 +20,7 @@ describe("source registry", () => {
     for (const source of listSupportedSources()) {
       expect(isSupportedSource(source)).toBe(true);
       expect(typeof getCaptureHandler(source)).toBe("function");
+      expect(typeof getBootstrapHandler(source)).toBe("function");
     }
   });
 });
