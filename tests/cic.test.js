@@ -13,18 +13,6 @@ function run(args) {
   });
 }
 
-function runStderr(args) {
-  try {
-    execFileSync("node", [CLI, ...args], {
-      encoding: "utf8",
-      timeout: 10000,
-    });
-    return "";
-  } catch (error) {
-    return error.stderr || "";
-  }
-}
-
 describe("feed-capture-cic prep", () => {
   test("returns valid JSON for x", () => {
     const output = JSON.parse(run(["prep", "x"]));
@@ -169,6 +157,42 @@ describe("feed-capture-cic ingest", () => {
 
     expect(() => run(["ingest", "xs", jsonFile])).toThrow();
     expect(() => run(["ingest", "toString", jsonFile])).toThrow();
+  });
+
+  test("rejects unknown ingest flags", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cic-test-"));
+    const jsonFile = join(tmp, "capture.json");
+
+    writeFileSync(
+      jsonFile,
+      JSON.stringify({
+        schema_version: 1,
+        source: "x",
+        captured_at: new Date().toISOString(),
+        items: [],
+      }),
+    );
+
+    expect(() => run(["ingest", "x", jsonFile, "--unexpected-flag"])).toThrow();
+  });
+
+  test("rejects missing values for ingest flags", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cic-test-"));
+    const jsonFile = join(tmp, "capture.json");
+
+    writeFileSync(
+      jsonFile,
+      JSON.stringify({
+        schema_version: 1,
+        source: "x",
+        captured_at: new Date().toISOString(),
+        items: [],
+      }),
+    );
+
+    expect(() =>
+      run(["ingest", "x", jsonFile, "--save-dir", "--assets-dir", tmp]),
+    ).toThrow();
   });
 });
 
