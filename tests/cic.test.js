@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { execFileSync } from "node:child_process";
-import { writeFileSync, mkdtempSync } from "node:fs";
+import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -94,6 +94,7 @@ describe("feed-capture-cic ingest", () => {
     const tmp = mkdtempSync(join(tmpdir(), "cic-test-"));
     const jsonFile = join(tmp, "capture.json");
     const saveDir = join(tmp, "save");
+    const configPath = join(tmp, "config.json");
 
     writeFileSync(
       jsonFile,
@@ -126,6 +127,7 @@ describe("feed-capture-cic ingest", () => {
         ],
       }),
     );
+    rmSync(configPath, { force: true });
 
     const output = run(["ingest", "x", jsonFile, "--save-dir", saveDir]);
     const merged = JSON.parse(output);
