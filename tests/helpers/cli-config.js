@@ -1,8 +1,30 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
 
 export const repoRoot = path.resolve(import.meta.dirname, "../..");
+const fixturesRoot = path.resolve(import.meta.dirname, "..", "fixtures");
+
+export function readFixture(...segments) {
+  return fs.readFileSync(path.join(fixturesRoot, ...segments), "utf8");
+}
+
+export function runCli(scriptPath, args, configPath) {
+  return execFileSync(process.execPath, [scriptPath, ...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: withConfigEnv(configPath),
+  });
+}
+
+export function spawnCli(scriptPath, args, configPath) {
+  return spawnSync(process.execPath, [scriptPath, ...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: withConfigEnv(configPath),
+  });
+}
 
 export function writeTestConfig(directory, overrides = {}) {
   const configDir = fs.mkdtempSync(

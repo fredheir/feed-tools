@@ -1,1 +1,3 @@
 .chrome-cdp/
+tests/fixtures/**/*.html
+tests/fixtures/**/*.txt

@@ -1,0 +1,5 @@
+- generic
+  - heading "Join LinkedIn" [level=1]
+  - StaticText "See who you know at Fixture Company"
+  - button "Sign in"
+  - button "Join now"

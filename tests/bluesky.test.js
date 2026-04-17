@@ -5,6 +5,7 @@ import {
   getCaptureHandler,
   isSupportedSource,
 } from "../lib/source-registry.js";
+import { readFixture } from "./helpers/cli-config.js";
 
 describe("bluesky support", () => {
   test("extracts stable source ids from bluesky post urls", () => {
@@ -40,5 +41,18 @@ describe("bluesky support", () => {
     expect(html).toContain('class="feed-card source-bluesky"');
     expect(html).toContain("BlueSky");
     expect(html).toContain("@mrjamesob.bsky.social");
+  });
+
+  test("real-browser feed fixture still exposes extractor selectors", () => {
+    const html = readFixture("bluesky", "article.html");
+
+    expect(html).toContain("feedItem-by-");
+    expect(html).toContain("replyBtn");
+    expect(html).toContain("repostBtn");
+    expect(html).toContain("likeBtn");
+    expect(html).toContain("userAvatarImage");
+    expect(html).toContain("/profile/");
+    expect(html).toContain("/post/");
+    expect(html).toContain("https://cdn.bsky.app/img/FIXTURE.jpg");
   });
 });

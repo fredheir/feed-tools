@@ -1,0 +1,629 @@
+- generic
+  - banner
+    - generic
+      - link "Facebook" [ref=e1]
+        - image
+    - LabelText
+      - image
+      - combobox "Search Facebook" [expanded=false, ref=e5]
+    - generic
+      - generic
+        - navigation "Facebook" [ref=e6]
+          - list
+            - listitem [level=1]
+              - listitem [level=1]
+                - generic
+                  - link "Home" [ref=e12]
+                    - image
+            - listitem [level=1]
+              - listitem [level=1]
+                - generic
+                  - link "Reels" [ref=e13]
+                    - image
+            - listitem [level=1]
+              - listitem [level=1]
+                - generic
+                  - link "Marketplace" [ref=e14]
+                    - image
+            - listitem [level=1]
+              - listitem [level=1]
+                - generic
+                  - link "Groups" [ref=e15]
+                    - image
+            - listitem [level=1]
+              - listitem [level=1]
+                - generic
+                  - link "Gaming" [ref=e16]
+                    - image
+    - generic
+      - navigation "Account controls and settings" [ref=e2]
+        - button "Facebook menu" [ref=e3]
+        - generic
+          - button "Messenger" [expanded=false, ref=e7]
+        - generic
+          - button "Notifications, 24 unread" [expanded=false, ref=e8]
+        - generic
+          - button "Your profile" [expanded=false, ref=e9]
+            - generic
+              - image "Your profile"
+  - generic
+    - generic
+      - generic
+        - navigation "Shortcuts" [ref=e10]
+          - generic
+            - generic
+              - heading "Facebook menu" [level=2, ref=e18]
+              - list
+                - listitem [level=1]
+                  - link "Fixture User" [ref=e42]
+                    - generic
+                      - StaticText "Fixture User"
+                - listitem [level=1]
+                  - link "Meta AI" [ref=e43]
+                    - generic
+                      - StaticText "Meta AI"
+                - listitem [level=1]
+                  - link "Friends" [ref=e44]
+                    - generic
+                      - StaticText "Friends"
+                - listitem [level=1]
+                  - link "Memories" [ref=e45]
+                    - generic
+                      - StaticText "Memories"
+                - listitem [level=1]
+                  - link "Saved" [ref=e46]
+                    - generic
+                      - StaticText "Saved"
+                - listitem [level=1]
+                  - link "Groups" [ref=e47]
+                    - generic
+                      - StaticText "Groups"
+                - listitem [level=1]
+                  - link "Reels" [ref=e48]
+                    - generic
+                      - StaticText "Reels"
+                - listitem [level=1]
+                  - link "Marketplace" [ref=e49]
+                    - generic
+                      - StaticText "Marketplace"
+                - listitem [level=1]
+                  - link "Feeds" [ref=e50]
+                    - generic
+                      - StaticText "Feeds"
+                - listitem [level=1]
+                  - link "Dating" [ref=e51]
+                    - generic
+                      - StaticText "Dating"
+                - listitem [level=1]
+                  - link "Events" [ref=e52]
+                    - generic
+                      - StaticText "Events"
+              - button "See more explore items" [ref=e20]
+                - generic
+                  - StaticText "See more"
+              - contentinfo "Facebook"
+                - list
+                  - listitem [level=1]
+                    - link "Privacy" [ref=e33]
+                  - listitem [level=1]
+                    - link "Terms" [ref=e34]
+                  - listitem [level=1]
+                    - link "Advertising" [ref=e35]
+                  - listitem [level=1]
+                    - link "Ad choices" [ref=e36]
+                      - StaticText "Ad choices"
+                      - image
+                  - listitem [level=1]
+                    - link "Cookies" [ref=e37]
+                  - listitem [level=1]
+                    - button "More footer links" [expanded=false, ref=e38]
+                      - StaticText "More"
+        - heading "Home" [level=1, ref=e11]
+        - main
+          - region "Create a post" [ref=e21]
+            - heading "Create a post" [level=3, ref=e24]
+            - link "Fixture User's timeline" [ref=e25]
+            - button "What's on your mind, Fixture User?" [ref=e26]
+              - StaticText "What's on your mind, Fixture User?"
+            - button "Live video" [ref=e27]
+            - button "Photo/video" [ref=e28]
+            - button "Feeling/activity" [ref=e29]
+          - region "Stories" [ref=e19]
+            - heading "Stories" [level=3, ref=e22]
+            - generic
+              - grid "stories tray"
+                - row "Create story Jaunais Rīgas Teātris's Story Alia Lupandina's Story Amanda Davison's Story Olia Gnydiuk's Story Seamas O'Reilly's Story"
+                  - generic
+                    - gridcell "Create story" [ref=e88] focusable [tabindex]
+                      - link "Create story" [ref=e121]
+                    - gridcell "Jaunais Rīgas Teātris's Story" [ref=e89] focusable [tabindex]
+                      - generic
+                        - link "Jaunais Rīgas Teātris's Story" [ref=e132]
+                    - gridcell "Alia Lupandina's Story" [ref=e90] focusable [tabindex]
+                      - generic
+                        - link "Alia Lupandina's Story" [ref=e133]
+                    - gridcell "Amanda Davison's Story" [ref=e91] focusable [tabindex]
+                      - generic
+                        - link "Amanda Davison's Story" [ref=e134]
+                    - gridcell "Olia Gnydiuk's Story" [ref=e92] focusable [tabindex]
+                      - generic
+                        - link "Olia Gnydiuk's Story" [ref=e135]
+                    - gridcell "Seamas O'Reilly's Story" [ref=e93] focusable [tabindex]
+                      - generic
+                        - link "Seamas O'Reilly's Story" [ref=e136]
+              - button "Next items" [ref=e32]
+          - heading "Feed posts" [level=3, ref=e17]
+          - generic
+          - link "Peter Hession" [ref=e94]
+            - image "Peter Hession"
+          - heading "Peter Hession" [level=4, ref=e53]
+            - link "Peter Hession" [ref=e95]
+              - StaticText "Peter Hession"
+          - link "3 days ago" [ref=e54]
+            - StaticText "o"
+            - StaticText "d"
+            - StaticText "o"
+            - StaticText "p"
+            - StaticText "s"
+            - StaticText "S"
+            - StaticText "n"
+            - StaticText "r"
+            - StaticText "t"
+            - StaticText "e"
+            - StaticText "a"
+            - StaticText ":"
+            - StaticText "8"
+            - StaticText "1"
+            - StaticText "g"
+            - StaticText "g"
+            - StaticText "m"
+            - StaticText "8"
+            - StaticText "c"
+            - StaticText "5"
+            - StaticText "2"
+            - StaticText "r"
+            - StaticText "3"
+            - StaticText "0"
+            - StaticText "a"
+            - StaticText "t"
+            - StaticText "l"
+            - StaticText "7"
+            - StaticText "u"
+            - StaticText "i"
+            - StaticText "g"
+            - StaticText "4"
+            - StaticText "4"
+            - StaticText "A"
+            - StaticText "6"
+            - StaticText "l"
+            - StaticText "1"
+            - StaticText "4"
+            - StaticText "h"
+            - StaticText "7"
+            - StaticText "0"
+            - StaticText "h"
+            - StaticText "8"
+            - StaticText "a"
+            - StaticText "3"
+            - StaticText "f"
+            - StaticText "5"
+            - StaticText "p"
+            - StaticText "u"
+            - StaticText "2"
+            - StaticText "3"
+            - StaticText "5"
+            - StaticText "1"
+            - StaticText "1"
+            - StaticText "u"
+            - StaticText "9"
+            - StaticText "0"
+          - image "Shared with Public"
+          - button "Actions for this post" [expanded=false, ref=e96]
+            - image
+          - link "Hide post by Peter Hession" [ref=e55]
+          - generic
+            - link "May be an image of text that says \"27APRIL2026 27 APRIL 2026 INAUGURAL LECTURE O'Malley Fellowship: O'MalleyFellowship: Advancingl rish AdvancingIrishStudies Studies Peter The University of imerick is pleased to invite you to the inaugura lecture by O'Malley Fellow in Irish Studies \"From now nowhere, here going nowhere\"? The famine road in context' Monday, 27 April 2026 5.30pm 6.00pm KBG12, Kemmy Business School, UL, 窗 RV SP by 6pm, 24 Apri April2026- 026- register using link above\"" [ref=e107]
+              - image "May be an image of text that says \"27APRIL2026 27 APRIL 2026 INAUGURAL LECTURE O'Malley Fellowship: O'MalleyFellowship: Advancingl rish AdvancingIrishStudies Studies Peter The University of imerick is pleased to invite you to the inaugura lecture by O'Malley Fellow in Irish Studies \"From now nowhere, here going nowhere\"? The famine road in context' Monday, 27 April 2026 5.30pm 6.00pm KBG12, Kemmy Business School, UL, 窗 RV SP by 6pm, 24 Apri April2026- 026- register using link above\""
+          - generic
+            - generic
+              - button "Like" [ref=e108]
+                - generic
+                  - generic
+                  - StaticText "66"
+              - button "React" [ref=e109]
+                - image
+            - button "Leave a comment" [ref=e110]
+              - generic
+                - generic
+                - StaticText "12"
+            - button "Send this to friends or post it on your profile." [ref=e111]
+              - generic
+                - generic
+                - StaticText "2"
+            - toolbar "See who reacted to this"
+              - button "Like: 52 people" [ref=e122]
+              - button "Love: 13 people" [ref=e123]
+          - generic
+            - button "View more comments" [ref=e97]
+              - StaticText "View more comments"
+          - article "Comment by Ingeborg Aase 3 days ago" [ref=e56]
+            - generic
+              - generic
+                - link "Ingeborg Aase" [ref=e142]
+                  - StaticText "Ingeborg Aase"
+                - StaticText "Good luck, Pete!"
+                - button "Hide or report this" [expanded=false, ref=e143]
+                  - image
+              - generic
+                - list
+                  - listitem [level=1]
+                    - link "3d" [ref=e144]
+                  - listitem [level=1]
+                    - generic
+                      - button "Like" [ref=e145]
+                      - button "React" [ref=e146]
+                  - listitem [level=1]
+                    - button "Reply" [ref=e147]
+                - button "1 reaction; see who reacted to this" [ref=e124]
+                  - StaticText "1"
+          - generic
+          - link "Möller's Latvija" [ref=e98]
+            - image "Möller's Latvija"
+          - heading "Möller's Latvija" [level=4, ref=e57]
+            - link "Möller's Latvija" [ref=e99]
+              - StaticText "Möller's Latvija"
+          - link "Sponsored" [ref=e58]
+            - StaticText "p"
+            - StaticText "o"
+            - StaticText "t"
+            - StaticText "r"
+            - StaticText "o"
+            - StaticText "d"
+            - StaticText "n"
+            - StaticText "e"
+            - StaticText "S"
+            - StaticText "s"
+            - StaticText "8"
+            - StaticText "1"
+            - StaticText "e"
+            - StaticText "6"
+            - StaticText "2"
+            - StaticText "3"
+            - StaticText "1"
+            - StaticText "c"
+            - StaticText "g"
+            - StaticText "1"
+            - StaticText "l"
+            - StaticText "f"
+            - StaticText "g"
+            - StaticText "r"
+            - StaticText "0"
+            - StaticText "4"
+            - StaticText "o"
+            - StaticText "m"
+            - StaticText "u"
+            - StaticText "S"
+            - StaticText "i"
+            - StaticText "t"
+            - StaticText "i"
+            - StaticText "i"
+            - StaticText "f"
+            - StaticText "7"
+            - StaticText "a"
+            - StaticText "s"
+            - StaticText "6"
+            - StaticText "n"
+            - StaticText "t"
+            - StaticText "8"
+            - StaticText "1"
+            - StaticText "7"
+            - StaticText "0"
+            - StaticText "8"
+            - StaticText "l"
+            - StaticText "p"
+            - StaticText "7"
+            - StaticText "5"
+            - StaticText "t"
+            - StaticText "1"
+            - StaticText "o"
+            - StaticText "0"
+            - StaticText "d"
+            - StaticText "3"
+            - StaticText "m"
+            - StaticText "h"
+            - StaticText "h"
+            - StaticText "a"
+          - image "Shared with Public"
+          - button "Actions for this post" [expanded=false, ref=e100]
+            - image
+          - link "Hide post by Möller's Latvija" [ref=e59]
+          - StaticText "Möller's Junior želejas zivtiņas bērniem - ar vitamīnu D un koncentrētām Omega-3 taukskābēm!"
+          - link "See translation" [ref=e60]
+          - generic
+            - link "Omega-3 un D vitamīns!" [ref=e137]
+              - image "Omega-3 un D vitamīns!"
+            - link "WWW.EUROAPTIEKA.LV Omega-3 un D vitamīns! Izdevīgs piedāvājums šeit" [ref=e125]
+              - generic
+                - generic
+                  - StaticText "WWW.EUROAPTIEKA.LV"
+                  - StaticText "Omega-3 un D vitamīns!"
+                  - StaticText "Izdevīgs piedāvājums šeit"
+                - PluginObject [disabled]
+                  - link "Shop now" [disabled, ref=e154]
+                    - StaticText "p"
+                    - StaticText "o"
+                    - StaticText "t"
+                    - StaticText "r"
+                    - StaticText "o"
+                    - StaticText "d"
+                    - StaticText "n"
+                    - StaticText "e"
+                    - StaticText "S"
+                    - StaticText "s"
+                    - StaticText "8"
+                    - StaticText "1"
+                    - StaticText "o"
+                    - StaticText "6"
+                    - StaticText "2"
+                    - StaticText "3"
+                    - StaticText "1"
+                    - StaticText "c"
+                    - StaticText "g"
+                    - StaticText "1"
+                    - StaticText "l"
+                    - StaticText "f"
+                    - StaticText "g"
+                    - StaticText "n"
+                    - StaticText "0"
+                    - StaticText "4"
+                    - StaticText "m"
+                    - StaticText "u"
+                    - StaticText "S"
+                    - StaticText "i"
+                    - StaticText "t"
+                    - StaticText "i"
+                    - StaticText "i"
+                    - StaticText "f"
+                    - StaticText "7"
+                    - StaticText "a"
+                    - StaticText "p"
+                    - StaticText "6"
+                    - StaticText "o"
+                    - StaticText "t"
+                    - StaticText "8"
+                    - StaticText "1"
+                    - StaticText "7"
+                    - StaticText "0"
+                    - StaticText "8"
+                    - StaticText "l"
+                    - StaticText "h"
+                    - StaticText "7"
+                    - StaticText "5"
+                    - StaticText "t"
+                    - StaticText "1"
+                    - StaticText "t"
+                    - StaticText "0"
+                    - StaticText "w"
+                    - StaticText "3"
+                    - StaticText "m"
+                    - StaticText "h"
+                    - StaticText "h"
+                    - StaticText "a"
+          - generic
+            - generic
+              - button "Like" [ref=e112]
+                - generic
+                  - generic
+                  - StaticText "8"
+              - button "React" [ref=e113]
+                - image
+            - button "Leave a comment" [ref=e114]
+              - generic
+            - button "Send this to friends or post it on your profile." [ref=e115]
+              - generic
+            - toolbar "See who reacted to this"
+              - button "Like: 7 people" [ref=e126]
+              - button "Haha: 1 person" [ref=e127]
+          - generic
+          - link "Alexander Etkind" [ref=e101]
+            - image "Alexander Etkind"
+          - heading "Alexander Etkind" [level=4, ref=e61]
+            - link "Alexander Etkind" [ref=e102]
+              - StaticText "Alexander Etkind"
+          - link "6 days ago" [ref=e62]
+            - StaticText "o"
+            - StaticText "d"
+            - StaticText "o"
+            - StaticText "p"
+            - StaticText "s"
+            - StaticText "S"
+            - StaticText "n"
+            - StaticText "r"
+            - StaticText "t"
+            - StaticText "e"
+            - StaticText "a"
+            - StaticText ":"
+            - StaticText "8"
+            - StaticText "1"
+            - StaticText "g"
+            - StaticText "g"
+            - StaticText "m"
+            - StaticText "8"
+            - StaticText "c"
+            - StaticText "5"
+            - StaticText "2"
+            - StaticText "r"
+            - StaticText "3"
+            - StaticText "1"
+            - StaticText "a"
+            - StaticText "t"
+            - StaticText "l"
+            - StaticText "7"
+            - StaticText "u"
+            - StaticText "i"
+            - StaticText "g"
+            - StaticText "4"
+            - StaticText "4"
+            - StaticText "A"
+            - StaticText "6"
+            - StaticText "l"
+            - StaticText "1"
+            - StaticText "4"
+            - StaticText "h"
+            - StaticText "7"
+            - StaticText "0"
+            - StaticText "h"
+            - StaticText "0"
+            - StaticText "a"
+            - StaticText "3"
+            - StaticText "f"
+            - StaticText "5"
+            - StaticText "p"
+            - StaticText "u"
+            - StaticText "2"
+            - StaticText "1"
+            - StaticText "1"
+            - StaticText "1"
+            - StaticText "1"
+            - StaticText "u"
+            - StaticText "9"
+            - StaticText "0"
+          - image "Shared with Public"
+          - button "Actions for this post" [expanded=false, ref=e103]
+            - image
+          - link "Hide post by Alexander Etkind" [ref=e63]
+          - generic
+            - StaticText "Now based in Vienna, Alexander Etkind described the war in Ukraine as a ‘special operation’ against modernity itself. The war was not only about territory or identity. … "
+            - button "See more" [ref=e104]
+          - generic
+            - generic
+              - link "Weekly Word" [ref=e138]
+                - image "Weekly Word"
+              - button "More" [ref=e128]
+                - image
+            - link "WEEKLYWORD.EU Weekly Word" [ref=e129]
+              - generic
+                - generic
+                  - StaticText "WEEKLYWORD.EU"
+                  - StaticText "Weekly Word"
+          - generic
+            - generic
+              - button "Like" [ref=e116]
+                - generic
+                  - generic
+                  - StaticText "42"
+              - button "React" [ref=e117]
+                - image
+            - button "Leave a comment" [ref=e118]
+              - generic
+                - generic
+                - StaticText "8"
+            - button "Send this to friends or post it on your profile." [ref=e119]
+              - generic
+                - generic
+                - StaticText "2"
+            - toolbar "See who reacted to this"
+              - button "Like: 38 people" [ref=e130]
+              - button "Love: 4 people" [ref=e131]
+          - generic
+            - button "View more comments" [ref=e105]
+              - StaticText "View more comments"
+          - generic
+            - article "Comment by Alexander Etkind 5 days ago" [ref=e106]
+              - generic
+                - generic
+                  - link "Alexander Etkind" [ref=e148]
+                    - StaticText "Alexander Etkind"
+                  - StaticText "Ты ж меня всю жизнь знаешь! Но не читаешь"
+                  - button "Hide or report this" [expanded=false, ref=e149]
+                    - image
+                - generic
+                  - list
+                    - listitem [level=1]
+                      - link "5d" [ref=e150]
+                    - listitem [level=1]
+                      - generic
+                        - button "Like" [ref=e151]
+                        - button "React" [ref=e152]
+                    - listitem [level=1]
+                      - button "Reply" [ref=e153]
+                  - button "1 reaction; see who reacted to this" [ref=e139]
+          - generic
+            - generic
+              - button "Alexander Zhuravlyov replied  1 reply" [ref=e120]
+                - generic
+          - article
+            - status "Loading..."
+              - generic
+          - article
+            - status "Loading..."
+              - generic
+        - complementary
+          - generic
+            - generic
+              - generic
+                - heading "Sponsored" [level=3, ref=e64]
+              - generic
+                - link "Advertiser Esi kopā ar uzvarētājiem synottip.lv" [ref=e30]
+                - button "Open menu for Synottip Sportabārs sponsored content" [expanded=false, ref=e40]
+              - generic
+                - link "Advertiser Nākamā līmeņa pieredze olybet.lv" [ref=e31]
+                - button "Open menu for Olybet sponsored content" [expanded=false, ref=e41]
+            - generic
+              - generic
+                - heading "Birthdays" [level=3, ref=e65]
+              - link "Dasha Trofimova's birthday is today." [ref=e23]
+                - generic
+            - generic
+              - generic
+                - heading "Contacts" [level=3, ref=e66]
+                - button "Search for a name or group" [ref=e140]
+                - button "More options for contacts" [expanded=false, ref=e141]
+              - list
+                - listitem [level=1]
+                  - link "Meta AI profile photo Meta AIVerified account" [ref=e67]
+                - listitem [level=1]
+                  - link "Petronella O'Negriezz, Active" [ref=e68]
+                - listitem [level=1]
+                  - link "Tom Hellier, Active" [ref=e69]
+                - listitem [level=1]
+                  - link "Ágnes Fülöp, Active" [ref=e70]
+                - listitem [level=1]
+                  - link "Ash Bainbridge, Active" [ref=e71]
+                - listitem [level=1]
+                  - link "Matt Gorle" [ref=e72]
+                - listitem [level=1]
+                  - link "Brian Pellot" [ref=e73]
+                - listitem [level=1]
+                  - link "Sophia Krau" [ref=e74]
+                - listitem [level=1]
+                  - link "Marielle Wijermars" [ref=e75]
+                - listitem [level=1]
+                  - link "Silvia Schmidt" [ref=e76]
+                - listitem [level=1]
+                  - link "Christopher Flaherty" [ref=e77]
+                - listitem [level=1]
+                  - link "Ian J. Cutress" [ref=e78]
+                - listitem [level=1]
+                  - link "Rossen Roussanov" [ref=e79]
+                - listitem [level=1]
+                  - link "Amalija Nettle" [ref=e80]
+                - listitem [level=1]
+                  - link "Jeanette Healy" [ref=e81]
+                - listitem [level=1]
+                  - link "Zane Štāla" [ref=e82]
+                - listitem [level=1]
+                  - link "Alison Smith" [ref=e83]
+            - generic
+              - generic
+                - heading "Group chats" [level=3, ref=e84]
+              - list
+                - listitem [level=1]
+                  - button "Ela, Marcin and 9 others, last active 41w" [ref=e85]
+                - listitem [level=1]
+                  - button "Kata, Lili and 3 others, last active 41w" [ref=e86]
+                - listitem [level=1]
+                  - button "Lelde and Kata, last active 3y" [ref=e87]
+              - button "Create group chat" [ref=e39]
+  - generic
+    - button "New message" [ref=e4]

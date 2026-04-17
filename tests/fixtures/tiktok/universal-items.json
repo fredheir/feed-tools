@@ -1,0 +1,72 @@
+[
+  {
+    "id": "7619758421079936278",
+    "desc": "",
+    "author": {
+      "uniqueId": "fixture_user_one",
+      "nickname": "Fixture User One",
+      "avatarThumb": "https://example.invalid/avatar-one-thumb.jpg",
+      "avatarMedium": "https://example.invalid/avatar-one-medium.jpg",
+      "avatarLarger": "https://example.invalid/avatar-one-large.jpg"
+    },
+    "video": {
+      "id": "7619758421079936278",
+      "height": 1024,
+      "width": 576,
+      "duration": 11,
+      "originCover": "https://example.invalid/video-one-origin.jpg",
+      "cover": "https://example.invalid/video-one-cover.jpg",
+      "dynamicCover": "https://example.invalid/video-one-dynamic.jpg",
+      "downloadAddr": "https://example.invalid/video-one-download.mp4",
+      "playAddr": "https://example.invalid/video-one-play.mp4"
+    },
+    "music": {
+      "id": "7375305389623102250",
+      "title": "GET OUT"
+    },
+    "challenges": [],
+    "stats": {
+      "commentCount": 745,
+      "shareCount": 7302,
+      "diggCount": 81500,
+      "playCount": 1500000
+    }
+  },
+  {
+    "id": "7607527097221008643",
+    "desc": "She was made for moments like this 🤗 #RedCarpetBoy #WGS2026 #WorldGovSummit",
+    "author": {
+      "uniqueId": "fixture_user_two",
+      "nickname": "Fixture User Two",
+      "avatarThumb": "https://example.invalid/avatar-two-thumb.jpg",
+      "avatarMedium": "https://example.invalid/avatar-two-medium.jpg",
+      "avatarLarger": "https://example.invalid/avatar-two-large.jpg"
+    },
+    "video": {
+      "id": "7607527097221008643",
+      "height": 1024,
+      "width": 576,
+      "duration": 20,
+      "originCover": "https://example.invalid/video-two-origin.jpg",
+      "cover": "https://example.invalid/video-two-cover.jpg",
+      "dynamicCover": "https://example.invalid/video-two-dynamic.jpg",
+      "downloadAddr": "https://example.invalid/video-two-download.mp4",
+      "playAddr": "https://example.invalid/video-two-play.mp4"
+    },
+    "music": {
+      "id": "7607527104662899478",
+      "title": "original sound"
+    },
+    "challenges": [
+      { "title": "RedCarpetBoy" },
+      { "title": "WGS2026" },
+      { "title": "WorldGovSummit" }
+    ],
+    "stats": {
+      "commentCount": 513,
+      "shareCount": 879,
+      "diggCount": 126600,
+      "playCount": 2800000
+    }
+  }
+]

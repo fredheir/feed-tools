@@ -5,6 +5,7 @@ import {
   scoreLinkedInItemQuality,
 } from "../sources/linkedin/capture.js";
 import { normalizeItemShape } from "../lib/item-shape.js";
+import { readFixture } from "./helpers/cli-config.js";
 
 describe("extractLinkedInSourceItemId", () => {
   test("extracts feed update urns", () => {
@@ -76,5 +77,17 @@ describe("extractLinkedInSourceItemId", () => {
 
     expect(scoreLinkedInItemQuality(item)).toBeLessThan(4);
     expect(isLinkedInItemWorthKeeping(item)).toBe(false);
+  });
+
+  test("real-browser snapshot fixture still exposes feed extraction signals", () => {
+    const snapshot = readFixture("linkedin", "snapshot.txt");
+
+    expect(snapshot).toContain('button "Start a post"');
+    expect(snapshot).toContain('heading "Feed post" [level=2');
+    expect(snapshot).toContain('button "Open control menu for post');
+    expect(snapshot).toContain('button "Comment"');
+    expect(snapshot).toContain('button "Repost"');
+    expect(snapshot).toContain('link "Send"');
+    expect(snapshot).toContain("Visibility: Global");
   });
 });

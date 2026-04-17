@@ -7,6 +7,7 @@ import {
   isInstagramPermalinkUrl,
   isInstagramProfileUrl,
 } from "../sources/instagram/parse.js";
+import { readFixture } from "./helpers/cli-config.js";
 
 function createBrowserStub(existingState) {
   const calls = [];
@@ -48,8 +49,8 @@ describe("instagram parse helpers", () => {
 
   test("recognizes permalink and profile urls", () => {
     expect(isInstagramPermalinkUrl("/p/DW6Oe10jEFH/")).toBe(true);
-    expect(isInstagramPermalinkUrl("/fredheir/")).toBe(false);
-    expect(isInstagramProfileUrl("/fredheir/")).toBe(true);
+    expect(isInstagramPermalinkUrl("/fixture_user/")).toBe(false);
+    expect(isInstagramProfileUrl("/fixture_user/")).toBe(true);
     expect(isInstagramProfileUrl("/explore/")).toBe(false);
   });
 
@@ -95,5 +96,20 @@ describe("instagram capture integration", () => {
     });
 
     expect(item.source_item_id).toBe("p:DW6Oe10jEFH");
+  });
+
+  test("real-browser feed fixture still exposes extractor signals", () => {
+    const html = readFixture("instagram", "article.html");
+
+    expect(html).toContain("/fixture_user/");
+    expect(html.includes('href="/p/') || html.includes('href="/reel/')).toBe(
+      true,
+    );
+    expect(html).toContain("More Options");
+    expect(html).toContain("Like");
+    expect(html).toContain("Comment");
+    expect(html).toContain("Share");
+    expect(html).toContain("Save");
+    expect(html).toContain("<img");
   });
 });
