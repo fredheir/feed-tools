@@ -61,4 +61,6 @@ function buildBrowserRuntimeScript(limit, body, extras = []) {
 
 module.exports = {
   buildBrowserRuntimeScript,
+  normalizeCount,
+  makeAbsoluteUrl,
 };

@@ -1,15 +1,40 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
 
 export const repoRoot = path.resolve(import.meta.dirname, "../..");
+const fixturesRoot = path.resolve(import.meta.dirname, "..", "fixtures");
+
+export function readFixture(...segments) {
+  return fs.readFileSync(path.join(fixturesRoot, ...segments), "utf8");
+}
+
+export function runCli(scriptPath, args, configPath) {
+  return execFileSync(process.execPath, [scriptPath, ...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: withConfigEnv(configPath),
+  });
+}
+
+export function spawnCli(scriptPath, args, configPath) {
+  return spawnSync(process.execPath, [scriptPath, ...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: withConfigEnv(configPath),
+  });
+}
 
 export function writeTestConfig(directory, overrides = {}) {
   const configDir = fs.mkdtempSync(
     path.join(os.tmpdir(), "feed-tools-config-"),
   );
   const configPath = path.join(configDir, "config.json");
+  const { user_preferences: userPreferencesOverrides, ...topLevelOverrides } =
+    overrides;
   const config = {
+    ...topLevelOverrides,
     user_preferences: {
       sources: [
         {
@@ -68,9 +93,8 @@ export function writeTestConfig(directory, overrides = {}) {
         populate_on_request_only: true,
         custom_instructions: "",
       },
-      ...overrides.user_preferences,
+      ...userPreferencesOverrides,
     },
-    ...overrides,
   };
 
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");

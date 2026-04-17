@@ -1,0 +1,5 @@
+- generic
+  - heading "Join X today" [level=1]
+  - button "Create account"
+  - button "Sign in"
+  - StaticText "See what’s happening in the world right now."

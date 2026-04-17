@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { prepareFeed } from "../sources/x/capture.js";
+import { readFixture } from "./helpers/cli-config.js";
 
 function createBrowserStub(existingFeedState) {
   const calls = [];
@@ -65,5 +66,24 @@ describe("x capture bootstrap", () => {
     expect(
       browser.calls.filter(([name]) => name === "tryWaitForFunction").length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe("x fixture contract", () => {
+  test("real-browser signed-in article fixture still exposes extractor selectors", () => {
+    const html = readFixture("x", "article.html");
+
+    expect(html).toContain('data-testid="socialContext"');
+    expect(html).toContain('data-testid="Tweet-User-Avatar"');
+    expect(html).toContain('data-testid="tweetText"');
+    expect(html).toContain('data-testid="tweetPhoto"');
+    expect(html).toContain('data-testid="reply"');
+    expect(html).toContain('data-testid="retweet"');
+    expect(html).toContain('data-testid="like"');
+    expect(html).toContain("profile_images/FIXTURE_normal.jpg");
+    expect(html).toContain("/fixture_user/status/123456789");
+    expect(html).toContain("View post analytics");
+    expect(html).toContain("fixture_reposter");
+    expect(html).toContain("@fixture_author");
   });
 });

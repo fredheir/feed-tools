@@ -1,0 +1,738 @@
+- generic [ref=e1] clickable [onclick]
+  - heading "0 notifications" [level=2, ref=e3]
+  - generic
+  - banner
+    - button "LinkedIn" [ref=e4]
+      - image "LinkedIn"
+    - search
+      - generic
+        - generic [ref=e7] clickable [onclick]
+        - textbox "Search" [ref=e8]
+    - navigation
+      - list
+        - listitem [level=1]
+          - button "Home, 1 new notification" [ref=e9]
+            - StaticText "Home"
+        - listitem [level=1]
+          - link "My Network, 0 new notifications" [ref=e10]
+            - StaticText "My Network"
+        - listitem [level=1]
+          - link "Jobs, 0 new notifications" [ref=e11]
+            - StaticText "Jobs"
+        - listitem [level=1]
+          - link "Messaging, 0 new notifications" [ref=e12]
+            - StaticText "Messaging"
+        - listitem [level=1]
+          - link "Notifications, 19 new notifications" [ref=e13]
+            - StaticText "19"
+            - StaticText "Notifications"
+        - listitem [level=1]
+          - button "Me" [expanded=false, ref=e14]
+            - StaticText "Me"
+    - navigation
+      - list
+        - listitem [level=1]
+          - button "For Business" [expanded=false, ref=e15]
+            - StaticText "For Business"
+    - link "Try Premium for €0" [ref=e5]
+      - paragraph
+        - StaticText "Try Premium for €0"
+  - main
+    - main [ref=e6] focusable [tabindex]
+      - link [ref=e27]
+        - figure
+          - image "Fixture User"
+      - link "Fixture User Director, Fixture Company Fixture Country" [ref=e28]
+        - paragraph
+          - StaticText "Fixture User"
+        - paragraph
+          - StaticText "Director, Fixture Company"
+        - paragraph
+          - StaticText "Fixture Country"
+      - link "Fixture Company" [ref=e29]
+        - paragraph
+          - StaticText "Fixture Company"
+      - menu
+        - link "Profile viewers 17" [ref=e154]
+          - generic "Profile viewers 17"
+            - paragraph
+              - StaticText "Profile viewers"
+            - paragraph
+              - StaticText "17"
+        - link "View all analytics 0" [ref=e155]
+          - paragraph
+            - StaticText "View all analytics"
+      - menu
+        - link "Fixture Company" [ref=e156]
+          - figure
+            - image "Fixture Company logo"
+          - paragraph
+            - StaticText "Fixture Company"
+        - link "Activity 0" [ref=e157]
+          - paragraph
+            - StaticText "Activity"
+          - paragraph
+            - StaticText "0"
+        - link "Visitors 5" [ref=e158]
+          - paragraph
+            - StaticText "Visitors"
+          - paragraph
+            - StaticText "5"
+        - paragraph
+          - StaticText "Grow your business faster"
+        - link "Try Premium Page for €0" [ref=e159]
+          - paragraph
+            - StaticText "Try Premium Page for €0"
+        - link "Advertise on LinkedIn" [ref=e160]
+          - paragraph
+            - StaticText "Advertise on LinkedIn"
+        - link "See visitor analytics" [ref=e161]
+          - paragraph
+            - StaticText "See visitor analytics"
+      - menu
+        - link "Saved items" [ref=e162]
+          - paragraph
+            - StaticText "Saved items"
+        - link "Groups" [ref=e163]
+          - paragraph
+            - StaticText "Groups"
+        - link "Newsletters" [ref=e164]
+          - paragraph
+            - StaticText "Newsletters"
+        - link "Events" [ref=e165]
+          - paragraph
+            - StaticText "Events"
+      - list
+        - link [ref=e30]
+        - button "Start a post" [ref=e31]
+          - paragraph
+            - StaticText "Start a post"
+        - button "Video" [ref=e32]
+          - paragraph
+            - StaticText "Video"
+        - button "Photo" [ref=e33]
+          - paragraph
+            - StaticText "Photo"
+        - link "Write article" [ref=e34]
+          - paragraph
+            - StaticText "Write article"
+        - button "Select feed view: Most relevant first" [expanded=false, ref=e16]
+          - paragraph
+            - StaticText "Select feed view: "
+            - strong
+              - StaticText "Most relevant first"
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e35]
+            - StaticText "Feed post"
+          - link [ref=e36]
+            - figure
+              - image "View Fixture LinkedIn Author’s profile"
+          - link "Fixture LinkedIn Author Verified Profile 1st Data, politics, and what happens in between. 13h • Visibility: Global" [ref=e37]
+            - generic "Fixture LinkedIn Author Verified Profile 1st"
+              - paragraph
+                - StaticText "Fixture LinkedIn Author"
+              - paragraph
+                - StaticText " "
+                - StaticText " • 1st"
+            - paragraph
+              - StaticText "Data, politics, and what happens in between."
+            - paragraph
+              - StaticText "13h • "
+              - image "Visibility: Global"
+          - button "Open control menu for post by Fixture LinkedIn Author" [expanded=false, ref=e38]
+          - button "Hide post by Fixture LinkedIn Author" [ref=e39]
+          - generic
+            - StaticText "Two interviews. Two countries. Two names. One of them mine.\n\n🇦🇹 ORF's ZIB2 had my alter ego Clemens on for their FPÖ 70th anniversary history special. But it's the message that matters anyway:\n\nOne of our organization's recent investigations found a network of 1,200+ TikTok accounts artificially amplifying Alice Weidel content and gaining 30M+ likes and 3M+ followers. The catch? Over 57% of the videos were uploaded from Nigeria! The AfD says it's nothing to do with them. Maybe. But that's exactly the point: synthetic reach can be bought by anyone to game algorithms. Users can no longer tell real support from manufactured hype. What lands on your screen has less and less to do with what we used to call \"social\" networks and more and more to do with machines steering your attention.\n\n🇨🇦 Global News Canada, on our other study: our analysts found 324 active ads on Meta openly pushing injectable peptides to Canadian users. These products are actually regulated as prescription drugs, illegal to sell without authorization. In the ads? Zero mention of prescriptions, Health Canada approval, or safety warnings. Meta's enforcement? Reactive at best. One ad comes down, the advertiser network behind it stays intact, and hundreds of new ones appear the next day. Whack-a-mole, indefinitely.\n\nTwo platforms, two countries, same story: the infrastructure for manipulation scales fast and the platforms seem unwilling to sacrifice profit for trust or safety.\nLinks to both interviews in the comments. Want to read our studies? Comment or DM me. "
+          - link [ref=e40]
+            - figure
+              - image "View image"
+          - link "Richard Kuchta and 83 others reacted" [ref=e41]
+            - paragraph
+              - StaticText "Richard Kuchta"
+              - StaticText " and "
+              - StaticText "83"
+              - StaticText " others reacted"
+          - button "6 comments" [ref=e42]
+            - paragraph
+              - StaticText "6"
+              - StaticText " comments"
+          - paragraph
+            - StaticText "•"
+          - link "2 reposts" [ref=e43]
+            - paragraph
+              - StaticText "2"
+              - StaticText " reposts"
+          - link "Open actor selection screen" [ref=e44]
+          - button "Reaction button state: no reaction" [ref=e45]
+            - StaticText "Like"
+          - button "Open reactions menu" [expanded=false, ref=e46]
+          - button "Comment" [ref=e47]
+            - StaticText "Comment"
+          - button "Repost" [expanded=false, ref=e48]
+            - StaticText "Repost"
+          - link "Send" [ref=e49]
+            - StaticText "Send"
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e50]
+            - StaticText "Feed post"
+          - link [ref=e51]
+            - figure
+              - image "View company: LinkedIn"
+          - link "LinkedIn Premium 33,544,148 followers Promoted" [ref=e52]
+            - generic "LinkedIn Premium"
+              - paragraph
+                - StaticText "LinkedIn"
+              - paragraph
+                - StaticText " "
+            - paragraph
+              - StaticText "33,544,148 followers"
+            - paragraph
+              - StaticText "Promoted"
+          - button "Open control menu for post by LinkedIn" [expanded=false, ref=e53]
+          - generic
+            - StaticText "Exploring new job opportunities? "
+            - link "https://lnkd.in/eGKiSHVp" [ref=e166]
+              - strong
+                - StaticText "https://lnkd.in/eGKiSHVp"
+          - link [ref=e54]
+            - figure
+              - image "View Sponsored Content"
+          - link "Get started linkedin.com Learn more" [ref=e55]
+            - paragraph
+              - StaticText "Get started"
+            - paragraph
+              - StaticText "linkedin.com"
+            - link "Learn more" [ref=e167]
+              - StaticText "Learn more"
+          - link "4,583 reactions" [ref=e56]
+            - paragraph
+              - StaticText "4,583"
+              - StaticText " reactions"
+          - button "107 comments" [ref=e57]
+            - paragraph
+              - StaticText "107"
+              - StaticText " comments"
+          - paragraph
+            - StaticText "•"
+          - link "51 reposts" [ref=e58]
+            - paragraph
+              - StaticText "51"
+              - StaticText " reposts"
+          - link "Open actor selection screen" [ref=e59]
+          - button "Reaction button state: no reaction" [ref=e60]
+            - StaticText "Like"
+          - button "Open reactions menu" [expanded=false, ref=e61]
+          - button "Comment" [ref=e62]
+            - StaticText "Comment"
+          - button "Repost" [expanded=false, ref=e63]
+            - StaticText "Repost"
+          - link "Send" [ref=e64]
+            - StaticText "Send"
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e65]
+            - StaticText "Feed post"
+          - link [ref=e66]
+            - figure
+              - image "View company: NATO Strategic Communications Centre of Excellence"
+          - link "NATO Strategic Communications Centre of Excellence 22m • Edited • Visibility: Global" [ref=e67]
+            - paragraph
+              - StaticText "NATO Strategic Communications Centre of Excellence"
+            - paragraph
+              - StaticText "22m • Edited • "
+              - image "Visibility: Global"
+          - button "Open control menu for post by NATO Strategic Communications Centre of Excellence" [expanded=false, ref=e68]
+          - button "Hide post by NATO Strategic Communications Centre of Excellence" [ref=e69]
+          - generic
+            - StaticText "Today, we were honored to welcome Ms Mariana Betsa, Deputy Foreign Minister of Ukraine. Discussions focused on ongoing cooperation and support for Ukraine, as well as the latest developments in our area of expertise, particularly cognitive warfare, malign activities in the information environment, and Artificial Intelligence."
+            - LineBreak "\n"
+            - LineBreak "\n"
+            - StaticText "Ukraine’s security is of critical importance to NATO and its member states. The Alliance fully supports Ukraine’s inherent right to self-defence and its sovereign right to choose its own security arrangements. 🤝"
+            - LineBreak "\n"
+            - LineBreak "\n"
+            - link "#StandWithUkraine" [ref=e168]
+              - strong
+                - StaticText "#StandWithUkraine"
+          - link [ref=e70]
+            - figure
+              - image "View image"
+          - link "Peeter Tali and 9 others reacted" [ref=e71]
+            - paragraph
+              - StaticText "Peeter Tali"
+              - StaticText " and "
+              - StaticText "9"
+              - StaticText " others reacted"
+          - button "1 comment" [ref=e72]
+            - paragraph
+              - StaticText "1"
+              - StaticText " comment"
+          - link "Open actor selection screen" [ref=e73]
+          - button "Reaction button state: no reaction" [ref=e74]
+            - StaticText "Like"
+          - button "Open reactions menu" [expanded=false, ref=e75]
+          - button "Comment" [ref=e76]
+            - StaticText "Comment"
+          - button "Repost" [expanded=false, ref=e77]
+            - StaticText "Repost"
+          - link "Send" [ref=e78]
+            - StaticText "Send"
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e79]
+            - StaticText "Feed post"
+          - link [ref=e80]
+            - figure
+              - image "View Fixture LinkedIn Profile’ profile"
+          - link "Fixture LinkedIn Profile Verified Profile 1st Partner at Michael Kyprianou Advocates & Legal Consultants 1d • Visibility: Global" [ref=e81]
+            - generic "Fixture LinkedIn Profile Verified Profile 1st"
+              - paragraph
+                - StaticText "Fixture LinkedIn Profile"
+              - paragraph
+                - StaticText " "
+                - StaticText " • 1st"
+            - paragraph
+              - StaticText "Partner at Michael Kyprianou Advocates & Legal Consultants"
+            - paragraph
+              - StaticText "1d • "
+              - image "Visibility: Global"
+          - button "Open control menu for post by Fixture LinkedIn Profile" [expanded=false, ref=e82]
+          - button "Hide post by Fixture LinkedIn Profile" [ref=e83]
+          - generic
+            - StaticText "I am proud to share that our Dispute Resolution team at "
+            - link "Michael Kyprianou Law Firm" [ref=e169]
+              - strong
+                - StaticText "Michael Kyprianou Law Firm"
+            - StaticText " has once again been recognised by The "
+            - link "Legal 500" [ref=e170]
+              - strong
+                - StaticText "Legal 500"
+            - StaticText " (EMEA 2026 edition). "
+            - LineBreak "\n"
+            - LineBreak "\n"
+            - StaticText "I am personally humbled to be ranked as a Next Generation Partner and truly grateful for the very kind and generous testimonials from our clients. "
+            - LineBreak "\n"
+            - LineBreak "\n"
+            - StaticText "A sincere thank you to our clients for their continued trust and support and to my colleagues at "
+            - link "Michael Kyprianou Law Firm" [ref=e171]
+              - strong
+                - StaticText "Michael Kyprianou Law Firm"
+            - StaticText ". Any personal recognition is only possible because of the environment here that genuinely supports collaboration, excellence and professional development. It is a privilege to work alongside such a talented and dedicated team, many of whom have also been individually recognised for the quality of their work."
+            - LineBreak "\n"
+            - LineBreak "\n"
+            - StaticText "You can read more here: "
+            - LineBreak "\n"
+            - StaticText "👉 "
+            - link "https://lnkd.in/dmTBsTAA" [ref=e172]
+              - strong
+                - StaticText "https://lnkd.in/dmTBsTAA"
+            - LineBreak "\n"
+            - LineBreak "\n"
+            - link "#Legal500" [ref=e173]
+              - strong
+                - StaticText "#Legal500"
+            - StaticText " "
+            - link "#Legal500EMEA" [ref=e174]
+              - strong
+                - StaticText "#Legal500EMEA"
+            - StaticText " "
+            - link "#DisputeResolution" [ref=e175]
+              - strong
+                - StaticText "#DisputeResolution"
+            - StaticText " "
+            - link "#Litigation" [ref=e176]
+              - strong
+                - StaticText "#Litigation"
+          - link [ref=e84]
+            - figure
+              - image "View image"
+          - link "Dan Connor and 46 others reacted" [ref=e85]
+            - paragraph
+              - StaticText "Dan Connor"
+              - StaticText " and "
+              - StaticText "46"
+              - StaticText " others reacted"
+          - link "Open actor selection screen" [ref=e86]
+          - button "Reaction button state: no reaction" [ref=e87]
+            - StaticText "Like"
+          - button "Open reactions menu" [expanded=false, ref=e88]
+          - button "Comment" [ref=e89]
+            - StaticText "Comment"
+          - button "Repost" [expanded=false, ref=e90]
+            - StaticText "Repost"
+          - link "Send" [ref=e91]
+            - StaticText "Send"
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e92]
+            - StaticText "Feed post"
+          - paragraph
+            - StaticText "Reach more buyers"
+          - paragraph
+            - StaticText "Boost your best posts in minutes and drive measurable results"
+          - link "Learn how" [ref=e93]
+            - StaticText "Learn how"
+          - button "View more options" [expanded=false, ref=e94]
+          - link [ref=e95]
+            - figure
+              - image "Learn how"
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e96]
+            - StaticText "Feed post"
+          - paragraph
+            - link "Ben Heap" [ref=e177]
+              - strong
+                - StaticText "Ben Heap"
+            - StaticText ", "
+            - link "Linda Curika" [ref=e178]
+              - strong
+                - StaticText "Linda Curika"
+            - StaticText " and 9 other connections follow "
+            - link "Fixture LinkedIn Brand" [ref=e179]
+              - strong
+                - StaticText "Fixture LinkedIn Brand"
+          - button "Open control menu for post by Fixture LinkedIn Brand" [expanded=false, ref=e97]
+          - link [ref=e98]
+            - figure
+              - image "View company: Fixture LinkedIn Brand"
+          - link "Fixture LinkedIn Brand 5,296,034 followers Promoted" [ref=e99]
+            - paragraph
+              - StaticText "Fixture LinkedIn Brand"
+            - paragraph
+              - StaticText "5,296,034 followers"
+            - paragraph
+              - StaticText "Promoted"
+          - generic
+            - StaticText "On your free, one-to-one LinkedIn Ads consultation, we’ll walk you through setting up a LinkedIn Ads campaign with targeting tips to reach the right prospects and land new customers."
+          - link [ref=e100]
+            - figure
+              - image "Request your complimentary 1:1 consultation View Lead Gen Form"
+          - link "Request your complimentary 1:1 consultation 6,574 submits" [ref=e101]
+            - paragraph
+              - StaticText "Request your complimentary 1:1 consultation"
+            - paragraph
+              - StaticText "6,574 submits"
+          - link "Register" [ref=e102]
+            - StaticText "Register"
+          - link "8,719 reactions" [ref=e103]
+            - paragraph
+              - StaticText "8,719"
+              - StaticText " reactions"
+          - button "40 comments" [ref=e104]
+            - paragraph
+              - StaticText "40"
+              - StaticText " comments"
+          - paragraph
+            - StaticText "•"
+          - link "13 reposts" [ref=e105]
+            - paragraph
+              - StaticText "13"
+              - StaticText " reposts"
+          - link "Open actor selection screen" [ref=e106]
+          - button "Reaction button state: no reaction" [ref=e107]
+            - StaticText "Like"
+          - button "Open reactions menu" [expanded=false, ref=e108]
+          - button "Comment" [ref=e109]
+            - StaticText "Comment"
+          - button "Repost" [expanded=false, ref=e110]
+            - StaticText "Repost"
+          - link "Send" [ref=e111]
+            - StaticText "Send"
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e112]
+            - StaticText "Feed post"
+          - link [ref=e113]
+            - figure
+              - image "View Fixture LinkedIn Person’s profile"
+          - link "Fixture LinkedIn Person Verified Profile 1st Head of Government Affairs, Policy and Access, ViiV Healthcare 3d • Visibility: Connections only" [ref=e114]
+            - generic "Fixture LinkedIn Person Verified Profile 1st"
+              - paragraph
+                - StaticText "Fixture LinkedIn Person"
+              - paragraph
+                - StaticText " "
+                - StaticText " • 1st"
+            - paragraph
+              - StaticText "Head of Government Affairs, Policy and Access, ViiV Healthcare "
+            - paragraph
+              - StaticText "3d • "
+              - image "Visibility: Connections only"
+          - button "Open control menu for post by Fixture LinkedIn Person" [expanded=false, ref=e115]
+          - button "Hide post by Fixture LinkedIn Person" [ref=e116]
+          - generic
+            - StaticText "After an extended sabbatical filled with travel, art, exercise and family adventures, I’m thrilled to today join ViiV Healthcare - part of the GSK family - as Head of Government Affairs, Policy and Access. Whilst it’ll take my kids a while to realise I’m going to work and ‘not just the gym’, it’s a dream role joining a team with lofty but achievable ambitions to end HIV once and for all. And in the meantime, to ensure no one with HIV is left behind untreated and excluded from society and life. Huge thanks to so many already at ViiV/GSK and for the opportunities and guidance a few special people at FTI, GW and Jazz gave me. Would love to chat to anyone else working in the HIV/AIDS, global health and related fields."
+          - link [ref=e117]
+            - figure
+              - image "View celebration image"
+          - link "Starting a new position" [ref=e118]
+            - paragraph
+              - StaticText "Starting a new position"
+          - link "82 reactions" [ref=e119]
+            - paragraph
+              - StaticText "82"
+              - StaticText " reactions"
+          - button "18 comments" [ref=e120]
+            - paragraph
+              - StaticText "18"
+              - StaticText " comments"
+          - button "Reaction button state: no reaction" [ref=e121]
+            - StaticText "Like"
+          - button "Open reactions menu" [expanded=false, ref=e122]
+          - button "Comment" [ref=e123]
+            - StaticText "Comment"
+          - generic
+            - list
+              - listitem [level=2]
+                - button "Congratulations! 🎉" [ref=e193]
+                  - generic
+                    - checkbox "Congratulations! 🎉" [checked=false, ref=e198]
+              - listitem [level=2]
+                - button "👏 Well deserved, Natasha" [ref=e194]
+                  - generic
+                    - checkbox "👏 Well deserved, Natasha" [checked=false, ref=e199]
+              - listitem [level=2]
+                - button "🎉 Excited for you" [ref=e195]
+                  - generic
+                    - checkbox "🎉 Excited for you" [checked=false, ref=e200]
+              - listitem [level=2]
+                - button "Wishing you the best" [ref=e196]
+                  - generic
+                    - checkbox "Wishing you the best" [checked=false, ref=e201]
+              - listitem [level=2]
+                - button "🎉🎉🎉" [ref=e197]
+                  - generic
+                    - checkbox "🎉🎉🎉" [checked=false, ref=e202]
+            - button "Next" [ref=e190]
+        - listitem [level=1]
+          - heading "Feed post" [level=2, ref=e124]
+            - StaticText "Feed post"
+          - link [ref=e125]
+            - figure
+              - image "View Fixture LinkedIn Executive’s profile"
+          - link "Fixture LinkedIn Executive Verified Profile 1st ShieldAI Business Development | SERA Alumnus |Keynote Speaker |Multi-Domain Architect | Integrating Space & OSINT for the AI-Driven Battlefield |Leveraging F1 Performance DNA & Aviation ExpertiseDo what honor dictates 1d • Visibility: Global" [ref=e126]
+            - generic "Fixture LinkedIn Executive Verified Profile 1st"
+              - paragraph
+              - paragraph
+            - paragraph
+              - StaticText "ShieldAI Business Development | SERA Alumnus |Keynote Speaker |Multi-Domain Architect | Integrating Space & OSINT for the AI-Driven Battlefield |Leveraging F1 Performance DNA & Aviation ExpertiseDo what honor dictates"
+            - paragraph
+              - StaticText "1d • "
+              - image "Visibility: Global"
+          - button "Open control menu for post by Fixture LinkedIn Executive" [expanded=false, ref=e127]
+          - button "Hide post by Fixture LinkedIn Executive" [ref=e128]
+          - generic
+            - StaticText "Standing here at the 100 years Lufthansa celebration in Frankfurt today is a deeply emotional experience. The irony is not lost on me that I am here alone because of the strike. My brother is stuck in Atlanta and my father’s flight was cancelled as well, so I quickly arranged to be here to represent us and made possibleby great people "
+            - link "Lufthansa" [ref=e180]
+              - strong
+            - StaticText " ."
+            - LineBreak "\n"
+            - StaticText "It feels like a true full circle moment. I am standing just 200m away from where I first started my journey as a young intern back in 1990. But the real heart of today is my father and the aviation folklore he lived. He was invited as a guest of honor because he started his career in the 1950s. The Lockheed 1649 Super Star being unveiled today was the very first large aircraft he ever flew. Seeing that \"Super Star\" reminds me of the incredible era of aviation he helped build."
+            - LineBreak "\n"
+            - StaticText "His path took him from the propeller age to running Lufthansa flight training in Phoenix during the late 70s and early 80s. He eventually ended his long career in 1994 as a Captain of the Boeing 747-200 \"Classic\"."
+            - LineBreak "\n"
+            - StaticText "That summer of 1994 was such a pivotal time for our family because it was the one moment our careers all overlapped. We were all part of the Lufthansa family at once. My father was flying his final routes as Captain, my brother had just become a purser after years as a steward, and I was starting my own aviation path at "
+            - link "Lufthansa Technik" [ref=e181]
+              - strong
+            - StaticText " in Hamburg (with a touch of my defence culture maturing 😇)."
+            - LineBreak "\n"
+            - StaticText "I have had so many professional interactions with the company since those days in Hamburg, but being here today feels different. I am so sad my father couldn't be here to see his old aircraft and be honored in person, but I feel a massive sense of pride to stand in his place. Thank you to everyone who made it possible for me to be part of this 100 year milestone."
+            - LineBreak "\n"
+            - LineBreak "\n"
+            - link "#Lufthansa100" [ref=e182]
+              - strong
+            - StaticText " "
+            - link "#AviationHistory" [ref=e183]
+              - strong
+            - StaticText " "
+            - link "#747Classic" [ref=e184]
+              - strong
+            - StaticText " "
+            - link "#Queen" [ref=e185]
+              - strong
+            - StaticText " "
+            - link "#SuperStar" [ref=e186]
+              - strong
+            - StaticText " "
+            - link "#LufthansaTechnik" [ref=e187]
+              - strong
+            - StaticText " "
+          - link [ref=e129]
+            - figure
+              - image "View image"
+          - link [ref=e130]
+            - figure
+              - image "View image"
+          - link [ref=e131]
+            - figure
+              - image "View image"
+          - link [ref=e132]
+            - figure
+              - image "View image"
+          - link "16 more images" [ref=e133]
+            - paragraph
+              - StaticText "+16"
+          - link "Francesca Galeotti and 100 others reacted" [ref=e134]
+            - paragraph
+              - StaticText "Francesca Galeotti"
+              - StaticText " and "
+              - StaticText "100"
+              - StaticText " others reacted"
+          - button "8 comments" [ref=e135]
+            - paragraph
+              - StaticText "8"
+              - StaticText " comments"
+          - link "Open actor selection screen" [ref=e136]
+          - button "Reaction button state: no reaction" [ref=e137]
+            - StaticText "Like"
+          - button "Open reactions menu" [expanded=false, ref=e138]
+          - button "Comment" [ref=e139]
+            - StaticText "Comment"
+          - button "Repost" [expanded=false, ref=e140]
+            - StaticText "Repost"
+          - link "Send" [ref=e141]
+            - StaticText "Send"
+      - paragraph
+        - StaticText "Today’s puzzles"
+      - link "Play Patches" [ref=e17]
+        - paragraph
+          - strong
+            - StaticText "Patches"
+          - StaticText " #31"
+        - paragraph
+          - StaticText "Piece it together"
+      - link "Play Zip" [ref=e18]
+        - paragraph
+          - strong
+            - StaticText "Zip"
+          - StaticText " #396"
+        - paragraph
+          - StaticText "2 connections played"
+      - link "Play MiniSudoku" [ref=e19]
+        - paragraph
+          - strong
+            - StaticText "Mini Sudoku"
+          - StaticText " #249"
+        - paragraph
+          - StaticText "The classic game, made mini"
+      - link "Play Tango" [ref=e20]
+        - paragraph
+          - strong
+            - StaticText "Tango"
+          - StaticText " #557"
+        - paragraph
+          - StaticText "Harmonize the grid"
+      - button "Show more" [ref=e21]
+        - StaticText "Show more"
+      - paragraph
+        - StaticText "Add to your feed"
+      - link "Dmytro Bilash Information security | Strategic Risk Intelligence Follow Dmytro Bilash" [ref=e22]
+        - figure
+          - image "View profile"
+        - paragraph
+          - StaticText "Dmytro Bilash"
+        - paragraph
+          - StaticText "Information security | Strategic Risk Intelligence"
+        - button "Follow Dmytro Bilash" [ref=e142]
+          - StaticText "Follow"
+      - link "Barack Obama Former President of the United States of America Follow Barack Obama" [ref=e23]
+        - figure
+          - image "View profile"
+        - paragraph
+          - StaticText "Barack Obama"
+        - paragraph
+          - StaticText "Former President of the United States of America"
+        - button "Follow Barack Obama" [ref=e143]
+          - StaticText "Follow"
+      - link "Munich Security Conference Company • International Affairs Follow Munich Security Conference" [ref=e24]
+        - figure
+          - image "View company"
+        - paragraph
+          - StaticText "Munich Security Conference"
+        - paragraph
+          - StaticText "Company • International Affairs"
+        - button "Follow Munich Security Conference" [ref=e144]
+          - StaticText "Follow"
+      - link "View all recommendations" [ref=e25]
+        - StaticText "View all recommendations"
+      - sectionfooter
+        - link "About" [ref=e145]
+          - paragraph
+            - StaticText "About"
+        - link "Accessibility" [ref=e146]
+          - paragraph
+            - StaticText "Accessibility"
+        - link "Help Center" [ref=e147]
+          - paragraph
+            - StaticText "Help Center"
+        - button "Privacy & Terms" [expanded=false, ref=e148]
+          - paragraph
+            - StaticText "Privacy & Terms"
+        - link "Ad Choices" [ref=e149]
+          - paragraph
+            - StaticText "Ad Choices"
+        - link "Advertising" [ref=e150]
+          - paragraph
+            - StaticText "Advertising"
+        - button "Business Services" [expanded=false, ref=e151]
+          - paragraph
+            - StaticText "Business Services"
+        - link "Get the LinkedIn app" [ref=e152]
+          - paragraph
+            - StaticText "Get the LinkedIn app"
+        - link "More" [ref=e153]
+          - paragraph
+            - StaticText "More"
+      - paragraph
+        - StaticText "LinkedIn Corporation © 2026"
+  - generic
+    - generic
+      - complementary
+        - generic
+          - sectionheader
+            - generic
+              - generic
+              - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e188]
+            - generic
+              - generic
+                - button "Open messenger dropdown menu" [expanded=false, ref=e191]
+              - generic
+                - button "Compose message" [ref=e192]
+              - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e189]
+          - link "Fixture Company picture Fixture Company" [ref=e26]
+            - image "Fixture Company picture"
+            - StaticText "Fixture Company"
+      - complementary "AI-powered assistant to get help with your career, jobs etc"
+  - Iframe [ref=e2]
+    - generic
+      - region "Toast message" [ref=e203]
+        - sectionheader
+          - heading "0 notifications total" [level=2, ref=e210]
+        - alert
+      - generic
+        - button "Skip to search" [ref=e204]
+          - StaticText "Skip to search"
+        - button "Skip to main content" [ref=e205]
+          - StaticText "Skip to main content"
+        - button "Keyboard shortcuts" [ref=e206]
+          - StaticText "Keyboard shortcuts"
+        - button "Close jump menu" [ref=e207]
+          - StaticText "Close jump menu"
+        - banner "Global Navigation"
+          - link "LinkedIn" [ref=e208]
+            - image "LinkedIn"
+              - image
+          - generic
+            - combobox "Search" [expanded=false, ref=e211]
+          - navigation "Primary Navigation" [ref=e209]
+            - list
+              - listitem [level=1]
+                - link "Home" [ref=e212]
+              - listitem [level=1]
+                - link "My Network" [ref=e213]
+              - listitem [level=1]
+                - link "Jobs" [ref=e214]
+              - listitem [level=1]
+                - link "Messaging" [ref=e215]
+              - listitem [level=1]
+                - link "19 new notifications Notifications" [ref=e216]
+              - listitem [level=1]
+                - button "Fixture User Me" [expanded=false, ref=e218]
+              - listitem [level=1]
+                - button "For Business" [expanded=false, ref=e219]
+              - listitem [level=1]
+                - link "Try Premium for €0" [ref=e217]

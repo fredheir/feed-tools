@@ -5,6 +5,7 @@ import {
   scoreFacebookItemQuality,
 } from "../sources/facebook/capture.js";
 import { canonicalizeItemUrl } from "../lib/item-shape.js";
+import { readFixture } from "./helpers/cli-config.js";
 
 describe("extractFacebookSourceItemId", () => {
   test("extracts profile post identifiers", () => {
@@ -117,5 +118,17 @@ describe("facebook item quality", () => {
     };
 
     expect(isFacebookItemWorthKeeping(item)).toBe(true);
+  });
+
+  test("real-browser snapshot fixture still exposes parser signals", () => {
+    const snapshot = readFixture("facebook", "snapshot.txt");
+
+    expect(snapshot).toContain('heading "Feed posts" [level=3');
+    expect(snapshot).toContain('button "Like"');
+    expect(snapshot).toContain('button "Leave a comment"');
+    expect(snapshot).toContain(
+      'button "Send this to friends or post it on your profile."',
+    );
+    expect(snapshot).toContain('heading "Sponsored" [level=3');
   });
 });

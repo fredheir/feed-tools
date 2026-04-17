@@ -2,102 +2,114 @@
 "use strict";
 
 const { createBrowserSession, jitterTimeout } = require("../../lib/browser");
-const { buildBrowserRuntimeScript } = require("../browser-runtime/core");
+const {
+  buildBrowserRuntimeScript,
+  normalizeCount,
+  makeAbsoluteUrl,
+} = require("../browser-runtime/core");
 const {
   assertFeedUrlAccessible,
   collectUniqueItems,
 } = require("../../lib/source-capture");
 
+const TIKTOK_BASE_URL = "https://www.tiktok.com";
+
+function buildTikTokItemsFromUniversalData(universalItems, limit) {
+  return universalItems
+    .filter((item) => item && item.id && item.author?.uniqueId && item.video)
+    .slice(0, limit)
+    .map((item, idx) => {
+      const handle = item.author?.uniqueId ? `@${item.author.uniqueId}` : null;
+      const postUrl =
+        item.author?.uniqueId && item.id
+          ? `${TIKTOK_BASE_URL}/@${item.author.uniqueId}/video/${item.id}`
+          : null;
+      const embeddedLinks = [];
+      for (const challenge of Array.isArray(item.challenges)
+        ? item.challenges
+        : []) {
+        if (!challenge?.title) continue;
+        embeddedLinks.push({
+          href: makeAbsoluteUrl(
+            `/tag/${challenge.title.replace(/^#/, "")}`,
+            TIKTOK_BASE_URL,
+          ),
+          text: `#${challenge.title.replace(/^#/, "")}`,
+          kind: "entity",
+        });
+      }
+      if (item.music?.id) {
+        embeddedLinks.push({
+          href: makeAbsoluteUrl(
+            `/music/${(item.music.title || "original-sound").replace(/\s+/g, "-").toLowerCase()}-${item.music.id}`,
+            TIKTOK_BASE_URL,
+          ),
+          text: item.music.title || "original sound",
+          kind: "entity",
+        });
+      }
+      return {
+        source: "tiktok",
+        source_item_id: String(item.id),
+        index: idx + 1,
+        url: postUrl,
+        author: {
+          handle,
+          display_name: item.author?.nickname || null,
+          profile_image_url:
+            item.author?.avatarThumb ||
+            item.author?.avatarMedium ||
+            item.author?.avatarLarger ||
+            null,
+        },
+        content: {
+          text: String(item.desc || "").trim(),
+        },
+        stats: {
+          reply: normalizeCount(item.stats?.commentCount),
+          share: normalizeCount(item.stats?.shareCount),
+          like: normalizeCount(item.stats?.diggCount),
+          view: normalizeCount(item.stats?.playCount),
+        },
+        media: [
+          {
+            src:
+              item.video?.originCover ||
+              item.video?.cover ||
+              item.video?.dynamicCover ||
+              null,
+            video_src: item.video?.downloadAddr || item.video?.playAddr || null,
+            href: postUrl,
+            alt: String(item.desc || "").trim() || handle || "TikTok video",
+            media_kind: "video",
+            width: item.video?.width || null,
+            height: item.video?.height || null,
+            duration: item.video?.duration || null,
+          },
+        ].filter((media) => media.src || media.video_src),
+        cards: [],
+        thread: {
+          has_thread_line: false,
+          thread_line_height: null,
+          thread_line_x: null,
+          child_candidate_index: null,
+          child_candidate_handle: null,
+          child_candidate_url: null,
+          relationship_confidence: null,
+        },
+        embedded_links: embeddedLinks,
+      };
+    });
+}
+
 function buildExtractionScript(limit) {
   return buildBrowserRuntimeScript(
     limit,
     `
-    function getUniversalItems() {
-      const items = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"];
-      return Array.isArray(items) ? items : [];
-    }
-
-    const universalItems = getUniversalItems();
-    const items = universalItems
-      .filter((item) => item && item.id && item.author?.uniqueId && item.video)
-      .slice(0, limit)
-      .map((item, idx) => {
-        const handle = item.author?.uniqueId ? "@" + item.author.uniqueId : null;
-        const postUrl =
-          item.author?.uniqueId && item.id
-            ? "https://www.tiktok.com/@" + item.author.uniqueId + "/video/" + item.id
-            : null;
-        const embeddedLinks = [];
-        for (const challenge of Array.isArray(item.challenges) ? item.challenges : []) {
-          if (!challenge?.title) continue;
-          embeddedLinks.push({
-            href: makeAbsoluteUrl("/tag/" + challenge.title.replace(/^#/, ""), "https://www.tiktok.com"),
-            text: "#" + challenge.title.replace(/^#/, ""),
-            kind: "entity",
-          });
-        }
-        if (item.music?.id) {
-          embeddedLinks.push({
-            href: makeAbsoluteUrl("/music/" + (item.music.title || "original-sound").replace(/\\s+/g, "-").toLowerCase() + "-" + item.music.id, "https://www.tiktok.com"),
-            text: item.music.title || "original sound",
-            kind: "entity",
-          });
-        }
-        return {
-          source: "tiktok",
-          source_item_id: String(item.id),
-          index: idx + 1,
-          url: postUrl,
-          author: {
-            handle,
-            display_name: item.author?.nickname || null,
-            profile_image_url:
-              item.author?.avatarThumb ||
-              item.author?.avatarMedium ||
-              item.author?.avatarLarger ||
-              null,
-          },
-          content: {
-            text: String(item.desc || "").trim(),
-          },
-          stats: {
-            reply: normalizeCount(item.stats?.commentCount),
-            share: normalizeCount(item.stats?.shareCount),
-            like: normalizeCount(item.stats?.diggCount),
-            view: normalizeCount(item.stats?.playCount),
-          },
-          media: [
-            {
-              src:
-                item.video?.originCover ||
-                item.video?.cover ||
-                item.video?.dynamicCover ||
-                null,
-              video_src:
-                item.video?.downloadAddr ||
-                item.video?.playAddr ||
-                null,
-              href: postUrl,
-              alt: String(item.desc || "").trim() || handle || "TikTok video",
-              media_kind: "video",
-              width: item.video?.width || null,
-              height: item.video?.height || null,
-              duration: item.video?.duration || null,
-            },
-          ].filter((media) => media.src || media.video_src),
-          cards: [],
-          thread: {
-            has_thread_line: false,
-            thread_line_height: null,
-            thread_line_x: null,
-            child_candidate_index: null,
-            child_candidate_handle: null,
-            child_candidate_url: null,
-            relationship_confidence: null,
-          },
-          embedded_links: embeddedLinks,
-        };
-      });
+    const TIKTOK_BASE_URL = ${JSON.stringify(TIKTOK_BASE_URL)};
+    const buildTikTokItemsFromUniversalData = ${buildTikTokItemsFromUniversalData.toString()};
+    const universalItems = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"] || [];
+    const items = buildTikTokItemsFromUniversalData(universalItems, limit);
 
     return JSON.stringify({
       schema_version: 1,
@@ -213,6 +225,7 @@ const source = {
 const prepareFeed = prepareTikTokFeed;
 
 module.exports = {
+  buildTikTokItemsFromUniversalData,
   source,
   prepareFeed,
 };
