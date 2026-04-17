@@ -2,6 +2,12 @@ import { describe, expect, test } from "vitest";
 import { applyMask } from "../lib/mask.js";
 
 describe("applyMask", () => {
+  test("rejects documents without an items array", () => {
+    expect(() => applyMask(null, { item_ids: ["x:1"] })).toThrow(
+      "Expected standardized feed document with .items array",
+    );
+  });
+
   test("filters by stable item id", () => {
     const doc = {
       schema_version: 1,

@@ -99,8 +99,7 @@ function buildExtractionScript(limit) {
       });
       if (fallback?.src) return fallback.src;
 
-      // Fallback: extract from background-image CSS (works in CiC where
-      // the security filter strips <img> elements but leaves CSS intact).
+      // CiC can strip <img> nodes, so fall back to CSS background images.
       const avatarContainer =
         article.querySelector('[data-testid="Tweet-User-Avatar"]') ||
         article.querySelector('[data-testid^="UserAvatar-Container-"]');
@@ -212,7 +211,7 @@ function buildExtractionScript(limit) {
             seen.add(href);
           }
         } catch (err) {
-          // Skip malformed URLs from DOM (e.g. relative or invalid href).
+          // Skip invalid or relative DOM URLs.
           void err;
         }
       }

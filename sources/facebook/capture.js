@@ -263,7 +263,7 @@ function enrichFacebookItem(item, browser) {
         media_kind: "image",
       });
     } catch (err) {
-      // Snapshot ref missing or DOM changed while resolving media.
+      // Snapshot refs can disappear after the DOM shifts.
       void err;
     }
   }
@@ -274,7 +274,7 @@ function enrichFacebookItem(item, browser) {
       const html = browser.getHtml(`@${item._author_image_ref}`);
       profileImageUrl = extractImageSrcFromHtml(html) || profileImageUrl;
     } catch (err) {
-      // Author image ref may be stale or missing.
+      // Author image refs can go stale between snapshot passes.
       void err;
     }
   }

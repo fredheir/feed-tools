@@ -266,7 +266,7 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
         2500,
       );
     } catch (err) {
-      // Timed out waiting for new feed rows; continue scrolling.
+      // No new rows appeared before the timeout; keep scrolling.
       void err;
     }
     mergeBatch(browser.evalJson(buildExtractionScript(limit)));

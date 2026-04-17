@@ -2,7 +2,7 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 import {
   buildAgentBrowserArgs,
-  getRuntimeBrowserOptions,
+  normalizeBrowserOptions,
   sanitizeAgentBrowserOutput,
 } from "../lib/browser.js";
 
@@ -58,26 +58,6 @@ describe("buildAgentBrowserArgs", () => {
     expect(args).toEqual(["--cdp", "9222", "snapshot", "-i"]);
   });
 
-  test("strips startup-only options from runtime session reuse", () => {
-    const runtime = getRuntimeBrowserOptions({
-      auto_connect: false,
-      session: "feed-x",
-      state_path: "./.auth/x.json",
-      profile: "./.profiles/x",
-      args: ["--no-sandbox"],
-      headed: true,
-    });
-
-    expect(runtime).toMatchObject({
-      autoConnect: false,
-      session: "feed-x",
-      statePath: null,
-      profile: null,
-      args: [],
-      headed: false,
-    });
-  });
-
   test("accepts legacy config-style aliases for browser options", () => {
     const args = buildAgentBrowserArgs(
       {
@@ -108,8 +88,30 @@ describe("buildAgentBrowserArgs", () => {
     ]);
   });
 
+  test("normalizes config-style aliases into the runtime browser shape", () => {
+    const normalized = normalizeBrowserOptions({
+      auto_connect: false,
+      session_name: "feed",
+      state_path: "./.auth/x.json",
+      allow_file_access: true,
+      color_scheme: "dark",
+      executable_path: "/bin/chrome",
+      browser_args: ["--no-sandbox"],
+    });
+
+    expect(normalized).toMatchObject({
+      autoConnect: false,
+      sessionName: "feed",
+      statePath: path.join(repoRoot, ".auth/x.json"),
+      allowFileAccess: true,
+      colorScheme: "dark",
+      executablePath: "/bin/chrome",
+      args: ["--no-sandbox"],
+    });
+  });
+
   test("normalizes cdp config to disable headed and auto-connect", () => {
-    const runtime = getRuntimeBrowserOptions({
+    const runtime = normalizeBrowserOptions({
       cdp: "9222",
       auto_connect: true,
       headed: true,

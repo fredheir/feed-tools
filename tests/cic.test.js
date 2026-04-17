@@ -201,7 +201,7 @@ describe("feed-capture-cic ingest", () => {
 describe("extraction scripts are self-contained", () => {
   test("x extraction script parses without syntax errors", () => {
     const script = run(["extract", "x", "3"]);
-    // Wrapping in Function() validates the syntax without executing.
+    // Function() checks syntax without running the script.
     expect(() => new Function(script)).not.toThrow();
   });
 

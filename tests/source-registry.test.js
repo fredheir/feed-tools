@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vitest";
+import { listSupportedSources } from "../lib/source-catalog.js";
 import {
   getBootstrapHandler,
   getCaptureHandler,
-  isSupportedSource,
-  listSupportedSources,
 } from "../lib/source-registry.js";
 
 describe("source registry", () => {
@@ -20,7 +19,6 @@ describe("source registry", () => {
 
   test("resolves handlers for every supported source", () => {
     for (const source of listSupportedSources()) {
-      expect(isSupportedSource(source)).toBe(true);
       expect(typeof getCaptureHandler(source)).toBe("function");
       expect(typeof getBootstrapHandler(source)).toBe("function");
     }
