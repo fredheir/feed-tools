@@ -33,7 +33,8 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 5. If the user's browser exposes remote debugging on `127.0.0.1:9222`, set `capture.browser.cdp` to `9222` in `config.json` and reuse that browser
 6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`
 7. Default `capture.browser.args` to `["--no-sandbox"]`
-8. Access each platform specified in `config.json`
+8. For video sources (tiktok, x, instagram), install yt-dlp with curl_cffi impersonation: `pnpm setup:yt-dlp` (requires `uv`)
+9. Access each platform specified in `config.json`
 
 ## Setup gotchas
 
@@ -81,6 +82,7 @@ DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chro
 ## Supported platforms
 
 - facebook
+- instagram
 - x
 - bluesky
 - linkedin

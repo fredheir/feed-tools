@@ -37,7 +37,7 @@ After the initial run, offer to render a feed about a particular topic (see Topi
 
 ## What the repo does
 
-- Captures feeds from `x`, `facebook`, `linkedin`, `bluesky`, and `tiktok`
+- Captures feeds from `x`, `facebook`, `instagram`, `linkedin`, `bluesky`, and `tiktok`
 - Persists feed state in sqlite under `./var/feed-archive`
 - Supports row-based curation and explicit classification before rendering
 - Renders a local HTML feed under `./var/feed.html`
