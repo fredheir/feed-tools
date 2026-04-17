@@ -313,7 +313,8 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
     });
   }
 
-  mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+  const extractionScript = buildExtractionScript(limit);
+  mergeBatch(browser.evalJson(extractionScript));
 
   const scrollPasses = Math.max(4, Math.min(12, limit + 2));
   let stagnantPasses = 0;
@@ -332,7 +333,7 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
       `document.querySelectorAll('main article').length > ${Number(beforeArticleCount) || 0}`,
       3000,
     );
-    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+    mergeBatch(browser.evalJson(extractionScript));
     stagnantPasses =
       collectedItems.length === beforeCount ? stagnantPasses + 1 : 0;
   }

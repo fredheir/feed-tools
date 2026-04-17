@@ -106,6 +106,7 @@ describe("downloadDocumentAssets", () => {
   test("downloads local x video assets with yt-dlp when video media is present", async () => {
     const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
     tempDirs.push(assetsDir);
+    prependFakeBin(["yt-dlp", "ffprobe", "ffmpeg"]);
     fs.mkdirSync(path.join(repoRoot, "chrome-profile", "Default"), {
       recursive: true,
     });
@@ -168,6 +169,7 @@ describe("downloadDocumentAssets", () => {
   test("transcodes unsupported downloaded video codecs for browser playback", async () => {
     const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
     tempDirs.push(assetsDir);
+    prependFakeBin(["yt-dlp", "ffprobe", "ffmpeg"]);
     global.fetch = vi.fn(async () => ({
       ok: true,
       headers: {
@@ -232,6 +234,7 @@ describe("downloadDocumentAssets", () => {
   test("downloads direct video sources when media provides a video_src", async () => {
     const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
     tempDirs.push(assetsDir);
+    prependFakeBin(["yt-dlp"]);
     global.fetch = vi.fn(async (url) => ({
       ok: true,
       headers: {

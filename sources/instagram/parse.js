@@ -14,12 +14,6 @@ const RESERVED_PROFILE_SEGMENTS = new Set([
   "web",
 ]);
 
-function textOrEmpty(value) {
-  return String(value || "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function extractInstagramSourceItemId(url) {
   if (!url) return null;
   try {
@@ -53,31 +47,6 @@ function isInstagramProfileUrl(url) {
   } catch {
     return false;
   }
-}
-
-function isCountLike(value) {
-  return /^\d[\d,.KkMm]*$/.test(textOrEmpty(value));
-}
-
-function isTimeLike(value) {
-  return /^\d+[smhdwy]$/i.test(textOrEmpty(value));
-}
-
-function isInstagramNoiseLine(value) {
-  const text = textOrEmpty(value);
-  if (!text) return true;
-  return (
-    text === "•" ||
-    text === "more" ||
-    text === "See translation" ||
-    text === "Suggested for you" ||
-    text === "Follow" ||
-    text === "Original audio" ||
-    text === "Learn more" ||
-    text === "Shop now" ||
-    text === "Ad" ||
-    isTimeLike(text)
-  );
 }
 
 function isInstagramItemWorthKeeping(item) {

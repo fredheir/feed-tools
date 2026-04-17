@@ -17,7 +17,8 @@ function buildExtractionScript(limit) {
       return Array.isArray(items) ? items : [];
     }
 
-    const items = getUniversalItems()
+    const universalItems = getUniversalItems();
+    const items = universalItems
       .filter((item) => item && item.id && item.author?.uniqueId && item.video)
       .slice(0, limit)
       .map((item, idx) => {
@@ -104,7 +105,7 @@ function buildExtractionScript(limit) {
       captured_at: new Date().toISOString(),
       items,
       meta: {
-        universal_count: getUniversalItems().length,
+        universal_count: universalItems.length,
         dom_count: document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length,
       },
     });
@@ -161,7 +162,8 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
     });
   }
 
-  mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+  const extractionScript = buildExtractionScript(limit);
+  mergeBatch(browser.evalJson(extractionScript));
 
   const scrollPasses = Math.max(4, Math.min(12, limit + 2));
   let stagnantPasses = 0;
@@ -182,20 +184,16 @@ async function captureDocument({ limit = 12, browserOptions = {} }) {
       window.scrollBy({ top: Math.round(window.innerHeight * 0.92), behavior: "instant" });
       return JSON.stringify({ ok: true, y: window.scrollY });
     })()`);
-    try {
-      browser.waitForFunction(
-        `(() => {
-          const items = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"];
-          const universalCount = Array.isArray(items) ? items.length : 0;
-          const articleCount = document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length;
-          return universalCount > ${Number(beforeMetrics.universalCount) || 0} || articleCount > ${Number(beforeMetrics.articleCount) || 0};
-        })()`,
-        3000,
-      );
-    } catch (error) {
-      void error;
-    }
-    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+    browser.tryWaitForFunction(
+      `(() => {
+        const items = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"];
+        const universalCount = Array.isArray(items) ? items.length : 0;
+        const articleCount = document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length;
+        return universalCount > ${Number(beforeMetrics.universalCount) || 0} || articleCount > ${Number(beforeMetrics.articleCount) || 0};
+      })()`,
+      3000,
+    );
+    mergeBatch(browser.evalJson(extractionScript));
     stagnantPasses =
       collectedItems.length === beforeCount ? stagnantPasses + 1 : 0;
   }
