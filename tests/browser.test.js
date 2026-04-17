@@ -78,6 +78,36 @@ describe("buildAgentBrowserArgs", () => {
     });
   });
 
+  test("accepts legacy config-style aliases for browser options", () => {
+    const args = buildAgentBrowserArgs(
+      {
+        session_name: "feed",
+        state: "./.auth/x.json",
+        allow_file_access: true,
+        color_scheme: "dark",
+        executable_path: "/bin/chrome",
+        browser_args: ["--no-sandbox"],
+      },
+      ["snapshot"],
+    );
+
+    expect(args).toEqual([
+      "--session-name",
+      "feed",
+      "--state",
+      path.join(repoRoot, ".auth/x.json"),
+      "--allow-file-access",
+      "--color-scheme",
+      "dark",
+      "--executable-path",
+      "/bin/chrome",
+      "--auto-connect",
+      "--args",
+      "--no-sandbox",
+      "snapshot",
+    ]);
+  });
+
   test("normalizes cdp config to disable headed and auto-connect", () => {
     const runtime = getRuntimeBrowserOptions({
       cdp: "9222",
