@@ -80,38 +80,6 @@ function isInstagramNoiseLine(value) {
   );
 }
 
-function hasRenderableInstagramMedia(item) {
-  return Boolean(
-    Array.isArray(item?.media) &&
-    item.media.some((media) => media?.src || media?.href || media?.video_src),
-  );
-}
-
-function scoreInstagramItemQuality(item) {
-  const text = textOrEmpty(item?.content?.text);
-  const author = textOrEmpty(item?.author?.handle);
-  const permalink = textOrEmpty(item?.source_item_id);
-  const mediaCount = hasRenderableInstagramMedia(item) ? item.media.length : 0;
-  const stats = item?.stats || {};
-  const engagementSignals = [
-    stats.reply,
-    stats.share,
-    stats.like,
-    stats.view,
-  ].filter(Boolean).length;
-  let score = 0;
-
-  if (permalink) score += 4;
-  if (author) score += 2;
-  if (text.length >= 30) score += 3;
-  else if (text.length >= 10) score += 1;
-  if (mediaCount > 0) score += 2;
-  if (engagementSignals > 0) score += 1;
-  if (text === "Ad" || text === "Follow") score -= 3;
-
-  return score;
-}
-
 function isInstagramItemWorthKeeping(item) {
   if (!item) return false;
   if (!item.url || !item.source_item_id) {

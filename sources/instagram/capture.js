@@ -189,12 +189,6 @@ function buildExtractionScript(limit) {
         .slice(captionStart)
         .filter((line) => !instagramIsNoiseLine(line) && !instagramIsCountLike(line) && line !== authorText);
 
-      let location = null;
-      if (firstAuthorIndex >= 0) {
-        const headerSlice = lines.slice(firstAuthorIndex + 1, repeatedAuthorIndex >= 0 ? repeatedAuthorIndex : lines.length);
-        location = headerSlice.find((line) => !instagramIsNoiseLine(line) && !instagramIsCountLike(line) && !instagramIsTimeLike(line)) || null;
-      }
-
       return {
         stats: {
           like: countBlock[0] || null,
@@ -203,7 +197,6 @@ function buildExtractionScript(limit) {
           view: countBlock[3] || null,
         },
         caption: captionLines.join("\\n").trim(),
-        location,
       };
     }
 
