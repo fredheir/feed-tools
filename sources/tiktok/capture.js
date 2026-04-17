@@ -106,6 +106,7 @@ function buildExtractionScript(limit) {
   return buildBrowserRuntimeScript(
     limit,
     `
+    const TIKTOK_BASE_URL = ${JSON.stringify(TIKTOK_BASE_URL)};
     const buildTikTokItemsFromUniversalData = ${buildTikTokItemsFromUniversalData.toString()};
     const universalItems = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"] || [];
     const items = buildTikTokItemsFromUniversalData(universalItems, limit);

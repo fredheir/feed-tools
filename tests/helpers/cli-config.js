@@ -31,7 +31,10 @@ export function writeTestConfig(directory, overrides = {}) {
     path.join(os.tmpdir(), "feed-tools-config-"),
   );
   const configPath = path.join(configDir, "config.json");
+  const { user_preferences: userPreferencesOverrides, ...topLevelOverrides } =
+    overrides;
   const config = {
+    ...topLevelOverrides,
     user_preferences: {
       sources: [
         {
@@ -90,9 +93,8 @@ export function writeTestConfig(directory, overrides = {}) {
         populate_on_request_only: true,
         custom_instructions: "",
       },
-      ...overrides.user_preferences,
+      ...userPreferencesOverrides,
     },
-    ...overrides,
   };
 
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
