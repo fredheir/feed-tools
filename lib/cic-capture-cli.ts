@@ -30,7 +30,6 @@ const { getSourceConfig, listCicSources } = require("./cic/source-config");
 const { getExtractionScript, isCicSupported } = require("./cic/extract");
 const { ingestDocument } = require("./cic/ingest");
 const { hasNewUnclassifiedItems } = require("./source-capture");
-import type { FeedConfig } from "./types.js";
 
 function usage(): never {
   console.log(`Usage:
@@ -97,7 +96,7 @@ async function cmdIngest(
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to parse JSON input ${jsonFile}: ${message}`);
   }
-  const appConfig = loadOptionalConfig() as FeedConfig | null;
+  const appConfig = loadOptionalConfig();
   const defaults = appConfig ? getCaptureDefaults(appConfig, sourceName) : {};
   const assetsDir = flags.assetsDir || defaults.assets_dir || "";
   const saveDir = appConfig

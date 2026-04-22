@@ -29,9 +29,24 @@ function getAllocationItems(
 
 function loadAllocationFromPath(allocationPath: string): FeedAllocation {
   try {
-    return JSON.parse(
+    const parsed = JSON.parse(
       fs.readFileSync(allocationPath, "utf8"),
-    ) as FeedAllocation;
+    ) as unknown;
+    if (!isPlainObject(parsed)) {
+      throw new Error(`Invalid allocation object: ${allocationPath}`);
+    }
+    const maybeAllocation = parsed as FeedAllocation;
+    return {
+      version:
+        typeof maybeAllocation.version === "number"
+          ? maybeAllocation.version
+          : 1,
+      source:
+        typeof maybeAllocation.source === "string"
+          ? maybeAllocation.source
+          : null,
+      items: getAllocationItems(maybeAllocation),
+    };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return createEmptyAllocation();

@@ -3,6 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+import { requireArgValue } from "./cli-args.js";
 const {
   getDefaultDocumentPath,
   getDefaultHtmlPath,
@@ -17,7 +18,7 @@ const { renderDocument } = require("./render/html");
 const { resolveSelectionList } = require("./selection");
 import { createBrowserSession } from "./browser.js";
 import { assertFeedDocument } from "./item-shape.js";
-import type { FeedConfig, FeedDocument } from "./types.js";
+import type { FeedDocument } from "./types.js";
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 function relativizeAssetPaths(
@@ -48,14 +49,6 @@ function relativizeAssetPaths(
     for (const card of item.cards || [])
       card.image_local = toRelative(card.image_local) ?? null;
   }
-}
-
-function requireArgValue(argv: string[], index: number, flag: string): string {
-  const value = argv[index + 1];
-  if (value === undefined || String(value).startsWith("--")) {
-    throw new Error(`Missing value for ${flag}`);
-  }
-  return value;
 }
 
 if (
@@ -128,7 +121,7 @@ if (!outputPath) {
 const rawDocument = JSON.parse(fs.readFileSync(inputPath, "utf8")) as unknown;
 assertFeedDocument(rawDocument, "feed-render");
 let document: FeedDocument = rawDocument;
-const config = loadConfig() as FeedConfig;
+const config = loadConfig();
 const curation = getCurationPreferences(config);
 const allocation = loadAllocationFromDocument(document);
 const selection = pickSpec ? resolveSelectionList(document, pickSpec) : "all";

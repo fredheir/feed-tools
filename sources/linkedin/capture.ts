@@ -14,6 +14,20 @@ import type {
   FeedItem,
 } from "../../lib/types.js";
 
+type LinkedInScoredCandidate = {
+  source_item_id?: string | null;
+  content?: { text?: string | null } | null;
+  author?: { handle?: string | null } | null;
+  stats?: {
+    reply?: string | number | null;
+    share?: string | number | null;
+    like?: string | number | null;
+    view?: string | number | null;
+  } | null;
+  media?: unknown[] | null;
+  cards?: unknown[] | null;
+};
+
 function extractLinkedInSourceItemId(
   url: string | null | undefined,
 ): string | null {
@@ -34,7 +48,7 @@ function extractLinkedInSourceItemId(
   }
 }
 
-function scoreLinkedInItemQuality(item: FeedItem): number {
+function scoreLinkedInItemQuality(item: LinkedInScoredCandidate): number {
   const text = String(item?.content?.text || "").trim();
   const author = String(item?.author?.handle || "").trim();
   const permalink = String(item?.source_item_id || "").trim();
@@ -64,7 +78,7 @@ function scoreLinkedInItemQuality(item: FeedItem): number {
 }
 
 function isLinkedInItemWorthKeeping(
-  item: FeedItem | null | undefined,
+  item: LinkedInScoredCandidate | null | undefined,
 ): boolean {
   if (!item) return false;
   if (item.source_item_id) return true;

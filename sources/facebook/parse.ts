@@ -1,14 +1,28 @@
 "use strict";
 
-import type { FeedCard, FeedItem } from "../../lib/types.js";
+import type { FeedCard } from "../../lib/types.js";
 
-type FacebookSnapshotLine = {
+export type FacebookSnapshotLine = {
   indent: number;
   raw: string;
   type: string;
   label: string | null;
   ref: string | null;
   level: number | null;
+};
+
+type FacebookScoredCandidate = {
+  source_item_id?: string | null;
+  content?: { text?: string | null } | null;
+  author?: { handle?: string | null } | null;
+  stats?: {
+    reply?: string | number | null;
+    share?: string | number | null;
+    like?: string | number | null;
+    view?: string | number | null;
+  } | null;
+  media?: unknown[] | null;
+  cards?: unknown[] | null;
 };
 
 function extractFacebookSourceItemId(
@@ -74,7 +88,7 @@ function isFacebookPermalinkUrl(url: string | null | undefined): boolean {
   return Boolean(extractFacebookSourceItemId(url));
 }
 
-function scoreFacebookItemQuality(item: FeedItem): number {
+function scoreFacebookItemQuality(item: FacebookScoredCandidate): number {
   const text = String(item?.content?.text || "").trim();
   const author = String(item?.author?.handle || "").trim();
   const sourceItemId = String(item?.source_item_id || "").trim();
@@ -106,7 +120,7 @@ function scoreFacebookItemQuality(item: FeedItem): number {
 }
 
 function isFacebookItemWorthKeeping(
-  item: FeedItem | null | undefined,
+  item: FacebookScoredCandidate | null | undefined,
 ): boolean {
   if (!item) return false;
   if (item.source_item_id) return true;

@@ -13,6 +13,7 @@ const {
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
 import type {
   BrowserSession,
+  FeedBrowserConfig,
   FeedDocument,
   FeedItem,
 } from "../../lib/types.js";
@@ -204,7 +205,7 @@ async function captureDocument({
   browserOptions = {},
 }: {
   limit?: number;
-  browserOptions?: Record<string, unknown>;
+  browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
   const browser = createBrowserSession(browserOptions);
   prepareTikTokFeed(browser);

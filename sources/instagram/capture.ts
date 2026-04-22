@@ -10,10 +10,13 @@ const {
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
 const {
   extractInstagramSourceItemId,
+  isInstagramPermalinkUrl,
+  isInstagramProfileUrl,
   isInstagramItemWorthKeeping,
 } = require("./parse");
 import type {
   BrowserSession,
+  FeedBrowserConfig,
   FeedDocument,
   FeedItem,
 } from "../../lib/types.js";
@@ -24,32 +27,6 @@ function normalizeInstagramCandidate(item: FeedItem): FeedItem {
     source_item_id:
       extractInstagramSourceItemId(item?.url) || item?.source_item_id,
   };
-}
-
-function instagramIsPermalink(url: string | null | undefined): boolean {
-  if (!url) return false;
-  try {
-    const parsed = new URL(url, "https://www.instagram.com");
-    return /^\/(p|reel|tv)\/[^/?#]+\/?$/.test(parsed.pathname);
-  } catch {
-    return false;
-  }
-}
-
-function instagramIsProfile(url: string | null | undefined): boolean {
-  if (!url) return false;
-  try {
-    const parsed = new URL(url, "https://www.instagram.com");
-    if (parsed.hostname && !/instagram\.com$/i.test(parsed.hostname))
-      return false;
-    const match = parsed.pathname.match(/^\/([^/?#]+)\/?$/);
-    if (!match) return false;
-    return !/^(accounts|about|api|developer|direct|explore|legal|reels|stories|web)$/i.test(
-      match[1],
-    );
-  } catch {
-    return false;
-  }
 }
 
 function instagramIsCountLike(value: unknown): boolean {
@@ -260,8 +237,8 @@ function buildExtractionScript(limit: number): string {
     });
     `,
     [
-      instagramIsPermalink,
-      instagramIsProfile,
+      isInstagramPermalinkUrl,
+      isInstagramProfileUrl,
       instagramIsCountLike,
       instagramIsTimeLike,
       instagramIsNoiseLine,
@@ -306,7 +283,7 @@ async function captureDocument({
   browserOptions = {},
 }: {
   limit?: number;
-  browserOptions?: Record<string, unknown>;
+  browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
   const browser = createBrowserSession(browserOptions);
   prepareInstagramFeed(browser);

@@ -111,9 +111,10 @@ async function persistCapturedDocument(
   let existingCurrent = loadCurrentDocumentFromDb(saveDir, sourceName);
   if (!existingCurrent) {
     try {
-      existingCurrent = JSON.parse(
-        fs.readFileSync(paths.currentPath, "utf8"),
-      ) as FeedDocument;
+      existingCurrent = normalizeDocument(
+        JSON.parse(fs.readFileSync(paths.currentPath, "utf8")) as unknown,
+        sourceName,
+      );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }

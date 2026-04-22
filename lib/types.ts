@@ -95,6 +95,20 @@ export interface FeedDocument {
 }
 
 export interface FeedBrowserConfig {
+  cdp?: string | null;
+  autoConnect?: boolean;
+  headed?: boolean;
+  args?: string[];
+  session?: string | null;
+  sessionName?: string | null;
+  profile?: string | null;
+  statePath?: string | null;
+  allowFileAccess?: boolean;
+  colorScheme?: string | null;
+  executablePath?: string | null;
+}
+
+export interface RawFeedBrowserConfig {
   cdp?: string;
   auto_connect?: boolean;
   autoConnect?: boolean;
@@ -123,11 +137,25 @@ export interface SourceCaptureConfig {
   browser?: FeedBrowserConfig;
 }
 
+export interface RawSourceCaptureConfig {
+  default_limit?: number;
+  assets_dir?: string;
+  save_dir?: string;
+  browser?: RawFeedBrowserConfig;
+}
+
 export interface SourcePreference {
-  name: string;
+  name: FeedSourceName;
   enabled?: boolean;
   default?: boolean;
   capture?: SourceCaptureConfig;
+}
+
+export interface RawSourcePreference {
+  name?: string;
+  enabled?: boolean;
+  default?: boolean;
+  capture?: RawSourceCaptureConfig;
 }
 
 export interface RenderPreferences {
@@ -162,6 +190,21 @@ export interface UserPreferences {
 export interface FeedConfig {
   version?: number;
   user_preferences?: UserPreferences;
+  summary?: {
+    notes?: string;
+  };
+}
+
+export interface RawUserPreferences {
+  sources?: RawSourcePreference[];
+  render?: RenderPreferences;
+  curation?: CurationPreferences;
+  summary?: SummaryPreferences;
+}
+
+export interface RawFeedConfig {
+  version?: number;
+  user_preferences?: RawUserPreferences;
   summary?: {
     notes?: string;
   };

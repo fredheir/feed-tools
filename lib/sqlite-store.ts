@@ -33,6 +33,7 @@ interface ItemStateRow {
 }
 
 interface ItemCategoryRow {
+  item_key: string;
   item_id: string;
   source: string;
   category: string;
@@ -373,7 +374,7 @@ function loadItemCategoryMap(
   const placeholders = sources.map(() => "?").join(", ");
   const rows = db
     .prepare(
-      `SELECT item_id, source, category, category_updated_at
+      `SELECT item_key, item_id, source, category, category_updated_at
        FROM items
        WHERE source IN (${placeholders})
          AND item_id IS NOT NULL
@@ -382,7 +383,7 @@ function loadItemCategoryMap(
     .all(...sources) as ItemCategoryRow[];
   return new Map(
     rows.map((row) => [
-      row.item_id,
+      row.item_key,
       {
         source: row.source,
         category: row.category,
@@ -471,12 +472,16 @@ function loadAllocationFromDb(
       : [document.source].filter((source): source is string => Boolean(source));
   const db = openDatabase(saveDir);
   try {
-    const categoriesByItemId =
+    const categoriesByItemKey =
       sources.length > 0 ? loadItemCategoryMap(db, sources) : new Map();
     const items: FeedAllocation["items"] = {};
-    for (const item of document.items) {
+    for (const [index, item] of document.items.entries()) {
       if (!item.id) continue;
-      const entry = categoriesByItemId.get(item.id);
+      const itemKey = getPreferredItemKey(item, {
+        source: item.source || document.source,
+        index: item.index ?? index + 1,
+      });
+      const entry = categoriesByItemKey.get(itemKey);
       if (entry) items[item.id] = entry;
     }
     return {
@@ -501,17 +506,21 @@ function saveAllocationToDb(
        SET category = ?,
            category_updated_at = ?,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-       WHERE item_id = ?`,
+       WHERE item_key = ?`,
     );
     db.exec("BEGIN");
-    for (const item of document.items) {
+    for (const [index, item] of document.items.entries()) {
       if (!item.id) continue;
       const entry = allocation.items[item.id] || null;
       if (!entry?.category) continue;
+      const itemKey = getPreferredItemKey(item, {
+        source: item.source || document.source,
+        index: item.index ?? index + 1,
+      });
       update.run(
         entry.category,
         entry.updated_at || new Date().toISOString(),
-        item.id,
+        itemKey,
       );
     }
     db.exec("COMMIT");

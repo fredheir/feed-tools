@@ -1,4 +1,11 @@
 import { isSupportedSource, listSupportedSources } from "./source-catalog.js";
+import type {
+  BrowserSession,
+  FeedBrowserConfig,
+  FeedDocument,
+  FeedSourceName,
+  NormalizedBrowserOptions,
+} from "./types.js";
 
 const {
   source: blueskySource,
@@ -25,27 +32,28 @@ const {
   prepareFeed: prepareXFeed,
 } = require("../sources/x/capture.js");
 const { runSourceCapture } = require("./source-capture.js");
-import type { FeedDocument, NormalizedBrowserOptions } from "./types.js";
 
 type CaptureOptions = {
   limit?: number;
   assetsDir?: string;
   saveDir?: string;
-  browserOptions?: Record<string, unknown>;
+  browserOptions?: FeedBrowserConfig;
 };
 
 type CaptureAdapter = {
-  name: string;
+  name: FeedSourceName;
   captureDocument: (options: {
     limit: number;
     browserOptions: NormalizedBrowserOptions;
   }) => Promise<FeedDocument>;
 };
 
-type BootstrapHandler = ((browser: unknown) => void | Promise<void>) | null;
+type BootstrapHandler =
+  | ((browser: BrowserSession) => void | Promise<void>)
+  | null;
 
 const SOURCE_MODULES: Record<
-  string,
+  FeedSourceName,
   { source: CaptureAdapter; prepareFeed: BootstrapHandler }
 > = {
   bluesky: { source: blueskySource, prepareFeed: prepareBlueskyFeed },
@@ -57,7 +65,7 @@ const SOURCE_MODULES: Record<
 };
 
 export function getCaptureHandler(
-  sourceName: string,
+  sourceName: FeedSourceName,
 ): ((options: CaptureOptions) => Promise<FeedDocument>) | null {
   const sourceModule = SOURCE_MODULES[sourceName];
   if (!sourceModule) return null;
@@ -66,7 +74,9 @@ export function getCaptureHandler(
   };
 }
 
-export function getBootstrapHandler(sourceName: string): BootstrapHandler {
+export function getBootstrapHandler(
+  sourceName: FeedSourceName,
+): BootstrapHandler {
   return SOURCE_MODULES[sourceName]?.prepareFeed || null;
 }
 

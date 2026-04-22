@@ -8,6 +8,7 @@ import type {
   BrowserSession,
   FeedBrowserConfig,
   NormalizedBrowserOptions,
+  RawFeedBrowserConfig,
 } from "./types.js";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -34,18 +35,6 @@ function toStringList(value: string | string[] | null | undefined): string[] {
   return [String(value)];
 }
 
-function pickOption<T extends keyof FeedBrowserConfig>(
-  options: FeedBrowserConfig,
-  ...keys: T[]
-): FeedBrowserConfig[T] | null {
-  for (const key of keys) {
-    const value = options[key];
-    if (value == null || value === "") continue;
-    return value;
-  }
-  return null;
-}
-
 function pickStringOption(
   ...values: Array<string | null | undefined>
 ): string | null {
@@ -65,31 +54,49 @@ function resolveConfigPath(value: string | null | undefined): string | null {
 }
 
 export function normalizeBrowserOptions(
-  options: FeedBrowserConfig = {},
+  options: FeedBrowserConfig | RawFeedBrowserConfig = {},
 ): NormalizedBrowserOptions {
-  const cdp = pickStringOption(options.cdp);
+  const cdp = pickStringOption(options.cdp ?? null);
   return {
     autoConnect:
-      (options.autoConnect ?? options.auto_connect) !== false && !cdp,
-    session: pickStringOption(options.session),
+      (options.autoConnect ??
+        ("auto_connect" in options ? options.auto_connect : undefined)) !==
+        false && !cdp,
+    session: pickStringOption(options.session ?? null),
     sessionName: pickStringOption(
-      pickOption(options, "sessionName", "session_name") ?? null,
+      options.sessionName ??
+        ("session_name" in options ? options.session_name : null) ??
+        null,
     ),
-    profile: resolveConfigPath(pickOption(options, "profile") ?? null),
+    profile: resolveConfigPath(options.profile ?? null),
     statePath: resolveConfigPath(
-      pickOption(options, "statePath", "state_path", "state") ?? null,
+      options.statePath ??
+        ("state_path" in options ? options.state_path : null) ??
+        ("state" in options ? options.state : null) ??
+        null,
     ),
     headed: options.headed === true && !cdp,
     allowFileAccess:
-      pickOption(options, "allowFileAccess", "allow_file_access") === true,
+      (options.allowFileAccess ??
+        ("allow_file_access" in options
+          ? options.allow_file_access
+          : undefined)) === true,
     colorScheme: pickStringOption(
-      pickOption(options, "colorScheme", "color_scheme") ?? null,
+      options.colorScheme ??
+        ("color_scheme" in options ? options.color_scheme : null) ??
+        null,
     ),
     executablePath: resolveConfigPath(
-      pickOption(options, "executablePath", "executable_path") ?? null,
+      options.executablePath ??
+        ("executable_path" in options ? options.executable_path : null) ??
+        null,
     ),
     cdp,
-    args: toStringList(pickOption(options, "args", "browser_args") ?? null),
+    args: toStringList(
+      options.args ??
+        ("browser_args" in options ? options.browser_args : null) ??
+        null,
+    ),
   };
 }
 

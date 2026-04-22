@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const process = require("node:process");
+import { requireArgValue } from "./cli-args.js";
 const {
   loadConfig,
   getSaveDir,
@@ -171,14 +172,6 @@ function printRenderContext(config: FeedConfig): string {
   return lines.join("\n");
 }
 
-function requireArgValue(argv: string[], index: number, flag: string): string {
-  const value = argv[index + 1];
-  if (value === undefined || String(value).startsWith("--")) {
-    throw new Error(`Missing value for ${flag}`);
-  }
-  return value;
-}
-
 if (
   process.argv[2] === "-h" ||
   process.argv[2] === "--help" ||
@@ -190,7 +183,7 @@ if (
   process.exit(0);
 }
 
-const config = loadConfig() as FeedConfig;
+const config = loadConfig();
 let outputPath = getDefaultDocumentPath();
 let saveDir = getSaveDir(config);
 let limit: number | null = null;

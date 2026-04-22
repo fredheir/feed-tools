@@ -8,6 +8,7 @@ const {
   collectUniqueItems,
 } = require("../../lib/source-capture");
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
+import type { FacebookSnapshotLine } from "./parse.js";
 const {
   cleanAuthorHeading,
   cleanBodyText,
@@ -29,15 +30,6 @@ import type {
   FeedItem,
   FeedMedia,
 } from "../../lib/types.js";
-
-type FacebookSnapshotLine = {
-  indent: number;
-  raw: string;
-  type: string;
-  label: string | null;
-  ref: string | null;
-  level: number | null;
-};
 
 type FacebookEnrichmentRef = {
   ref: string;
