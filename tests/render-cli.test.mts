@@ -83,7 +83,7 @@ describe("feed-render", () => {
 
     execFileSync(
       process.execPath,
-      ["./lib/render-cli.js", inputPath, outputPath, "--no-open"],
+      ["./bin/feed-render", inputPath, outputPath, "--no-open"],
       {
         cwd: repoRoot,
         encoding: "utf8",

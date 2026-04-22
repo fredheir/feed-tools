@@ -12,7 +12,7 @@ describe("feed-capture", () => {
     const configPath = writeTestConfig(repoRoot);
     const output = execFileSync(
       process.execPath,
-      ["./lib/capture-cli.js", "--help"],
+      ["./bin/feed-capture", "--help"],
       {
         cwd: repoRoot,
         encoding: "utf8",
@@ -27,7 +27,7 @@ describe("feed-capture", () => {
     const configPath = writeTestConfig(repoRoot);
     const result = spawnSync(
       process.execPath,
-      ["./lib/capture-cli.js", "mastodon"],
+      ["./bin/feed-capture", "mastodon"],
       {
         cwd: repoRoot,
         encoding: "utf8",

@@ -59,14 +59,7 @@ describe("feed-curate", () => {
 
     const stdout = execFileSync(
       process.execPath,
-      [
-        "./lib/curate-cli.js",
-        outputPath,
-        "--save-dir",
-        saveDir,
-        "--source",
-        "x",
-      ],
+      ["./bin/feed-curate", outputPath, "--save-dir", saveDir, "--source", "x"],
       {
         cwd: repoRoot,
         encoding: "utf8",
@@ -109,14 +102,7 @@ describe("feed-curate", () => {
 
     const result = spawnSync(
       process.execPath,
-      [
-        "./lib/curate-cli.js",
-        outputPath,
-        "--save-dir",
-        saveDir,
-        "--source",
-        "x",
-      ],
+      ["./bin/feed-curate", outputPath, "--save-dir", saveDir, "--source", "x"],
       {
         cwd: repoRoot,
         encoding: "utf8",
@@ -165,14 +151,7 @@ describe("feed-curate", () => {
 
     const result = spawnSync(
       process.execPath,
-      [
-        "./lib/curate-cli.js",
-        outputPath,
-        "--save-dir",
-        saveDir,
-        "--source",
-        "x",
-      ],
+      ["./bin/feed-curate", outputPath, "--save-dir", saveDir, "--source", "x"],
       {
         cwd: repoRoot,
         encoding: "utf8",
@@ -224,14 +203,7 @@ describe("feed-curate", () => {
 
     const stdout = execFileSync(
       process.execPath,
-      [
-        "./lib/curate-cli.js",
-        outputPath,
-        "--save-dir",
-        saveDir,
-        "--source",
-        "x",
-      ],
+      ["./bin/feed-curate", outputPath, "--save-dir", saveDir, "--source", "x"],
       {
         cwd: repoRoot,
         encoding: "utf8",
@@ -291,7 +263,7 @@ describe("feed-curate", () => {
     const stdout = execFileSync(
       process.execPath,
       [
-        "./lib/curate-cli.js",
+        "./bin/feed-curate",
         outputPath,
         "--save-dir",
         saveDir,

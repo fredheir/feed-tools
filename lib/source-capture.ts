@@ -2,31 +2,23 @@
 
 const fs = require("node:fs");
 const fsPromises = require("node:fs/promises");
-const { downloadDocumentAssets } = require("./assets");
-const { closeBrowserSession, normalizeBrowserOptions } = require("./browser");
-const { DEFAULT_SAVE_DIR } = require("./config");
+const { downloadDocumentAssets } = require("./assets.js");
+const {
+  closeBrowserSession,
+  normalizeBrowserOptions,
+} = require("./browser.js");
+const { DEFAULT_SAVE_DIR } = require("./config.js");
 const { buildNormalizedFeedDocument } = require("./feed-document-normalize.js");
-const { getPreferredItemKey, normalizeItemShape } = require("./item-shape");
-const { mergeDocuments } = require("./merge");
+const { getPreferredItemKey, normalizeItemShape } = require("./item-shape.js");
+const { mergeDocuments } = require("./merge.js");
 const {
   loadAllocationFromDb,
   loadCurrentDocumentFromDb,
   persistSourceDocument,
-} = require("./sqlite-store");
-const { ensureSourceStorage, getSourceStoragePaths } = require("./storage");
-import type {
-  FeedDocument,
-  FeedItem,
-  NormalizedBrowserOptions,
-} from "./types.js";
-
-interface CaptureAdapter {
-  name: string;
-  captureDocument: (options: {
-    limit: number;
-    browserOptions: NormalizedBrowserOptions;
-  }) => Promise<FeedDocument>;
-}
+} = require("./sqlite-store.js");
+const { ensureSourceStorage, getSourceStoragePaths } = require("./storage.js");
+import { isRecord } from "./coerce.js";
+import type { CaptureAdapter, FeedDocument, FeedItem } from "./types.js";
 
 interface PersistOptions {
   sourceName: string;
@@ -51,10 +43,6 @@ class CaptureAccessError extends Error {
     this.name = "CaptureAccessError";
     this.sourceName = sourceName;
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function assertMatchingSource(

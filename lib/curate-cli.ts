@@ -10,22 +10,23 @@ const {
   getSaveDir,
   getCurationPreferences,
   resolveCanonicalSaveDir,
-} = require("./config");
-const { getDefaultDocumentPath } = require("./document-paths");
+} = require("./config.js");
+const { getDefaultDocumentPath } = require("./document-paths.js");
 const {
   exportDocumentsFromDb,
   loadAllocationFromDb,
-} = require("./sqlite-store");
+} = require("./sqlite-store.js");
 const {
   appendCommaList,
   resolveSelectedSources,
-} = require("./source-selection");
+} = require("./source-selection.js");
 const {
   buildClassificationPrompt,
   buildRows,
+  hasPositiveLimit,
   printClassificationRows,
   printRowsWithAllocation,
-} = require("./selection");
+} = require("./selection.js");
 import type {
   FeedAllocation,
   FeedConfig,
@@ -111,9 +112,7 @@ function buildMatchedRows(
       return { row, item, category, hits };
     })
     .filter((entry: MatchedRow) => entry.hits > 0);
-  return typeof limit === "number" && Number.isInteger(limit) && limit > 0
-    ? rows.slice(0, limit)
-    : rows;
+  return hasPositiveLimit(limit) ? rows.slice(0, limit) : rows;
 }
 
 function printMatchedRows(

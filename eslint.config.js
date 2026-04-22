@@ -2,72 +2,41 @@ const js = require("@eslint/js");
 const globals = require("globals");
 const tseslint = require("typescript-eslint");
 
+const TS_FILES = [
+  "bin/**/*.{ts,tsx,mts}",
+  "lib/**/*.{ts,tsx,mts}",
+  "sources/**/*.{ts,tsx,mts}",
+  "tests/**/*.{ts,tsx,mts}",
+];
+
 module.exports = [
   {
     ignores: ["node_modules/**", "dist/**"],
   },
   {
     ...js.configs.recommended,
-    files: ["bin/*", "lib/**/*.js", "sources/**/*.js", "tests/**/*.js"],
+    files: ["bin/*", "*.{js,cjs}", "tests/**/*.{js,cjs}"],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: "commonjs",
-      globals: {
-        ...globals.node,
-      },
+      globals: { ...globals.node },
     },
-    rules: {
-      "no-console": "off",
-    },
+    rules: { "no-console": "off" },
   },
   {
     files: ["tests/**/*.js"],
-    languageOptions: {
-      ecmaVersion: 2024,
-      sourceType: "module",
-      globals: {
-        ...globals.node,
-      },
-    },
+    languageOptions: { sourceType: "module" },
   },
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
-    files: [
-      "bin/**/*.ts",
-      "bin/**/*.tsx",
-      "bin/**/*.mts",
-      "lib/**/*.ts",
-      "lib/**/*.tsx",
-      "lib/**/*.mts",
-      "sources/**/*.ts",
-      "sources/**/*.tsx",
-      "sources/**/*.mts",
-      "tests/**/*.ts",
-      "tests/**/*.tsx",
-      "tests/**/*.mts",
-    ],
+    files: TS_FILES,
     languageOptions: {
       ...(config.languageOptions || {}),
-      globals: {
-        ...globals.node,
-      },
+      globals: { ...globals.node },
     },
   })),
   {
-    files: [
-      "bin/**/*.ts",
-      "bin/**/*.tsx",
-      "bin/**/*.mts",
-      "lib/**/*.ts",
-      "lib/**/*.tsx",
-      "lib/**/*.mts",
-      "sources/**/*.ts",
-      "sources/**/*.tsx",
-      "sources/**/*.mts",
-      "tests/**/*.ts",
-      "tests/**/*.tsx",
-      "tests/**/*.mts",
-    ],
+    files: TS_FILES,
     rules: {
       "no-console": "off",
       "@typescript-eslint/no-confusing-void-expression": "off",

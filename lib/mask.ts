@@ -1,6 +1,6 @@
 "use strict";
 
-const { getItemMaskKeys } = require("./item");
+const { getItemMaskKeys } = require("./item.js");
 import { assertFeedDocument } from "./item-shape.js";
 import type {
   FeedDocument,

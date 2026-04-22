@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 "use strict";
 
-const { canonicalizeItemUrl } = require("../../lib/item-shape");
+const { canonicalizeItemUrl } = require("../../lib/item-shape.js");
 const {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture");
+} = require("../../lib/source-capture.js");
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
 import type { FacebookSnapshotLine } from "./parse.js";
 const {
@@ -23,7 +23,7 @@ const {
   isNoiseStaticText,
   parseSnapshotLine,
   scoreFacebookItemQuality,
-} = require("./parse");
+} = require("./parse.js");
 import type {
   BrowserSession,
   FeedDocument,

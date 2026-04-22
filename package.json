@@ -23,32 +23,17 @@
       "bin/feed-classify",
       "bin/feed-curate",
       "bin/feed-render",
-      "lib/capture-cli.ts",
-      "lib/cic-capture-cli.ts",
-      "lib/classify-cli.ts",
-      "lib/curate-cli.ts",
-      "lib/render-cli.ts",
-      "tests/**/*.js",
-      "tests/**/*.mts"
+      "lib/*-cli.ts",
+      "tests/**/*.{js,mts}"
     ],
     "project": [
       "bin/*",
       "lib/**/*.ts",
-      "lib/**/*.js",
       "sources/**/*.ts",
-      "sources/**/*.js",
-      "tests/**/*.js",
-      "tests/**/*.mts"
+      "tests/**/*.{js,mts}"
     ],
     "ignore": [
       "bin/_run-ts-cli.js"
-    ],
-    "ignoreFiles": [
-      "lib/capture-cli.js",
-      "lib/cic-capture-cli.js",
-      "lib/classify-cli.js",
-      "lib/curate-cli.js",
-      "lib/render-cli.js"
     ],
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [

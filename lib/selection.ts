@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 
-import { assertFeedDocument } from "./item-shape.js";
-const { buildNormalizedFeedDocument } = require("./feed-document-normalize.js");
+const { normalizePersistedDocument } = require("./feed-document-normalize.js");
 import type {
   CurationPreferences,
   FeedAllocation,
@@ -15,34 +14,16 @@ interface SelectionRow {
 }
 
 type SelectionSpec = string | string[];
-type PartialFeedDocument = Partial<FeedDocument> & { items?: unknown[] };
 
-function normalizeSelectionDocument(
-  document: unknown,
-  context: string,
-): FeedDocument {
-  assertFeedDocument(document, context);
-  const candidate = document as PartialFeedDocument;
-  const source =
-    typeof candidate.source === "string" ? candidate.source : "unknown";
-  return buildNormalizedFeedDocument(candidate, {
-    source,
-    schemaVersion:
-      typeof candidate.schema_version === "number"
-        ? candidate.schema_version
-        : 1,
-    capturedAt:
-      typeof candidate.captured_at === "string" ? candidate.captured_at : null,
-  });
-}
-
-function hasPositiveLimit(limit: number | null | undefined): limit is number {
+export function hasPositiveLimit(
+  limit: number | null | undefined,
+): limit is number {
   return typeof limit === "number" && Number.isInteger(limit) && limit > 0;
 }
 
 export function loadDocument(inputPath: string): FeedDocument {
   const document = JSON.parse(fs.readFileSync(inputPath, "utf8")) as unknown;
-  return normalizeSelectionDocument(document, "loadDocument");
+  return normalizePersistedDocument(document, { context: "loadDocument" });
 }
 
 export function buildRows(document: FeedDocument): SelectionRow[] {
