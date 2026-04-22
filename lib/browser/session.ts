@@ -135,7 +135,11 @@ function translateMountedPath(
 
 function resolveHostBrowserPath(target: string): string {
   const resolved = path.resolve(String(target));
-  return translateMountedPath(resolved, getMountInfo(resolved));
+  try {
+    return translateMountedPath(resolved, getMountInfo(resolved));
+  } catch {
+    return resolved;
+  }
 }
 
 function toBrowserTarget(target: string): string {

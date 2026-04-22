@@ -242,7 +242,8 @@ export interface FeedTabGroup {
 
 export interface FeedTab {
   label: string;
-  groups: FeedTabGroup[];
+  groups?: FeedTabGroup[];
+  item_ids?: string[];
   summary?: string;
 }
 

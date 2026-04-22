@@ -35,12 +35,16 @@ module.exports = [
     files: [
       "bin/**/*.ts",
       "bin/**/*.tsx",
+      "bin/**/*.mts",
       "lib/**/*.ts",
       "lib/**/*.tsx",
+      "lib/**/*.mts",
       "sources/**/*.ts",
       "sources/**/*.tsx",
+      "sources/**/*.mts",
       "tests/**/*.ts",
       "tests/**/*.tsx",
+      "tests/**/*.mts",
     ],
     languageOptions: {
       ...(config.languageOptions || {}),
@@ -53,12 +57,16 @@ module.exports = [
     files: [
       "bin/**/*.ts",
       "bin/**/*.tsx",
+      "bin/**/*.mts",
       "lib/**/*.ts",
       "lib/**/*.tsx",
+      "lib/**/*.mts",
       "sources/**/*.ts",
       "sources/**/*.tsx",
+      "sources/**/*.mts",
       "tests/**/*.ts",
       "tests/**/*.tsx",
+      "tests/**/*.mts",
     ],
     rules: {
       "no-console": "off",

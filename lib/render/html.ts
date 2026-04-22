@@ -10,6 +10,20 @@ const {
 } = require("./platform-icons");
 import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
 
+function getTabGroups(
+  tab: FeedTab,
+): Array<{ label?: string; item_ids: string[] }> {
+  if (Array.isArray(tab.groups)) return tab.groups;
+  if (Array.isArray(tab.item_ids)) {
+    return [
+      {
+        item_ids: tab.item_ids,
+      },
+    ];
+  }
+  return [];
+}
+
 function renderDocument(document: FeedDocument): string {
   const rows: FeedItem[] = orderItemsByThread(document);
   const sourceLabel = String(document.source || "feed").toUpperCase();
@@ -58,7 +72,7 @@ function renderDocument(document: FeedDocument): string {
   }
 
   function buildGroups(tab: FeedTab): string {
-    return tab.groups
+    return getTabGroups(tab)
       .map(
         (group) => `
       <section class="group-block">

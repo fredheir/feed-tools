@@ -14,6 +14,20 @@ function hasMaskItemIds(
   return "item_ids" in mask && Array.isArray(mask.item_ids);
 }
 
+function getTabGroups(
+  tab: FeedTab,
+): Array<{ label?: string; item_ids: string[] }> {
+  if (Array.isArray(tab.groups)) return tab.groups;
+  if (Array.isArray(tab.item_ids)) {
+    return [
+      {
+        item_ids: tab.item_ids,
+      },
+    ];
+  }
+  return [];
+}
+
 function resolveThreadChild(
   item: FeedItem,
   document: FeedDocument,
@@ -249,7 +263,7 @@ function expandThreadSelection(
 function collectMaskIdentifiers(mask: FeedMask): string[] {
   if (hasMaskTabs(mask)) {
     return mask.tabs.flatMap((tab: FeedTab) =>
-      tab.groups.flatMap((group) => group.item_ids),
+      getTabGroups(tab).flatMap((group) => group.item_ids),
     );
   }
   if (hasMaskItemIds(mask)) return mask.item_ids;
@@ -274,7 +288,7 @@ function expandMask(document: FeedDocument, mask: FeedMask): FeedMask {
       ...mask,
       tabs: mask.tabs.map((tab: FeedTab) => ({
         ...tab,
-        groups: tab.groups.map((group) => ({
+        groups: getTabGroups(tab).map((group) => ({
           ...group,
           item_ids: expandThreadSelection(group.item_ids, context),
         })),

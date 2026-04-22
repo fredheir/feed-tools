@@ -53,6 +53,35 @@ describe("renderDocument", () => {
     expect(html).toContain('class="platform-filter-group"');
   });
 
+  test("renders legacy tab masks that use tab-level item_ids", () => {
+    const html = renderDocument({
+      schema_version: 1,
+      source: "combined",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "x:1",
+          source: "x",
+          index: 1,
+          url: "https://x.com/a/status/1",
+          author: { handle: "@a" },
+          content: { text: "Legacy tab item" },
+          stats: {},
+          media: [],
+          cards: [],
+          thread: {},
+        },
+      ],
+      mask: {
+        tabbed: true,
+        tabs: [{ label: "Coding", item_ids: ["x:1"] }],
+      },
+    });
+
+    expect(html).toContain("Legacy tab item");
+    expect(html).toContain('class="tab-panel tab-panel-0"');
+  });
+
   test("renders threaded x replies after the original post", () => {
     const html = renderDocument({
       schema_version: 1,
