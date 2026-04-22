@@ -8,46 +8,64 @@ import type {
   FeedMask,
   FeedTab,
   FeedTabGroup,
+  RawFeedMask,
+  RawFeedTab,
 } from "./types.js";
 
-interface NormalizedFeedTab extends Omit<FeedTab, "groups" | "item_ids"> {
-  groups: FeedTabGroup[];
-}
-
-function hasMaskTabs(mask: FeedMask): mask is FeedMask & { tabs: FeedTab[] } {
+function hasMaskTabs(
+  mask: FeedMask | RawFeedMask,
+): mask is (FeedMask | RawFeedMask) & { tabs: Array<FeedTab | RawFeedTab> } {
   return "tabs" in mask && Array.isArray(mask.tabs);
 }
 
 function hasMaskItemIds(
-  mask: FeedMask,
-): mask is FeedMask & { item_ids: string[] } {
+  mask: FeedMask | RawFeedMask,
+): mask is (FeedMask | RawFeedMask) & { item_ids: string[] } {
   return "item_ids" in mask && Array.isArray(mask.item_ids);
 }
 
-function getTabGroups(tab: FeedTab): FeedTabGroup[] {
-  if (Array.isArray(tab.groups)) return tab.groups;
-  if (Array.isArray(tab.item_ids)) {
+function getTabGroups(tab: FeedTab | RawFeedTab): FeedTabGroup[] {
+  if (Array.isArray(tab.groups)) {
+    return tab.groups.map((group) => ({
+      ...group,
+      item_ids: Array.isArray(group.item_ids) ? group.item_ids : [],
+    }));
+  }
+  if ("item_ids" in tab && Array.isArray(tab.item_ids)) {
     return [{ item_ids: tab.item_ids }];
   }
   return [];
 }
 
-function normalizeTab(tab: FeedTab): NormalizedFeedTab {
-  const { item_ids: _itemIds, ...normalizedTab } = tab;
+function normalizeTab(tab: FeedTab | RawFeedTab): FeedTab {
+  const { item_ids: _itemIds, ...normalizedTab } = tab as RawFeedTab;
   return {
     ...normalizedTab,
-    groups: getTabGroups(tab).map((group) => ({
-      ...group,
-      item_ids: Array.isArray(group.item_ids) ? group.item_ids : [],
-    })),
+    groups: getTabGroups(tab),
   };
 }
 
 function normalizeMaskTabs(
-  mask: FeedMask | null | undefined,
-): NormalizedFeedTab[] {
+  mask: FeedMask | RawFeedMask | null | undefined,
+): FeedTab[] {
   if (!mask || !hasMaskTabs(mask)) return [];
-  return mask.tabs.map(normalizeTab);
+  return (mask.tabs as Array<FeedTab | RawFeedTab>).map((tab) =>
+    normalizeTab(tab),
+  );
+}
+
+function normalizeMask(
+  mask: FeedMask | RawFeedMask | null | undefined,
+): FeedMask | null | undefined {
+  if (!mask) return mask;
+  assertSingularMaskSelection(mask);
+  if (!hasMaskTabs(mask)) return mask;
+  return {
+    ...mask,
+    tabs: (mask.tabs as Array<FeedTab | RawFeedTab>).map((tab) =>
+      normalizeTab(tab),
+    ),
+  };
 }
 
 function resolveThreadChild(
@@ -291,23 +309,27 @@ function collectMaskIdentifiers(mask: FeedMask): string[] {
   return [];
 }
 
-function assertSingularMaskSelection(mask: FeedMask): void {
+function assertSingularMaskSelection(mask: FeedMask | RawFeedMask): void {
   if (hasMaskItemIds(mask) && hasMaskTabs(mask)) {
     throw new Error("FeedMask cannot contain both item_ids and tabs");
   }
 }
 
-function expandMask(document: FeedDocument, mask: FeedMask): FeedMask {
-  if (!mask) return mask;
-  assertSingularMaskSelection(mask);
-  if (!hasMaskTabs(mask) && !hasMaskItemIds(mask)) return mask;
+function expandMask(
+  document: FeedDocument,
+  mask: FeedMask | RawFeedMask,
+): FeedMask {
+  const normalizedMask = normalizeMask(mask) as FeedMask;
+  if (!hasMaskTabs(normalizedMask) && !hasMaskItemIds(normalizedMask)) {
+    return normalizedMask;
+  }
 
   const context = buildExpansionContext(document);
-  const normalizedTabs = normalizeMaskTabs(mask);
+  const normalizedTabs = normalizeMaskTabs(normalizedMask);
 
   if (normalizedTabs.length > 0) {
     return {
-      ...mask,
+      ...normalizedMask,
       tabs: normalizedTabs.map((tab) => ({
         ...tab,
         groups: tab.groups.map((group) => ({
@@ -317,16 +339,16 @@ function expandMask(document: FeedDocument, mask: FeedMask): FeedMask {
       })),
     };
   }
-  if (!hasMaskItemIds(mask)) return mask;
+  if (!hasMaskItemIds(normalizedMask)) return normalizedMask;
   return {
-    ...mask,
-    item_ids: expandThreadSelection(mask.item_ids, context),
+    ...normalizedMask,
+    item_ids: expandThreadSelection(normalizedMask.item_ids, context),
   };
 }
 
 function applyMask(
   document: FeedDocument,
-  mask: FeedMask | null,
+  mask: FeedMask | RawFeedMask | null,
 ): FeedDocument {
   if (!mask) return document;
   assertFeedDocument(document, "applyMask");

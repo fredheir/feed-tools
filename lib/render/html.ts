@@ -4,21 +4,14 @@ const { getRenderCss } = require("./css");
 const { escapeHtml, renderItemCard, toSourceClass } = require("./item");
 const { getItemMaskKeys } = require("../item");
 const { normalizeMaskTabs, orderItemsByThread } = require("../mask") as {
-  normalizeMaskTabs: (
-    mask: FeedDocument["mask"],
-  ) => Array<Omit<FeedTab, "groups" | "item_ids"> & { groups: FeedTabGroup[] }>;
+  normalizeMaskTabs: (mask: FeedDocument["mask"]) => FeedTab[];
   orderItemsByThread: (document: FeedDocument) => FeedItem[];
 };
 const {
   getPlatformIconDataUri,
   getPlatformIconMeta,
 } = require("./platform-icons");
-import type {
-  FeedDocument,
-  FeedItem,
-  FeedTab,
-  FeedTabGroup,
-} from "../types.js";
+import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
 
 function renderDocument(document: FeedDocument): string {
   const rows: FeedItem[] = orderItemsByThread(document);
@@ -62,9 +55,7 @@ function renderDocument(document: FeedDocument): string {
       .join("\n");
   }
 
-  function buildGroups(
-    tab: Omit<FeedTab, "groups" | "item_ids"> & { groups: FeedTabGroup[] },
-  ): string {
+  function buildGroups(tab: FeedTab): string {
     return tab.groups
       .map(
         (group) => `

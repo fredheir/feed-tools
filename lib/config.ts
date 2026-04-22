@@ -15,30 +15,18 @@ import type {
   SourcePreference,
   UserPreferences,
 } from "./types.js";
+import {
+  isRecord,
+  toOptionalBoolean,
+  toOptionalString,
+  toStringArray,
+} from "./coerce.js";
 import { isSupportedSource } from "./source-catalog.js";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
 export const DEFAULT_ASSETS_DIR = path.join(REPO_ROOT, "var", "feed-assets");
 const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function toOptionalString(value: unknown): string | null {
-  if (value == null || value === "") return null;
-  return String(value);
-}
-
-function toOptionalBoolean(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined;
-}
-
-function toStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  return value.map((entry) => String(entry)).filter(Boolean);
-}
 
 function normalizeBrowserConfig(value: unknown): FeedBrowserConfig {
   if (!isRecord(value)) return {};

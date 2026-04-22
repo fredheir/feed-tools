@@ -241,8 +241,19 @@ export interface FeedTabGroup {
 }
 
 export interface FeedTab {
-  label: string;
-  groups?: FeedTabGroup[];
+  label?: string;
+  groups: FeedTabGroup[];
+  summary?: string;
+}
+
+export interface RawFeedTabGroup {
+  label?: string;
+  item_ids?: string[];
+}
+
+export interface RawFeedTab {
+  label?: string;
+  groups?: RawFeedTabGroup[];
   item_ids?: string[];
   summary?: string;
 }
@@ -259,6 +270,17 @@ export type FeedMask =
     })
   | (FeedMaskBase & {
       tabs: FeedTab[];
+      item_ids?: never;
+    })
+  | FeedMaskBase;
+
+export type RawFeedMask =
+  | (FeedMaskBase & {
+      item_ids: string[];
+      tabs?: never;
+    })
+  | (FeedMaskBase & {
+      tabs: RawFeedTab[];
       item_ids?: never;
     })
   | FeedMaskBase;

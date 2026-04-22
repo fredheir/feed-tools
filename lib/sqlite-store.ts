@@ -4,11 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 const { combineDocuments } = require("./document-ops");
-import {
-  assertFeedDocument,
-  getPreferredItemKey,
-  normalizeItemShape,
-} from "./item-shape.js";
+const { buildNormalizedFeedDocument } = require("./feed-document-normalize.js");
+import { assertFeedDocument, getPreferredItemKey } from "./item-shape.js";
 import type { FeedAllocation, FeedDocument, FeedItem } from "./types.js";
 
 type SqliteDatabase = InstanceType<typeof DatabaseSync>;
@@ -60,45 +57,6 @@ interface ItemState {
 type CategoryMapEntry = FeedAllocation["items"][string];
 type PartialFeedDocument = Partial<FeedDocument> & { items?: unknown[] };
 
-function normalizeStoredItem(
-  item: unknown,
-  fallback: { source: string; index: number },
-): FeedItem {
-  const candidate = (item ?? {}) as Partial<FeedItem>;
-  const contentText =
-    typeof candidate.content?.text === "string"
-      ? candidate.content.text
-      : typeof (item as { text?: unknown })?.text === "string"
-        ? (item as { text: string }).text
-        : undefined;
-  return {
-    ...normalizeItemShape(
-      contentText === undefined
-        ? candidate
-        : {
-            ...candidate,
-            content: {
-              ...candidate.content,
-              text: contentText,
-            },
-          },
-      fallback,
-    ),
-    first_seen_at:
-      typeof candidate.first_seen_at === "string"
-        ? candidate.first_seen_at
-        : null,
-    last_seen_at:
-      typeof candidate.last_seen_at === "string"
-        ? candidate.last_seen_at
-        : null,
-    capture_count:
-      typeof candidate.capture_count === "number"
-        ? candidate.capture_count
-        : null,
-  };
-}
-
 function normalizeStoredDocument(
   document: unknown,
   options: {
@@ -108,26 +66,20 @@ function normalizeStoredDocument(
 ): FeedDocument {
   assertFeedDocument(document, options.context);
   const candidate = document as PartialFeedDocument;
-  const items = Array.isArray(candidate.items) ? candidate.items : [];
   const source =
     typeof candidate.source === "string"
       ? candidate.source
       : options.fallbackSource || "unknown";
-  return {
-    schema_version:
+  return buildNormalizedFeedDocument(candidate, {
+    source,
+    schemaVersion:
       typeof candidate.schema_version === "number"
         ? candidate.schema_version
         : 1,
-    source,
-    captured_at:
+    capturedAt:
       typeof candidate.captured_at === "string" ? candidate.captured_at : null,
-    items: items.map((item, index) =>
-      normalizeStoredItem(item, {
-        source,
-        index: index + 1,
-      }),
-    ),
-  };
+    includeCaptureMetadata: true,
+  });
 }
 
 function getDatabasePath(saveDir: string): string {

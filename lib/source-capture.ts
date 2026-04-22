@@ -5,6 +5,7 @@ const fsPromises = require("node:fs/promises");
 const { downloadDocumentAssets } = require("./assets");
 const { closeBrowserSession, normalizeBrowserOptions } = require("./browser");
 const { DEFAULT_SAVE_DIR } = require("./config");
+const { buildNormalizedFeedDocument } = require("./feed-document-normalize.js");
 const { getPreferredItemKey, normalizeItemShape } = require("./item-shape");
 const { mergeDocuments } = require("./merge");
 const {
@@ -79,16 +80,19 @@ function assertCapturedAtValue(value: unknown, sourceName: string): void {
 
 function normalizeItem(
   item: unknown,
-  index: number,
-  sourceName: string,
+  fallback: { source: string; index: number },
 ): FeedItem {
   if (!isRecord(item)) {
     throw new Error(
-      `Invalid ${sourceName} capture document: item ${index + 1} must be an object`,
+      `Invalid ${fallback.source} capture document: item ${fallback.index} must be an object`,
     );
   }
-  assertMatchingSource(item.source, sourceName, `item ${index + 1} source`);
-  return normalizeItemShape(item, { source: sourceName, index: index + 1 });
+  assertMatchingSource(
+    item.source,
+    fallback.source,
+    `item ${fallback.index} source`,
+  );
+  return normalizeItemShape(item, fallback);
 }
 
 function normalizeDocument(
@@ -108,17 +112,15 @@ function normalizeDocument(
   assertMatchingSource(document.source, sourceName, "document source");
   assertCapturedAtValue(document.captured_at, sourceName);
 
-  return {
-    schema_version: 1,
+  return buildNormalizedFeedDocument(document, {
     source: sourceName,
-    captured_at:
+    schemaVersion: 1,
+    capturedAt:
       typeof document.captured_at === "string" && document.captured_at
         ? document.captured_at
         : new Date().toISOString(),
-    items: document.items.map((item, index) =>
-      normalizeItem(item, index, sourceName),
-    ),
-  };
+    normalizeItem,
+  });
 }
 
 function assertStandardizedDocument(

@@ -189,6 +189,34 @@ describe("config helpers", () => {
     );
   });
 
+  test("parseConfigPayload keeps config-side string coercion behavior", () => {
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: {
+          sources: [
+            {
+              name: "x",
+              capture: {
+                browser: {
+                  cdp: 9222,
+                  session: 123,
+                  profile: false,
+                },
+              },
+            },
+          ],
+        },
+      }),
+      "/tmp/config.json",
+    );
+
+    expect(getCaptureBrowserOptions(config, "x")).toMatchObject({
+      cdp: "9222",
+      session: "123",
+      profile: "false",
+    });
+  });
+
   test("parseConfigPayload returns normalized empty preference objects", () => {
     const config = parseConfigPayload("{}", "/tmp/config.json");
 

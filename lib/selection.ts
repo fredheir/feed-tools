@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 
-import { assertFeedDocument, normalizeItemShape } from "./item-shape.js";
+import { assertFeedDocument } from "./item-shape.js";
+const { buildNormalizedFeedDocument } = require("./feed-document-normalize.js");
 import type {
   CurationPreferences,
   FeedAllocation,
@@ -22,43 +23,17 @@ function normalizeSelectionDocument(
 ): FeedDocument {
   assertFeedDocument(document, context);
   const candidate = document as PartialFeedDocument;
-  const items = Array.isArray(candidate.items) ? candidate.items : [];
   const source =
     typeof candidate.source === "string" ? candidate.source : "unknown";
-  return {
-    schema_version:
+  return buildNormalizedFeedDocument(candidate, {
+    source,
+    schemaVersion:
       typeof candidate.schema_version === "number"
         ? candidate.schema_version
         : 1,
-    source,
-    captured_at:
+    capturedAt:
       typeof candidate.captured_at === "string" ? candidate.captured_at : null,
-    items: items.map((item, index) => {
-      const candidateItem = (item ?? {}) as Partial<FeedItem>;
-      const legacyItem = (item ?? {}) as { text?: unknown };
-      const contentText =
-        typeof candidateItem.content?.text === "string"
-          ? candidateItem.content.text
-          : typeof legacyItem.text === "string"
-            ? legacyItem.text
-            : undefined;
-      return normalizeItemShape(
-        contentText === undefined
-          ? candidateItem
-          : {
-              ...candidateItem,
-              content: {
-                ...candidateItem.content,
-                text: contentText,
-              },
-            },
-        {
-          source,
-          index: index + 1,
-        },
-      );
-    }),
-  };
+  });
 }
 
 function hasPositiveLimit(limit: number | null | undefined): limit is number {

@@ -4,6 +4,7 @@ const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
+import { isRecord, toOptionalString } from "../coerce.js";
 import type {
   BrowserSession,
   FeedBrowserConfig,
@@ -82,14 +83,6 @@ function normalizeUrlPrefixes(urlPrefix: string | string[]): string[] {
   return [String(urlPrefix)].filter(Boolean);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
-function toOptionalString(value: unknown): string | null {
-  return typeof value === "string" && value !== "" ? value : null;
-}
-
 function parseFindmntPayload(payload: string): MountInfo | null {
   const parsed = JSON.parse(payload) as unknown;
   if (!isRecord(parsed)) return null;
@@ -98,8 +91,8 @@ function parseFindmntPayload(payload: string): MountInfo | null {
   const filesystem = filesystems[0];
   if (!isRecord(filesystem)) return null;
   return {
-    target: toOptionalString(filesystem.target),
-    source: toOptionalString(filesystem.source),
+    target: toOptionalString(filesystem.target, { coerce: false }),
+    source: toOptionalString(filesystem.source, { coerce: false }),
   };
 }
 
