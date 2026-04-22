@@ -9,11 +9,6 @@ import type { FeedDocument, FeedItem, FeedMedia } from "./types.js";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 
-function buildPlaceholderDataUri(label: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675"><rect width="100%" height="100%" fill="#dfe8eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#536471" font-family="sans-serif" font-size="28">${label}</text></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
 function extFromUrl(url: string): string {
   try {
     const pathname = new URL(url).pathname;
@@ -118,9 +113,19 @@ function shouldUseCookiesForVideo(item: FeedItem): boolean {
   return item?.source === "x" || item?.source === "instagram";
 }
 
-function getVideoCodec(filePath: string): string | null {
+type VideoProbeResult =
+  | { ok: true; codec: string }
+  | { ok: false; reason: string };
+
+type BrowserPlayableVideoResult =
+  | { ok: true; filePath: string }
+  | { ok: false; reason: string };
+
+function probeVideoCodec(filePath: string): VideoProbeResult {
   const ffprobe = getFfprobeCommand();
-  if (!ffprobe) return null;
+  if (!ffprobe) {
+    return { ok: false, reason: "ffprobe is unavailable" };
+  }
   try {
     const output = childProcess.execFileSync(
       ffprobe,
@@ -145,51 +150,81 @@ function getVideoCodec(filePath: string): string | null {
     const parsed = JSON.parse(output) as {
       streams?: Array<{ codec_name?: string }>;
     };
-    return parsed.streams?.[0]?.codec_name || null;
-  } catch {
-    return null;
+    const codec = parsed.streams?.[0]?.codec_name;
+    if (!codec) {
+      return {
+        ok: false,
+        reason: `ffprobe returned no video codec for ${filePath}`,
+      };
+    }
+    return { ok: true, codec };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, reason: `ffprobe failed for ${filePath}: ${message}` };
   }
 }
 
-function ensureBrowserPlayableVideo(filePath: string): string {
-  const codec = getVideoCodec(filePath);
-  if (!codec || ["h264", "vp8", "vp9"].includes(codec)) return filePath;
+function ensureBrowserPlayableVideo(
+  filePath: string,
+): BrowserPlayableVideoResult {
+  const probed = probeVideoCodec(filePath);
+  if ("reason" in probed) {
+    return { ok: false, reason: probed.reason };
+  }
+  if (["h264", "vp8", "vp9"].includes(probed.codec)) {
+    return { ok: true, filePath };
+  }
 
   const ffmpeg = getFfmpegCommand();
-  if (!ffmpeg) return filePath;
+  if (!ffmpeg) {
+    return {
+      ok: false,
+      reason: `ffmpeg is unavailable for transcoding codec ${probed.codec}`,
+    };
+  }
 
   const parsed = path.parse(filePath);
   const target = path.join(parsed.dir, `${parsed.name}-browser.mp4`);
-  if (fs.existsSync(target)) return target;
+  if (fs.existsSync(target)) {
+    return { ok: true, filePath: target };
+  }
 
-  childProcess.execFileSync(
-    ffmpeg,
-    [
-      "-y",
-      "-i",
-      filePath,
-      "-map",
-      "0:v:0",
-      "-map",
-      "0:a:0?",
-      "-c:v",
-      "libx264",
-      "-pix_fmt",
-      "yuv420p",
-      "-movflags",
-      "+faststart",
-      "-c:a",
-      "aac",
-      target,
-    ],
-    {
-      cwd: REPO_ROOT,
-      stdio: "ignore",
-      timeout: 180000,
-      maxBuffer: 20 * 1024 * 1024,
-    },
-  );
-  return target;
+  try {
+    childProcess.execFileSync(
+      ffmpeg,
+      [
+        "-y",
+        "-i",
+        filePath,
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a:0?",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-c:a",
+        "aac",
+        target,
+      ],
+      {
+        cwd: REPO_ROOT,
+        stdio: "ignore",
+        timeout: 180000,
+        maxBuffer: 20 * 1024 * 1024,
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      ok: false,
+      reason: `ffmpeg failed to transcode ${filePath}: ${message}`,
+    };
+  }
+  return { ok: true, filePath: target };
 }
 
 async function downloadMediaVideo(
@@ -205,19 +240,21 @@ async function downloadMediaVideo(
     if (!videoUrl) {
       throw new Error("Video capture expected a resolvable source URL");
     }
-    try {
-      return ensureBrowserPlayableVideo(
-        downloadVideoWithYtDlp(
-          videoUrl,
-          `video-${item.index}`,
-          assetsDir,
-          existingFiles,
-          { useCookies: shouldUseCookiesForVideo(item) },
-        ),
-      );
-    } catch (error) {
-      if (!media?.video_src) throw error;
+    const downloadedVideo = downloadVideoWithYtDlp(
+      videoUrl,
+      `video-${item.index}`,
+      assetsDir,
+      existingFiles,
+      { useCookies: shouldUseCookiesForVideo(item) },
+    );
+    const preparedVideo = ensureBrowserPlayableVideo(downloadedVideo);
+    if (preparedVideo.ok) {
+      return preparedVideo.filePath;
     }
+    if ("reason" in preparedVideo) {
+      throw new Error(preparedVideo.reason);
+    }
+    throw new Error("Video processing failed without an explicit reason");
   }
 
   const directVideoSrc = media?.video_src;
@@ -233,7 +270,14 @@ async function downloadMediaVideo(
         `Failed to download direct video asset for ${directVideoSrc}`,
       );
     }
-    return ensureBrowserPlayableVideo(downloaded);
+    const preparedVideo = ensureBrowserPlayableVideo(downloaded);
+    if (preparedVideo.ok) {
+      return preparedVideo.filePath;
+    }
+    if ("reason" in preparedVideo) {
+      throw new Error(preparedVideo.reason);
+    }
+    throw new Error("Video processing failed without an explicit reason");
   }
   return null;
 }
@@ -284,11 +328,17 @@ function downloadVideoWithYtDlp(
     timeout: 180000,
     maxBuffer: 20 * 1024 * 1024,
   });
+  const expectedPrefix = path.join(assetsDir, `${prefix}-${hash}.`);
   const downloadedPath = String(output || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .find((line) => path.isAbsolute(line) && fs.existsSync(line));
+    .find(
+      (line) =>
+        path.isAbsolute(line) &&
+        fs.existsSync(line) &&
+        line.startsWith(expectedPrefix),
+    );
   if (!downloadedPath) {
     throw new Error(`yt-dlp did not report a downloaded file for ${url}`);
   }
@@ -325,27 +375,45 @@ async function downloadDocumentAssets(
 ): Promise<FeedDocument> {
   fs.mkdirSync(assetsDir, { recursive: true });
   const existingFiles = fs.readdirSync(assetsDir);
+  const clonedDocument: FeedDocument = {
+    ...document,
+    items: document.items.map((item) => ({
+      ...item,
+      author: { ...(item.author || {}) },
+      content: { ...(item.content || {}) },
+      stats: { ...(item.stats || {}) },
+      thread: { ...(item.thread || {}) },
+      media: Array.isArray(item.media)
+        ? item.media.map((media) => ({ ...media }))
+        : [],
+      cards: Array.isArray(item.cards)
+        ? item.cards.map((card) => ({ ...card }))
+        : [],
+      embedded_links: Array.isArray(item.embedded_links)
+        ? item.embedded_links.map((link) => ({ ...link }))
+        : [],
+    })),
+  };
 
   const jobs: Promise<void>[] = [];
-  for (const item of document.items) {
-    jobs.push(
-      download(
-        item.author?.profile_image_url,
-        `profile-${item.index}`,
-        assetsDir,
-        existingFiles,
-      )
-        .then((local) => {
-          if (item.author) item.author.profile_image_local = local;
-        })
-        .catch((error) => {
-          console.warn(`asset warning: ${error.message}`);
-          if (item.author) {
-            item.author.profile_image_local =
-              buildPlaceholderDataUri("profile");
+  for (const item of clonedDocument.items) {
+    if (item.author?.profile_image_url) {
+      jobs.push(
+        download(
+          item.author.profile_image_url,
+          `profile-${item.index}`,
+          assetsDir,
+          existingFiles,
+        ).then((local) => {
+          if (!local) {
+            throw new Error(
+              `Failed to materialize author profile image for item ${item.index}`,
+            );
           }
+          item.author.profile_image_local = local;
         }),
-    );
+      );
+    }
     const mediaItems = Array.isArray(item.media) ? item.media : [];
     for (const [index, media] of mediaItems.entries()) {
       if (media?.media_kind === "video") {
@@ -355,52 +423,57 @@ async function downloadDocumentAssets(
               downloadMediaVideo(item, media, assetsDir, existingFiles),
             )
             .then((local) => {
-              if (local) media.local_video_src = local;
-            })
-            .catch((error) => {
-              console.warn(`asset warning: ${error.message}`);
+              if (!local) {
+                throw new Error(
+                  `Failed to materialize video asset for item ${item.index}`,
+                );
+              }
+              media.local_video_src = local;
             }),
         );
       }
-      jobs.push(
-        download(
-          media.src,
-          `media-${item.index}-${index + 1}`,
-          assetsDir,
-          existingFiles,
-        )
-          .then((local) => {
+      if (media.src) {
+        jobs.push(
+          download(
+            media.src,
+            `media-${item.index}-${index + 1}`,
+            assetsDir,
+            existingFiles,
+          ).then((local) => {
+            if (!local) {
+              throw new Error(
+                `Failed to materialize media asset for item ${item.index}`,
+              );
+            }
             media.local_src = local;
-          })
-          .catch((error) => {
-            console.warn(`asset warning: ${error.message}`);
-            media.local_src = media.src || buildPlaceholderDataUri("media");
           }),
-      );
+        );
+      }
     }
     const cards = Array.isArray(item.cards) ? item.cards : [];
     for (const [index, card] of cards.entries()) {
-      jobs.push(
-        download(
-          card.image_url,
-          `card-${item.index}-${index + 1}`,
-          assetsDir,
-          existingFiles,
-        )
-          .then((local) => {
+      if (card.image_url) {
+        jobs.push(
+          download(
+            card.image_url,
+            `card-${item.index}-${index + 1}`,
+            assetsDir,
+            existingFiles,
+          ).then((local) => {
+            if (!local) {
+              throw new Error(
+                `Failed to materialize card image for item ${item.index}`,
+              );
+            }
             card.image_local = local;
-          })
-          .catch((error) => {
-            console.warn(`asset warning: ${error.message}`);
-            card.image_local =
-              card.image_url || buildPlaceholderDataUri("preview");
           }),
-      );
+        );
+      }
     }
   }
   await Promise.all(jobs);
 
-  return document;
+  return clonedDocument;
 }
 
 module.exports = {

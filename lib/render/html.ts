@@ -3,126 +3,22 @@
 const { getRenderCss } = require("./css");
 const { escapeHtml, renderItemCard, toSourceClass } = require("./item");
 const { getItemMaskKeys } = require("../item");
+const { orderItemsByThread } = require("../mask");
 const {
   getPlatformIconDataUri,
   getPlatformIconMeta,
 } = require("./platform-icons");
-import type {
-  FeedDocument,
-  FeedItem,
-  FeedTab,
-  FeedTabGroup,
-} from "../types.js";
-
-function orderThreadChains(items: FeedItem[]): FeedItem[] {
-  const rows = Array.isArray(items) ? items : [];
-  const byUrl = new Map<string, FeedItem>();
-  const byId = new Map<string, FeedItem>();
-  const originalIndexById = new Map<string, number>();
-  const childToParent = new Map<string, string>();
-
-  for (const [index, item] of rows.entries()) {
-    if (!item?.id) continue;
-    byId.set(String(item.id), item);
-    originalIndexById.set(String(item.id), index);
-    if (item.url) byUrl.set(String(item.url), item);
-  }
-
-  for (const item of rows) {
-    const parentId = String(item?.id || "");
-    const childUrl = item?.thread?.child_candidate_url;
-    if (!parentId || !childUrl) continue;
-    const child = byUrl.get(String(childUrl));
-    if (!child?.id || child.id === item.id) continue;
-    childToParent.set(String(child.id), parentId);
-  }
-
-  function getChainRoot(item: FeedItem): string {
-    let currentId = String(item?.id || "");
-    if (!currentId) return "";
-    const seen = new Set<string>();
-    while (childToParent.has(currentId) && !seen.has(currentId)) {
-      seen.add(currentId);
-      currentId = childToParent.get(currentId) || currentId;
-    }
-    return currentId;
-  }
-
-  const chainBuckets = new Map<string, FeedItem[]>();
-  for (const item of rows) {
-    const id = String(item?.id || "");
-    if (!id) continue;
-    const rootId = getChainRoot(item) || id;
-    const bucket = chainBuckets.get(rootId) || [];
-    bucket.push(item);
-    chainBuckets.set(rootId, bucket);
-  }
-
-  const orderedByRoot = new Map<string, FeedItem[]>();
-  for (const [rootId, bucket] of chainBuckets.entries()) {
-    const childrenByParent = new Map<string, FeedItem[]>();
-    for (const item of bucket) {
-      const id = String(item.id);
-      const parentId = childToParent.get(id);
-      if (!parentId) continue;
-      const siblings = childrenByParent.get(parentId) || [];
-      siblings.push(item);
-      childrenByParent.set(parentId, siblings);
-    }
-    for (const siblings of childrenByParent.values()) {
-      siblings.sort(
-        (a, b) =>
-          (originalIndexById.get(String(a.id)) ?? Number.MAX_SAFE_INTEGER) -
-          (originalIndexById.get(String(b.id)) ?? Number.MAX_SAFE_INTEGER),
-      );
-    }
-
-    const root = byId.get(rootId) || bucket[0];
-    const ordered: FeedItem[] = [];
-    const stack: FeedItem[] = root ? [root] : [];
-    const seen = new Set<string>();
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (!current) continue;
-      const currentId = String(current?.id || "");
-      if (!currentId || seen.has(currentId)) continue;
-      seen.add(currentId);
-      ordered.push(current);
-      const children = childrenByParent.get(currentId) || [];
-      for (let index = children.length - 1; index >= 0; index -= 1) {
-        const child = children[index];
-        if (child) stack.push(child);
-      }
-    }
-
-    for (const item of bucket) {
-      const id = String(item.id);
-      if (seen.has(id)) continue;
-      ordered.push(item);
-    }
-    orderedByRoot.set(rootId, ordered);
-  }
-
-  const emittedRoots = new Set<string>();
-  const result: FeedItem[] = [];
-  for (const item of rows) {
-    const id = String(item?.id || "");
-    if (!id) {
-      result.push(item);
-      continue;
-    }
-    const rootId = getChainRoot(item) || id;
-    if (emittedRoots.has(rootId)) continue;
-    emittedRoots.add(rootId);
-    result.push(...(orderedByRoot.get(rootId) || [item]));
-  }
-  return result;
-}
+import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
 
 function renderDocument(document: FeedDocument): string {
-  const rows = orderThreadChains(document.items);
+  const rows = orderItemsByThread(document) as FeedItem[];
   const sourceLabel = String(document.source || "feed").toUpperCase();
-  const tabs = Array.isArray(document.mask?.tabs) ? document.mask.tabs : [];
+  const tabs =
+    document.mask &&
+    "tabs" in document.mask &&
+    Array.isArray(document.mask.tabs)
+      ? document.mask.tabs
+      : [];
   const tabbed = document.mask?.tabbed === true || tabs.length > 0;
   const summary = document.mask?.summary || "";
   const platforms = Array.from(
@@ -162,12 +58,9 @@ function renderDocument(document: FeedDocument): string {
   }
 
   function buildGroups(tab: FeedTab): string {
-    if (!Array.isArray(tab.groups) || tab.groups.length === 0) {
-      return buildRows(selectItems(tab.item_ids));
-    }
     return tab.groups
       .map(
-        (group: FeedTabGroup) => `
+        (group) => `
       <section class="group-block">
         ${group.label ? `<div class="group-label">${escapeHtml(group.label)}</div>` : ""}
         ${buildRows(selectItems(group.item_ids))}

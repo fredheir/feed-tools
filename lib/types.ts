@@ -242,17 +242,25 @@ export interface FeedTabGroup {
 
 export interface FeedTab {
   label: string;
-  groups?: FeedTabGroup[];
-  item_ids?: string[];
+  groups: FeedTabGroup[];
   summary?: string;
 }
 
-export interface FeedMask {
+interface FeedMaskBase {
   summary?: string;
   tabbed?: boolean;
-  item_ids?: string[];
-  tabs?: FeedTab[];
 }
+
+export type FeedMask =
+  | (FeedMaskBase & {
+      item_ids: string[];
+      tabs?: never;
+    })
+  | (FeedMaskBase & {
+      tabs: FeedTab[];
+      item_ids?: never;
+    })
+  | FeedMaskBase;
 
 export interface CategoryAssignment {
   category: string;

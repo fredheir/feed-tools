@@ -91,6 +91,44 @@ describe("renderDocument", () => {
     expect(html.indexOf("Original")).toBeLessThan(html.indexOf("Reply"));
   });
 
+  test("renders index-linked thread replies after the original post", () => {
+    const html = renderDocument({
+      schema_version: 1,
+      source: "combined",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "x:reply",
+          source: "x",
+          index: 2,
+          url: "https://x.com/a/status/2",
+          author: { handle: "@a" },
+          content: { text: "Reply" },
+          stats: {},
+          media: [],
+          cards: [],
+          thread: {},
+        },
+        {
+          id: "x:root",
+          source: "x",
+          index: 1,
+          url: "https://x.com/a/status/1",
+          author: { handle: "@a" },
+          content: { text: "Original" },
+          stats: {},
+          media: [],
+          cards: [],
+          thread: {
+            child_candidate_index: 2,
+          },
+        },
+      ],
+    });
+
+    expect(html.indexOf("Original")).toBeLessThan(html.indexOf("Reply"));
+  });
+
   test("injects viewport autoplay script for rendered videos", () => {
     const html = renderDocument({
       schema_version: 1,

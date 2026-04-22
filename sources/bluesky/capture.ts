@@ -8,11 +8,82 @@ const {
   collectUniqueItems,
 } = require("../../lib/source-capture");
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
+import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.js";
 import type {
   BrowserSession,
+  FeedBrowserConfig,
   FeedDocument,
   FeedItem,
 } from "../../lib/types.js";
+
+type RawBlueskyExtractionItem = Parameters<typeof normalizeItemShape>[0];
+
+type RawBlueskyExtractionPayload = {
+  captured_at?: string | null;
+  items: RawBlueskyExtractionItem[];
+};
+
+type BlueskyFeedState = {
+  url: string;
+  feedItems: number;
+  text: string;
+};
+
+function assertRawBlueskyExtractionPayload(
+  payload: unknown,
+): asserts payload is RawBlueskyExtractionPayload {
+  if (!isPlainObject(payload) || !Array.isArray(payload.items)) {
+    throw new Error("Invalid bluesky extraction payload");
+  }
+}
+
+function normalizeBlueskyExtractionDocument(payload: unknown): FeedDocument {
+  assertRawBlueskyExtractionPayload(payload);
+  const capturedAt =
+    typeof payload.captured_at === "string" && payload.captured_at
+      ? payload.captured_at
+      : new Date().toISOString();
+
+  return {
+    schema_version: 1,
+    source: "bluesky",
+    captured_at: capturedAt,
+    items: payload.items.map((item, index) =>
+      normalizeItemShape(item, { source: "bluesky", index: index + 1 }),
+    ),
+  };
+}
+
+function parseBlueskyFeedState(state: unknown): BlueskyFeedState {
+  if (!isPlainObject(state)) {
+    throw new Error("Invalid bluesky feed state");
+  }
+  if (
+    typeof state.url !== "string" ||
+    typeof state.feedItems !== "number" ||
+    !Number.isFinite(state.feedItems) ||
+    typeof state.text !== "string"
+  ) {
+    throw new Error("Invalid bluesky feed state");
+  }
+  return {
+    url: state.url,
+    feedItems: state.feedItems,
+    text: state.text,
+  };
+}
+
+function parseDomCount(state: unknown): { count: number } {
+  if (!isPlainObject(state)) {
+    throw new Error("Invalid bluesky DOM count");
+  }
+  if (typeof state.count !== "number" || !Number.isFinite(state.count)) {
+    throw new Error("Invalid bluesky DOM count");
+  }
+  return {
+    count: state.count,
+  };
+}
 
 function extractBlueskySourceItemId(
   url: string | null | undefined,
@@ -189,15 +260,13 @@ function prepareBlueskyFeed(browser: BrowserSession): void {
   const shortWait = jitterTimeout(900, 300);
   const mediumWait = jitterTimeout(1600, 500);
   browser.ensureTab("https://bsky.app/", "https://bsky.app/");
-  const existingFeedState = browser.evalJson<{
-    url: string;
-    feedItems: number;
-    text: string;
-  }>(`(() => JSON.stringify({
+  const existingFeedState = parseBlueskyFeedState(
+    browser.evalJson(`(() => JSON.stringify({
     url: location.href,
     feedItems: document.querySelectorAll('[data-testid^="feedItem-by-"]').length,
     text: document.body?.innerText || ""
-  }))()`);
+  }))()`),
+  );
   if (
     String(existingFeedState.url || "").startsWith("https://bsky.app/") &&
     Number(existingFeedState.feedItems || 0) > 0
@@ -240,7 +309,7 @@ async function captureDocument({
   browserOptions = {},
 }: {
   limit?: number;
-  browserOptions?: Record<string, unknown>;
+  browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
   const browser = createBrowserSession(browserOptions);
   prepareBlueskyFeed(browser);
@@ -248,7 +317,8 @@ async function captureDocument({
   const collectedItems: FeedItem[] = [];
   const seen = new Set<string>();
 
-  function mergeBatch(document: FeedDocument): void {
+  function mergeBatch(payload: unknown): void {
+    const document = normalizeBlueskyExtractionDocument(payload);
     collectUniqueItems(document.items, {
       seen,
       sourceName: "bluesky",
@@ -270,11 +340,11 @@ async function captureDocument({
     index += 1
   ) {
     const beforeCount = collectedItems.length;
-    const { count: knownDomItems } = browser.evalJson<{
-      count: number;
-    }>(`(() => JSON.stringify({
+    const { count: knownDomItems } = parseDomCount(
+      browser.evalJson(`(() => JSON.stringify({
       count: document.querySelectorAll('[data-testid^="feedItem-by-"]').length
-    }))()`);
+    }))()`),
+    );
     browser.evalText(`(() => {
       window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
       return JSON.stringify({ ok: true, y: window.scrollY });
@@ -317,6 +387,7 @@ const prepareFeed = prepareBlueskyFeed;
 
 module.exports = {
   buildExtractionScript,
+  normalizeBlueskyExtractionDocument,
   source,
   prepareFeed,
   extractBlueskySourceItemId,

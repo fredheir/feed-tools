@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.14.0",
   "scripts": {
     "prepare": "husky",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
     "lint": "pnpm run typecheck && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -28,7 +28,8 @@
       "lib/classify-cli.ts",
       "lib/curate-cli.ts",
       "lib/render-cli.ts",
-      "tests/**/*.js"
+      "tests/**/*.js",
+      "tests/**/*.mts"
     ],
     "project": [
       "bin/*",
@@ -36,7 +37,8 @@
       "lib/**/*.js",
       "sources/**/*.ts",
       "sources/**/*.js",
-      "tests/**/*.js"
+      "tests/**/*.js",
+      "tests/**/*.mts"
     ],
     "ignore": [
       "bin/_run-ts-cli.js"

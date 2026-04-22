@@ -8,17 +8,87 @@ const {
   collectUniqueItems,
 } = require("../../lib/source-capture");
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
-import type { BrowserSession, FeedDocument } from "../../lib/types.js";
+import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.js";
+import type {
+  BrowserSession,
+  FeedBrowserConfig,
+  FeedDocument,
+} from "../../lib/types.js";
 
 type XExtractionMeta = {
-  article_count?: number;
-  hydrated_count?: number;
-  incomplete_count?: number;
+  article_count: number;
+  hydrated_count: number;
+  incomplete_count: number;
 };
 
-type XExtractionDocument = FeedDocument & {
+type NormalizableFeedItem = Parameters<typeof normalizeItemShape>[0];
+
+type RawXExtractionItem = NormalizableFeedItem & {
+  capture_incomplete?: boolean | null;
+};
+
+type RawXExtractionPayload = {
+  captured_at?: string | null;
+  items: RawXExtractionItem[];
+  meta?: Partial<XExtractionMeta> | null;
+};
+
+type XNormalizedExtractionDocument = FeedDocument & {
   meta?: XExtractionMeta;
 };
+
+function assertRawXExtractionPayload(
+  payload: unknown,
+): asserts payload is RawXExtractionPayload {
+  if (!isPlainObject(payload) || !Array.isArray(payload.items)) {
+    throw new Error("Invalid x extraction payload");
+  }
+}
+
+function parseXExtractionMeta(meta: unknown): XExtractionMeta {
+  if (!isPlainObject(meta)) {
+    throw new Error("Invalid x extraction meta");
+  }
+  const articleCount = meta.article_count;
+  const hydratedCount = meta.hydrated_count;
+  const incompleteCount = meta.incomplete_count;
+  if (
+    typeof articleCount !== "number" ||
+    !Number.isFinite(articleCount) ||
+    typeof hydratedCount !== "number" ||
+    !Number.isFinite(hydratedCount) ||
+    typeof incompleteCount !== "number" ||
+    !Number.isFinite(incompleteCount)
+  ) {
+    throw new Error("Invalid x extraction meta");
+  }
+  return {
+    article_count: articleCount,
+    hydrated_count: hydratedCount,
+    incomplete_count: incompleteCount,
+  };
+}
+
+function normalizeXExtractionDocument(
+  payload: unknown,
+): XNormalizedExtractionDocument {
+  assertRawXExtractionPayload(payload);
+  const capturedAt =
+    typeof payload.captured_at === "string" && payload.captured_at
+      ? payload.captured_at
+      : new Date().toISOString();
+  const meta = parseXExtractionMeta(payload.meta);
+
+  return {
+    schema_version: 1,
+    source: "x",
+    captured_at: capturedAt,
+    items: payload.items.map((item, index) =>
+      normalizeItemShape(item, { source: "x", index: index + 1 }),
+    ),
+    meta,
+  };
+}
 
 function buildExtractionScript(limit: number): string {
   return buildBrowserRuntimeScript(
@@ -310,11 +380,6 @@ function buildExtractionScript(limit: number): string {
           thread_line_x: line?.x || null,
         },
         embedded_links: getEmbeddedLinks(article),
-        capture_incomplete: !isHydratedItem({
-          author: { handle, profile_image_url },
-          content: { text },
-          url,
-        }),
       };
     });
 
@@ -426,12 +491,12 @@ async function captureDocument({
   browserOptions = {},
 }: {
   limit?: number;
-  browserOptions?: Record<string, unknown>;
+  browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
   const browser = createBrowserSession(browserOptions);
   prepareXFeed(browser);
 
-  let bestDocument: XExtractionDocument | null = null;
+  let bestDocument: XNormalizedExtractionDocument | null = null;
   const attempts = [
     { waitMs: 0, allowReload: false },
     { waitMs: jitterTimeout(1200, 400), allowReload: false },
@@ -442,18 +507,18 @@ async function captureDocument({
     if (attempt.waitMs > 0) browser.waitMilliseconds(attempt.waitMs);
     if (attempt.allowReload) prepareXFeed(browser);
 
-    const candidate = browser.evalJson<XExtractionDocument>(
-      buildExtractionScript(limit),
+    const candidate = normalizeXExtractionDocument(
+      browser.evalJson(buildExtractionScript(limit)),
     );
     if (
       !bestDocument ||
-      (candidate.items || []).length > (bestDocument.items || []).length ||
-      ((candidate.meta || {}).hydrated_count || 0) >
-        ((bestDocument.meta || {}).hydrated_count || 0)
+      candidate.items.length > bestDocument.items.length ||
+      (candidate.meta?.hydrated_count || 0) >
+        (bestDocument.meta?.hydrated_count || 0)
     ) {
       bestDocument = candidate;
     }
-    if ((candidate.items || []).length >= limit) break;
+    if (candidate.items.length >= limit) break;
   }
 
   const document: FeedDocument = bestDocument || {
@@ -486,6 +551,7 @@ const prepareFeed = prepareXFeed;
 
 module.exports = {
   buildExtractionScript,
+  normalizeXExtractionDocument,
   source,
   prepareFeed,
 };

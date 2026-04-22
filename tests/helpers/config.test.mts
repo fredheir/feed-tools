@@ -1,5 +1,7 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
+
 import {
   DEFAULT_SAVE_DIR,
   getCaptureBrowserOptions,
@@ -10,12 +12,16 @@ import {
   getSaveDir,
   resolveCanonicalSaveDir,
 } from "../../lib/config.js";
+import type { FeedConfig } from "../../lib/types.js";
 
-const repoRoot = path.resolve(import.meta.dirname, "../..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
 
 describe("config helpers", () => {
   test("reads enabled sources and capture defaults from config-like objects", () => {
-    const config = {
+    const config: FeedConfig = {
       user_preferences: {
         sources: [
           {
@@ -64,7 +70,7 @@ describe("config helpers", () => {
   });
 
   test("normalizes explicit and legacy save-dir requests", () => {
-    const config = {
+    const config: FeedConfig = {
       user_preferences: {
         sources: [
           {
@@ -90,7 +96,7 @@ describe("config helpers", () => {
   });
 
   test("resolveCanonicalSaveDir picks workset source over first enabled source", () => {
-    const config = {
+    const config: FeedConfig = {
       user_preferences: {
         sources: [
           {

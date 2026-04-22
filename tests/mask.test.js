@@ -265,4 +265,63 @@ describe("applyMask", () => {
       "facebook:1",
     ]);
   });
+
+  test("rejects masks that mix top-level item_ids and tabs", () => {
+    const doc = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [{ id: "x:1", source: "x", index: 1, url: "a", thread: {} }],
+    };
+
+    expect(() =>
+      applyMask(doc, {
+        item_ids: ["x:1"],
+        tabs: [
+          { label: "Coding", groups: [{ label: "Coding", item_ids: ["x:1"] }] },
+        ],
+      }),
+    ).toThrow("FeedMask cannot contain both item_ids and tabs");
+  });
+
+  test("expands grouped selections using index-based thread links in the stored order", () => {
+    const doc = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "x:reply",
+          source: "x",
+          index: 2,
+          url: "https://x.com/a/status/2",
+          thread: {},
+        },
+        {
+          id: "x:root",
+          source: "x",
+          index: 1,
+          url: "https://x.com/a/status/1",
+          thread: {
+            child_candidate_index: 2,
+          },
+        },
+      ],
+    };
+
+    const masked = applyMask(doc, {
+      tabs: [
+        {
+          label: "Thread",
+          groups: [{ label: "Thread", item_ids: ["x:reply"] }],
+        },
+      ],
+    });
+
+    expect(masked.items.map((item) => item.id)).toEqual(["x:root", "x:reply"]);
+    expect(masked.mask.tabs[0].groups[0].item_ids).toEqual([
+      "x:root",
+      "x:reply",
+    ]);
+  });
 });

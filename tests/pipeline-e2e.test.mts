@@ -2,15 +2,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { getDatabasePath } from "../lib/sqlite-store.js";
+
 import {
   repoRoot,
   runCli,
   spawnCli,
   writeTestConfig,
-} from "./helpers/cli-config.js";
+} from "./helpers/cli-config.mts";
 
-const tempDirs = [];
+const tempDirs: string[] = [];
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
@@ -93,11 +93,13 @@ describe("pipeline e2e", () => {
       ["ingest", "x", capturePath, "--save-dir", saveDir],
       configPath,
     );
-    const merged = JSON.parse(ingestOutput);
+    const merged = JSON.parse(ingestOutput) as {
+      items: Array<{ id: string }>;
+    };
 
     expect(merged.items).toHaveLength(1);
     expect(merged.items[0].id).toBe("x:123456789");
-    expect(fs.existsSync(getDatabasePath(saveDir))).toBe(true);
+    expect(fs.existsSync(path.join(saveDir, "feed.sqlite"))).toBe(true);
 
     const firstCurate = spawnCli(
       "./lib/curate-cli.js",
