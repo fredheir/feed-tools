@@ -159,6 +159,26 @@ describe("youtube support", () => {
     });
   });
 
+  test("parses word-based aria-label durations when badge text is missing", () => {
+    const items = normalizeYouTubeCardsToItems(
+      [
+        {
+          kind: "video",
+          url: "https://www.youtube.com/watch?v=ZN4njIQcSR4",
+          title: "Longform talk",
+          authorName: "TED",
+          durationText: "1 hour, 2 minutes",
+          thumbnailUrl: "https://i.ytimg.com/vi/ZN4njIQcSR4/hq720.jpg",
+        },
+      ],
+      1,
+    );
+
+    expect(items[0].media[0]).toMatchObject({
+      duration: 3720,
+    });
+  });
+
   test("normalizes browser extraction output before merge/dedupe", () => {
     const document = normalizeYouTubeExtractionDocument({
       captured_at: "2026-04-22T10:00:00Z",
