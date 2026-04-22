@@ -103,7 +103,7 @@ function normalizeYouTubeCardsToItems(
               src: cleanText(card.thumbnailUrl) || null,
               href: cleanText(card.url) || null,
               alt: cleanText(card.title) || null,
-              media_kind: "video",
+              media_kind: "video" as const,
               duration: parseDurationSeconds(card.durationText),
               source: "youtube",
             },

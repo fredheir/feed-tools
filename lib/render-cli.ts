@@ -24,30 +24,38 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 function relativizeAssetPaths(
   document: FeedDocument,
   outputPath: string,
+  inputPath: string,
 ): void {
-  const toRelative = (
+  const resolveLocalAsset = (
     value: string | null | undefined,
-  ): string | null | undefined =>
-    !value || /^(https?:|data:|file:)/i.test(value)
-      ? value
-      : path
-          .relative(
-            path.dirname(outputPath),
-            path.isAbsolute(value) ? value : path.resolve(REPO_ROOT, value),
-          )
-          .split(path.sep)
-          .join("/");
+  ): string | null => {
+    if (!value || /^(https?:|data:|file:)/i.test(value)) return value ?? null;
+
+    const candidates = [
+      path.resolve(path.dirname(inputPath), value),
+      path.isAbsolute(value) ? value : path.resolve(REPO_ROOT, value),
+    ];
+    const absolutePath = candidates.find((candidate) =>
+      fs.existsSync(candidate),
+    );
+    if (!absolutePath) return null;
+
+    return path
+      .relative(path.dirname(outputPath), absolutePath)
+      .split(path.sep)
+      .join("/");
+  };
 
   for (const item of document.items) {
     if (item.author)
       item.author.profile_image_local =
-        toRelative(item.author.profile_image_local) ?? null;
+        resolveLocalAsset(item.author.profile_image_local) ?? null;
     for (const media of item.media || []) {
-      media.local_src = toRelative(media.local_src) ?? null;
-      media.local_video_src = toRelative(media.local_video_src) ?? null;
+      media.local_src = resolveLocalAsset(media.local_src) ?? null;
+      media.local_video_src = resolveLocalAsset(media.local_video_src) ?? null;
     }
     for (const card of item.cards || [])
-      card.image_local = toRelative(card.image_local) ?? null;
+      card.image_local = resolveLocalAsset(card.image_local) ?? null;
   }
 }
 
@@ -133,7 +141,7 @@ document = applyMask(document, {
   }),
   tabbed,
 });
-relativizeAssetPaths(document, outputPath);
+relativizeAssetPaths(document, outputPath, inputPath);
 const html = renderDocument(document);
 fs.writeFileSync(outputPath, html, "utf8");
 if (!noOpen) {
