@@ -10,7 +10,7 @@ import {
   runSourceCapture,
 } from "../lib/source-capture.js";
 import { exportDocumentsFromDb, getDatabasePath } from "../lib/sqlite-store.js";
-import { readFixture, repoRoot } from "./helpers/cli-config.js";
+import { readFixture, repoRoot } from "./helpers/cli-config.mts";
 
 const tempDirs = [];
 

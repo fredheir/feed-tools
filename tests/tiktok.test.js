@@ -3,7 +3,7 @@ import {
   buildTikTokItemsFromUniversalData,
   prepareFeed,
 } from "../sources/tiktok/capture.js";
-import { readFixture } from "./helpers/cli-config.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 function createBrowserStub(existingState) {
   const calls = [];

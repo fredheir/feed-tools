@@ -7,7 +7,7 @@ import {
   isInstagramPermalinkUrl,
   isInstagramProfileUrl,
 } from "../sources/instagram/parse.js";
-import { readFixture } from "./helpers/cli-config.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 function createBrowserStub(existingState) {
   const calls = [];

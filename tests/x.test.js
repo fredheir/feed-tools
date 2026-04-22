@@ -3,7 +3,7 @@ import {
   normalizeXExtractionDocument,
   prepareFeed,
 } from "../sources/x/capture.js";
-import { readFixture } from "./helpers/cli-config.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 function createBrowserStub(existingFeedState) {
   const calls = [];

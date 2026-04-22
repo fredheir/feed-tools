@@ -8,7 +8,7 @@ import {
   getCaptureHandler,
   isSupportedSource,
 } from "../lib/source-registry.js";
-import { readFixture } from "./helpers/cli-config.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 describe("bluesky support", () => {
   test("extracts stable source ids from bluesky post urls", () => {
