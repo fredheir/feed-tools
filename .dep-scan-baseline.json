@@ -1,0 +1,7 @@
+{
+  "last_scan": "2026-04-21",
+  "findings": [],
+  "notes": [
+    "2026-04-21: Initial baseline. Weekly scan via pnpm audit. Starting state found 6 advisories: vite GHSA-4w7w-66w2-5vf9 / GHSA-v2wj-q39q-566r / GHSA-p9ff-h696-f583 (transitive via vitest), axios GHSA-3p68-rc4w-qgx5 / GHSA-fvcv-3m26-pcqx (transitive via @j178/prek), follow-redirects GHSA-r4q5-vmmm-2653 (transitive via @j178/prek->axios). Fix: bumped @j178/prek 0.3.8->0.3.10 (clears axios+follow-redirects chain), added vite ^8.0.9 as direct devDependency and pnpm.overrides for vite (^8.0.9), axios (>=1.12.0), follow-redirects (>=1.15.6). vite override alone did not take effect due to pnpm autoInstallPeers + optionalDependencies interaction; adding vite directly forced the resolution. Post-install pnpm audit clean."
+  ]
+}
