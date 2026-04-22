@@ -7,7 +7,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - markolo-hetzner
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -15,7 +19,7 @@ jobs:
           version: 10.14.0
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
