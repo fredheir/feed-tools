@@ -6,28 +6,49 @@
   "packageManager": "pnpm@10.14.0",
   "scripts": {
     "prepare": "husky",
-    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpm run typecheck && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "precommit": "prek run --all-files --stage pre-commit",
     "test": "vitest run",
-    "deadcode": "knip",
+    "deadcode": "knip --exclude exports,types",
     "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode",
     "setup:yt-dlp": "uv tool install --force 'yt-dlp[default,curl-cffi]'"
   },
   "knip": {
     "entry": [
+      "bin/feed-capture",
+      "bin/feed-capture-cic",
+      "bin/feed-classify",
+      "bin/feed-curate",
+      "bin/feed-render",
+      "lib/capture-cli.ts",
+      "lib/cic-capture-cli.ts",
+      "lib/classify-cli.ts",
+      "lib/curate-cli.ts",
+      "lib/render-cli.ts",
+      "tests/**/*.js"
+    ],
+    "project": [
+      "bin/*",
+      "lib/**/*.ts",
+      "lib/**/*.js",
+      "sources/**/*.ts",
+      "sources/**/*.js",
+      "tests/**/*.js"
+    ],
+    "ignore": [
+      "bin/_run-ts-cli.js"
+    ],
+    "ignoreFiles": [
       "lib/capture-cli.js",
       "lib/cic-capture-cli.js",
       "lib/classify-cli.js",
       "lib/curate-cli.js",
       "lib/render-cli.js"
     ],
-    "project": [
-      "lib/**/*.js",
-      "sources/**/*.js",
-      "bin/*"
-    ],
+    "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
       "agent-browser"
     ],
@@ -35,17 +56,23 @@
       "uv"
     ]
   },
+  "dependencies": {
+    "tsx": "^4.20.6"
+  },
   "devDependencies": {
     "@j178/prek": "0.3.10",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
     "agent-browser": "^0.23.4",
     "eslint": "^9.39.1",
     "globals": "^16.4.0",
     "husky": "^9.1.7",
     "knip": "^6.1.1",
     "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
     "vite": "^8.0.9",
     "vitest": "^4.1.5"
   },

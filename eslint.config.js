@@ -1,13 +1,14 @@
 const js = require("@eslint/js");
 const globals = require("globals");
+const tseslint = require("typescript-eslint");
 
 module.exports = [
   {
-    ignores: ["node_modules/**"],
+    ignores: ["node_modules/**", "dist/**"],
   },
   {
     ...js.configs.recommended,
-    files: ["**/*.js"],
+    files: ["bin/*", "lib/**/*.js", "sources/**/*.js", "tests/**/*.js"],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: "commonjs",
@@ -27,6 +28,47 @@ module.exports = [
       globals: {
         ...globals.node,
       },
+    },
+  },
+  ...tseslint.configs.recommended.map((config) => ({
+    ...config,
+    files: [
+      "bin/**/*.ts",
+      "bin/**/*.tsx",
+      "lib/**/*.ts",
+      "lib/**/*.tsx",
+      "sources/**/*.ts",
+      "sources/**/*.tsx",
+      "tests/**/*.ts",
+      "tests/**/*.tsx",
+    ],
+    languageOptions: {
+      ...(config.languageOptions || {}),
+      globals: {
+        ...globals.node,
+      },
+    },
+  })),
+  {
+    files: [
+      "bin/**/*.ts",
+      "bin/**/*.tsx",
+      "lib/**/*.ts",
+      "lib/**/*.tsx",
+      "sources/**/*.ts",
+      "sources/**/*.tsx",
+      "tests/**/*.ts",
+      "tests/**/*.tsx",
+    ],
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-confusing-void-expression": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/require-await": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
 ];
