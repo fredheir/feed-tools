@@ -1,6 +1,7 @@
 "use strict";
 
 const { execFileSync } = require("node:child_process");
+const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 import type { FeedBrowserConfig, NormalizedBrowserOptions } from "../types.js";
@@ -85,18 +86,27 @@ function normalizeUrlPrefixes(urlPrefix: string | string[]): string[] {
 function getMountInfo(
   targetPath: string,
 ): { target?: string; source?: string } | null {
+  let lookupTarget = path.resolve(targetPath);
+  while (!fs.existsSync(lookupTarget)) {
+    const parent = path.dirname(lookupTarget);
+    if (parent === lookupTarget) {
+      throw new Error(`No existing path found for mount lookup: ${targetPath}`);
+    }
+    lookupTarget = parent;
+  }
   try {
     const payload = execFileSync(
       "findmnt",
-      ["-J", "-T", targetPath, "--output", "TARGET,SOURCE"],
+      ["-J", "-T", lookupTarget, "--output", "TARGET,SOURCE"],
       {
         encoding: "utf8",
       },
     );
     const parsed = JSON.parse(payload) as FindmntPayload;
     return parsed.filesystems?.[0] || null;
-  } catch {
-    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`findmnt failed for ${lookupTarget}: ${message}`);
   }
 }
 

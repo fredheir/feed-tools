@@ -29,6 +29,9 @@ function normalizeInstagramCandidate(item: FeedItem): FeedItem {
   };
 }
 
+const instagramIsPermalink = isInstagramPermalinkUrl;
+const instagramIsProfile = isInstagramProfileUrl;
+
 function instagramIsCountLike(value: unknown): boolean {
   return /^\d[\d,.KkMm]*$/.test(
     String(value || "")
@@ -237,8 +240,8 @@ function buildExtractionScript(limit: number): string {
     });
     `,
     [
-      isInstagramPermalinkUrl,
-      isInstagramProfileUrl,
+      instagramIsPermalink,
+      instagramIsProfile,
       instagramIsCountLike,
       instagramIsTimeLike,
       instagramIsNoiseLine,

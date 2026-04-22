@@ -98,10 +98,14 @@ function resolveVideoUrl(item: FeedItem, media: FeedMedia): string | null {
       const parsed = new URL(candidate);
       if (/^https?:$/i.test(parsed.protocol)) return parsed.toString();
     } catch {
-      // Ignore malformed URLs and fall back to the next candidate.
+      /* fall through */
     }
   }
   return null;
+}
+
+function hashUrl(url: string): string {
+  return crypto.createHash("sha1").update(url).digest("hex").slice(0, 12);
 }
 
 function shouldUseYtDlpForVideo(item: FeedItem, media: FeedMedia): boolean {
@@ -168,7 +172,7 @@ function ensureBrowserPlayableVideo(
   filePath: string,
 ): BrowserPlayableVideoResult {
   const probed = probeVideoCodec(filePath);
-  if ("reason" in probed) {
+  if (!probed.ok) {
     return { ok: false, reason: probed.reason };
   }
   if (["h264", "vp8", "vp9"].includes(probed.codec)) {
@@ -248,13 +252,8 @@ async function downloadMediaVideo(
       { useCookies: shouldUseCookiesForVideo(item) },
     );
     const preparedVideo = ensureBrowserPlayableVideo(downloadedVideo);
-    if (preparedVideo.ok) {
-      return preparedVideo.filePath;
-    }
-    if ("reason" in preparedVideo) {
-      throw new Error(preparedVideo.reason);
-    }
-    throw new Error("Video processing failed without an explicit reason");
+    if (preparedVideo.ok) return preparedVideo.filePath;
+    throw new Error(preparedVideo.reason);
   }
 
   const directVideoSrc = media?.video_src;
@@ -271,13 +270,8 @@ async function downloadMediaVideo(
       );
     }
     const preparedVideo = ensureBrowserPlayableVideo(downloaded);
-    if (preparedVideo.ok) {
-      return preparedVideo.filePath;
-    }
-    if ("reason" in preparedVideo) {
-      throw new Error(preparedVideo.reason);
-    }
-    throw new Error("Video processing failed without an explicit reason");
+    if (preparedVideo.ok) return preparedVideo.filePath;
+    throw new Error(preparedVideo.reason);
   }
   return null;
 }
@@ -289,7 +283,7 @@ function downloadVideoWithYtDlp(
   existingFiles: string[],
   options: { useCookies?: boolean } = {},
 ): string {
-  const hash = crypto.createHash("sha1").update(url).digest("hex").slice(0, 12);
+  const hash = hashUrl(url);
   const needle = `${prefix}-${hash}.`;
   const existing = existingFiles.find((name) => name.startsWith(needle));
   if (existing) return path.join(assetsDir, existing);
@@ -353,7 +347,7 @@ async function download(
 ): Promise<string | null> {
   if (!url) return null;
 
-  const hash = crypto.createHash("sha1").update(url).digest("hex").slice(0, 12);
+  const hash = hashUrl(url);
   const needle = `${prefix}-${hash}.`;
   const existing = existingFiles.find((name) => name.startsWith(needle));
   if (existing) return path.join(assetsDir, existing);

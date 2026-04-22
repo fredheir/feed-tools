@@ -11,7 +11,7 @@ const {
 import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
 
 function renderDocument(document: FeedDocument): string {
-  const rows = orderItemsByThread(document) as FeedItem[];
+  const rows: FeedItem[] = orderItemsByThread(document);
   const sourceLabel = String(document.source || "feed").toUpperCase();
   const tabs =
     document.mask &&

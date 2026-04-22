@@ -28,7 +28,7 @@ function resolveThreadChild(
     return null;
   }
 
-  const source = String(item.source || document.source || "unknown");
+  const source = item.source || document.source || "unknown";
   const key = `${source}:${Number(thread.child_candidate_index)}`;
   const candidates = bySourceAndIndex.get(key) || [];
   return candidates.length === 1 ? candidates[0] : null;
@@ -41,9 +41,9 @@ function buildThreadLinks(document: FeedDocument): Map<string, string> {
   const links = new Map<string, string>();
 
   for (const item of items) {
-    if (item?.url) byUrl.set(String(item.url), item);
+    if (item?.url) byUrl.set(item.url, item);
     if (item?.index != null) {
-      const source = String(item?.source || document?.source || "unknown");
+      const source = item.source || document.source || "unknown";
       const key = `${source}:${Number(item.index)}`;
       const bucket = bySourceAndIndex.get(key) || [];
       bucket.push(item);
@@ -55,7 +55,7 @@ function buildThreadLinks(document: FeedDocument): Map<string, string> {
     if (!item?.id) continue;
     const child = resolveThreadChild(item, document, byUrl, bySourceAndIndex);
     if (!child?.id || child.id === item.id) continue;
-    links.set(String(item.id), String(child.id));
+    links.set(item.id, child.id);
   }
 
   return links;
@@ -63,12 +63,13 @@ function buildThreadLinks(document: FeedDocument): Map<string, string> {
 
 function buildThreadAdjacency(
   document: FeedDocument,
+  links: Map<string, string> = buildThreadLinks(document),
 ): Map<string, Set<string>> {
   const adjacency = new Map<string, Set<string>>();
   for (const item of document.items) {
-    if (item?.id) adjacency.set(String(item.id), new Set());
+    if (item?.id) adjacency.set(item.id, new Set());
   }
-  for (const [parentId, childId] of buildThreadLinks(document)) {
+  for (const [parentId, childId] of links) {
     if (!adjacency.has(parentId)) adjacency.set(parentId, new Set());
     if (!adjacency.has(childId)) adjacency.set(childId, new Set());
     adjacency.get(parentId)?.add(childId);
@@ -77,7 +78,10 @@ function buildThreadAdjacency(
   return adjacency;
 }
 
-function orderItemsByThread(document: FeedDocument): FeedItem[] {
+function orderItemsByThread(
+  document: FeedDocument,
+  links: Map<string, string> = buildThreadLinks(document),
+): FeedItem[] {
   const rows = Array.isArray(document.items) ? document.items : [];
   const byId = new Map<string, FeedItem>();
   const originalIndexById = new Map<string, number>();
@@ -85,16 +89,16 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
 
   for (const [index, item] of rows.entries()) {
     if (!item?.id) continue;
-    byId.set(String(item.id), item);
-    originalIndexById.set(String(item.id), index);
+    byId.set(item.id, item);
+    originalIndexById.set(item.id, index);
   }
 
-  for (const [parentId, childId] of buildThreadLinks(document)) {
+  for (const [parentId, childId] of links) {
     childToParent.set(childId, parentId);
   }
 
-  function getChainRoot(item: FeedItem): string {
-    let currentId = String(item?.id || "");
+  function getChainRoot(id: string): string {
+    let currentId = id;
     if (!currentId) return "";
     const seen = new Set<string>();
     while (childToParent.has(currentId) && !seen.has(currentId)) {
@@ -106,9 +110,8 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
 
   const chainBuckets = new Map<string, FeedItem[]>();
   for (const item of rows) {
-    const id = String(item?.id || "");
-    if (!id) continue;
-    const rootId = getChainRoot(item) || id;
+    if (!item?.id) continue;
+    const rootId = getChainRoot(item.id) || item.id;
     const bucket = chainBuckets.get(rootId) || [];
     bucket.push(item);
     chainBuckets.set(rootId, bucket);
@@ -118,8 +121,8 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
   for (const [rootId, bucket] of chainBuckets.entries()) {
     const childrenByParent = new Map<string, FeedItem[]>();
     for (const item of bucket) {
-      const id = String(item.id);
-      const parentId = childToParent.get(id);
+      if (!item.id) continue;
+      const parentId = childToParent.get(item.id);
       if (!parentId) continue;
       const siblings = childrenByParent.get(parentId) || [];
       siblings.push(item);
@@ -128,8 +131,8 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
     for (const siblings of childrenByParent.values()) {
       siblings.sort(
         (a, b) =>
-          (originalIndexById.get(String(a.id)) ?? Number.MAX_SAFE_INTEGER) -
-          (originalIndexById.get(String(b.id)) ?? Number.MAX_SAFE_INTEGER),
+          (originalIndexById.get(a.id ?? "") ?? Number.MAX_SAFE_INTEGER) -
+          (originalIndexById.get(b.id ?? "") ?? Number.MAX_SAFE_INTEGER),
       );
     }
 
@@ -139,12 +142,10 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
     const seen = new Set<string>();
     while (stack.length > 0) {
       const current = stack.pop();
-      if (!current) continue;
-      const currentId = String(current?.id || "");
-      if (!currentId || seen.has(currentId)) continue;
-      seen.add(currentId);
+      if (!current?.id || seen.has(current.id)) continue;
+      seen.add(current.id);
       ordered.push(current);
-      const children = childrenByParent.get(currentId) || [];
+      const children = childrenByParent.get(current.id) || [];
       for (let index = children.length - 1; index >= 0; index -= 1) {
         const child = children[index];
         if (child) stack.push(child);
@@ -152,8 +153,7 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
     }
 
     for (const item of bucket) {
-      const id = String(item.id);
-      if (seen.has(id)) continue;
+      if (!item.id || seen.has(item.id)) continue;
       ordered.push(item);
     }
     orderedByRoot.set(rootId, ordered);
@@ -162,12 +162,11 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
   const emittedRoots = new Set<string>();
   const result: FeedItem[] = [];
   for (const item of rows) {
-    const id = String(item?.id || "");
-    if (!id) {
+    if (!item?.id) {
       result.push(item);
       continue;
     }
-    const rootId = getChainRoot(item) || id;
+    const rootId = getChainRoot(item.id) || item.id;
     if (emittedRoots.has(rootId)) continue;
     emittedRoots.add(rootId);
     result.push(...(orderedByRoot.get(rootId) || [item]));
@@ -175,26 +174,34 @@ function orderItemsByThread(document: FeedDocument): FeedItem[] {
   return result;
 }
 
-function expandThreadSelection(
-  document: FeedDocument,
-  identifiers: string[],
-): string[] {
-  assertFeedDocument(document, "expandThreadSelection");
-  const items = document.items;
+interface ExpansionContext {
+  itemByKey: Map<string, FeedItem>;
+  adjacency: Map<string, Set<string>>;
+  orderedIds: string[];
+}
+
+function buildExpansionContext(document: FeedDocument): ExpansionContext {
+  const links = buildThreadLinks(document);
+  const adjacency = buildThreadAdjacency(document, links);
+  const orderedIds = orderItemsByThread(document, links)
+    .map((item) => item.id)
+    .filter((id): id is string => Boolean(id));
+
   const itemByKey = new Map<string, FeedItem>();
-  const itemIndexById = new Map<string, number>();
-  for (const [index, item] of items.entries()) {
+  for (const item of document.items) {
     for (const key of getItemMaskKeys(item)) {
       itemByKey.set(String(key), item);
     }
-    if (item?.id) itemIndexById.set(String(item.id), index);
   }
 
-  const adjacency = buildThreadAdjacency(document);
-  const orderedItems = orderItemsByThread(document);
-  const orderedIds = orderedItems
-    .map((item) => item.id)
-    .filter((id): id is string => Boolean(id));
+  return { itemByKey, adjacency, orderedIds };
+}
+
+function expandThreadSelection(
+  identifiers: string[],
+  context: ExpansionContext,
+): string[] {
+  const { itemByKey, adjacency, orderedIds } = context;
   const seedItems = identifiers
     .map((id) => itemByKey.get(String(id)))
     .filter(Boolean);
@@ -202,7 +209,7 @@ function expandThreadSelection(
   const seen = new Set<string>();
   for (const item of seedItems) {
     if (!item?.id) continue;
-    const rootId = String(item.id);
+    const rootId = item.id;
     if (seen.has(rootId)) continue;
 
     const queue = [rootId];
@@ -210,22 +217,29 @@ function expandThreadSelection(
     while (queue.length > 0) {
       const current = queue.shift();
       if (!current) continue;
-      for (const neighbor of adjacency.get(String(current)) || []) {
+      for (const neighbor of adjacency.get(current) || []) {
         if (component.has(neighbor)) continue;
         component.add(neighbor);
         queue.push(neighbor);
       }
     }
 
-    const componentIds = orderedIds.filter((id) => component.has(id));
-    for (const id of component) {
-      if (componentIds.includes(id)) continue;
+    const componentIdSet = new Set<string>();
+    const componentIds: string[] = [];
+    for (const id of orderedIds) {
+      if (!component.has(id) || componentIdSet.has(id)) continue;
       componentIds.push(id);
+      componentIdSet.add(id);
+    }
+    for (const id of component) {
+      if (componentIdSet.has(id)) continue;
+      componentIds.push(id);
+      componentIdSet.add(id);
     }
     for (const id of componentIds) {
       if (seen.has(id)) continue;
-      expandedIds.push(String(id));
-      seen.add(String(id));
+      expandedIds.push(id);
+      seen.add(id);
     }
   }
 
@@ -251,27 +265,26 @@ function assertSingularMaskSelection(mask: FeedMask): void {
 function expandMask(document: FeedDocument, mask: FeedMask): FeedMask {
   if (!mask) return mask;
   assertSingularMaskSelection(mask);
+  if (!hasMaskTabs(mask) && !hasMaskItemIds(mask)) return mask;
+
+  const context = buildExpansionContext(document);
+
   if (hasMaskTabs(mask)) {
     return {
       ...mask,
-      tabs: mask.tabs.map((tab: FeedTab) => {
-        return {
-          ...tab,
-          groups: tab.groups.map((group) => ({
-            ...group,
-            item_ids: expandThreadSelection(document, group.item_ids),
-          })),
-        };
-      }),
+      tabs: mask.tabs.map((tab: FeedTab) => ({
+        ...tab,
+        groups: tab.groups.map((group) => ({
+          ...group,
+          item_ids: expandThreadSelection(group.item_ids, context),
+        })),
+      })),
     };
   }
-  if (hasMaskItemIds(mask)) {
-    return {
-      ...mask,
-      item_ids: expandThreadSelection(document, mask.item_ids),
-    };
-  }
-  return mask;
+  return {
+    ...mask,
+    item_ids: expandThreadSelection(mask.item_ids, context),
+  };
 }
 
 function applyMask(
@@ -315,6 +328,5 @@ function applyMask(
 
 module.exports = {
   applyMask,
-  buildThreadLinks,
   orderItemsByThread,
 };
