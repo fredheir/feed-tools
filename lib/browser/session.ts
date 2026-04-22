@@ -4,21 +4,20 @@ const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-import type { FeedBrowserConfig, NormalizedBrowserOptions } from "../types.js";
+import type {
+  BrowserSession,
+  FeedBrowserConfig,
+  NormalizedBrowserOptions,
+} from "../types.js";
 
-interface FindmntPayload {
-  filesystems?: Array<{ target?: string; source?: string }>;
+interface MountInfo {
+  target: string | null;
+  source: string | null;
 }
 
 interface BrowserTab {
   index: number;
   url?: string;
-}
-
-interface BrowserTabListPayload {
-  data?: {
-    tabs?: BrowserTab[];
-  };
 }
 
 interface BrowserSessionDeps {
@@ -83,9 +82,41 @@ function normalizeUrlPrefixes(urlPrefix: string | string[]): string[] {
   return [String(urlPrefix)].filter(Boolean);
 }
 
-function getMountInfo(
-  targetPath: string,
-): { target?: string; source?: string } | null {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function toOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+function parseFindmntPayload(payload: string): MountInfo | null {
+  const parsed = JSON.parse(payload) as unknown;
+  if (!isRecord(parsed)) return null;
+  const filesystems = parsed.filesystems;
+  if (!Array.isArray(filesystems) || filesystems.length === 0) return null;
+  const filesystem = filesystems[0];
+  if (!isRecord(filesystem)) return null;
+  return {
+    target: toOptionalString(filesystem.target),
+    source: toOptionalString(filesystem.source),
+  };
+}
+
+function parseBrowserTabList(payload: string): BrowserTab[] {
+  const parsed = JSON.parse(payload) as unknown;
+  if (!isRecord(parsed)) return [];
+  const data = parsed.data;
+  if (!isRecord(data) || !Array.isArray(data.tabs)) return [];
+  return data.tabs.flatMap((tab): BrowserTab[] => {
+    if (!isRecord(tab) || typeof tab.index !== "number") return [];
+    return typeof tab.url === "string"
+      ? [{ index: tab.index, url: tab.url }]
+      : [{ index: tab.index }];
+  });
+}
+
+function getMountInfo(targetPath: string): MountInfo | null {
   let lookupTarget = path.resolve(targetPath);
   while (!fs.existsSync(lookupTarget)) {
     const parent = path.dirname(lookupTarget);
@@ -102,8 +133,7 @@ function getMountInfo(
         encoding: "utf8",
       },
     );
-    const parsed = JSON.parse(payload) as FindmntPayload;
-    return parsed.filesystems?.[0] || null;
+    return parseFindmntPayload(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`findmnt failed for ${lookupTarget}: ${message}`);
@@ -112,10 +142,10 @@ function getMountInfo(
 
 function translateMountedPath(
   resolvedPath: string,
-  mount: { target?: string; source?: string } | null,
+  mount: MountInfo | null,
 ): string {
-  const mountTarget = mount?.target ? String(mount.target) : null;
-  const mountSource = mount?.source ? String(mount.source) : null;
+  const mountTarget = mount?.target ?? null;
+  const mountSource = mount?.source ?? null;
   const hostRootMatch = mountSource?.match(/^\[(.+)\]$/);
 
   if (!mountTarget || !hostRootMatch) {
@@ -151,7 +181,7 @@ function toBrowserTarget(target: string): string {
 function createBrowserSession(
   { normalizeBrowserOptions, runAgentBrowser }: BrowserSessionDeps,
   options: FeedBrowserConfig = {},
-) {
+): BrowserSession {
   const browserOptions = normalizeBrowserOptions(options);
 
   function run(
@@ -179,10 +209,7 @@ function createBrowserSession(
   }
 
   function listTabs(): BrowserTab[] {
-    const payload = JSON.parse(
-      run(["tab", "list", "--json"]),
-    ) as BrowserTabListPayload;
-    return payload.data?.tabs || [];
+    return parseBrowserTabList(run(["tab", "list", "--json"]));
   }
 
   function switchToTab(index: number): void {
@@ -313,12 +340,12 @@ function createBrowserSession(
     return currentUrl;
   }
 
-  function evalJson(script: string): unknown {
+  function evalJson<T = unknown>(script: string): T {
     const parsed = JSON.parse(run(["eval", script])) as unknown;
     if (typeof parsed === "string") {
-      return JSON.parse(parsed) as unknown;
+      return JSON.parse(parsed) as T;
     }
-    return parsed;
+    return parsed as T;
   }
 
   function evalText(script: string): string {

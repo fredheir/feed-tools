@@ -142,4 +142,52 @@ describe("pipeline e2e", () => {
     expect(html).toContain("Coding");
     expect(html).toContain("https://x.com/testuser/status/123456789");
   });
+
+  test("rejects CiC ingest documents whose declared source does not match the ingest boundary", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-pipeline-e2e-"));
+    tempDirs.push(dir);
+
+    const saveDir = path.join(dir, "save");
+    const capturePath = path.join(dir, "capture.json");
+    const configPath = writeTestConfig(repoRoot, {
+      user_preferences: {
+        sources: [
+          {
+            name: "x",
+            enabled: true,
+            default: true,
+            capture: {
+              save_dir: saveDir,
+              assets_dir: path.join(dir, "assets"),
+              default_limit: 12,
+              browser: {},
+            },
+          },
+        ],
+      },
+    });
+
+    fs.writeFileSync(
+      capturePath,
+      JSON.stringify(
+        {
+          schema_version: 1,
+          source: "linkedin",
+          captured_at: "2026-04-18T10:00:00Z",
+          items: [],
+        },
+        null,
+        2,
+      ),
+    );
+
+    const ingest = spawnCli(
+      "./lib/cic-capture-cli.js",
+      ["ingest", "x", capturePath, "--save-dir", saveDir],
+      configPath,
+    );
+
+    expect(ingest.status).not.toBe(0);
+    expect(ingest.stderr).toContain('document source must match source "x"');
+  });
 });

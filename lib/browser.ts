@@ -35,6 +35,32 @@ function toStringList(value: string | string[] | null | undefined): string[] {
   return [String(value)];
 }
 
+function getLegacyStringOption(
+  options: RawFeedBrowserConfig,
+  key:
+    | "session_name"
+    | "state"
+    | "state_path"
+    | "color_scheme"
+    | "executable_path",
+): string | null | undefined {
+  return key in options ? options[key] : undefined;
+}
+
+function getLegacyBooleanOption(
+  options: RawFeedBrowserConfig,
+  key: "auto_connect" | "allow_file_access",
+): boolean | undefined {
+  return key in options ? options[key] : undefined;
+}
+
+function getLegacyStringListOption(
+  options: RawFeedBrowserConfig,
+  key: "browser_args",
+): string[] | undefined {
+  return key in options ? options[key] : undefined;
+}
+
 function pickStringOption(
   ...values: Array<string | null | undefined>
 ): string | null {
@@ -56,45 +82,44 @@ function resolveConfigPath(value: string | null | undefined): string | null {
 export function normalizeBrowserOptions(
   options: FeedBrowserConfig | RawFeedBrowserConfig = {},
 ): NormalizedBrowserOptions {
+  const legacyOptions = options as RawFeedBrowserConfig;
   const cdp = pickStringOption(options.cdp ?? null);
   return {
     autoConnect:
       (options.autoConnect ??
-        ("auto_connect" in options ? options.auto_connect : undefined)) !==
-        false && !cdp,
+        getLegacyBooleanOption(legacyOptions, "auto_connect")) !== false &&
+      !cdp,
     session: pickStringOption(options.session ?? null),
     sessionName: pickStringOption(
       options.sessionName ??
-        ("session_name" in options ? options.session_name : null) ??
+        getLegacyStringOption(legacyOptions, "session_name") ??
         null,
     ),
     profile: resolveConfigPath(options.profile ?? null),
     statePath: resolveConfigPath(
       options.statePath ??
-        ("state_path" in options ? options.state_path : null) ??
-        ("state" in options ? options.state : null) ??
+        getLegacyStringOption(legacyOptions, "state_path") ??
+        getLegacyStringOption(legacyOptions, "state") ??
         null,
     ),
     headed: options.headed === true && !cdp,
     allowFileAccess:
       (options.allowFileAccess ??
-        ("allow_file_access" in options
-          ? options.allow_file_access
-          : undefined)) === true,
+        getLegacyBooleanOption(legacyOptions, "allow_file_access")) === true,
     colorScheme: pickStringOption(
       options.colorScheme ??
-        ("color_scheme" in options ? options.color_scheme : null) ??
+        getLegacyStringOption(legacyOptions, "color_scheme") ??
         null,
     ),
     executablePath: resolveConfigPath(
       options.executablePath ??
-        ("executable_path" in options ? options.executable_path : null) ??
+        getLegacyStringOption(legacyOptions, "executable_path") ??
         null,
     ),
     cdp,
     args: toStringList(
       options.args ??
-        ("browser_args" in options ? options.browser_args : null) ??
+        getLegacyStringListOption(legacyOptions, "browser_args") ??
         null,
     ),
   };

@@ -134,7 +134,7 @@ export interface SourceCaptureConfig {
   default_limit?: number;
   assets_dir?: string;
   save_dir?: string;
-  browser?: FeedBrowserConfig;
+  browser: FeedBrowserConfig;
 }
 
 export interface RawSourceCaptureConfig {
@@ -181,16 +181,16 @@ export interface SummaryPreferences {
 }
 
 export interface UserPreferences {
-  sources?: SourcePreference[];
-  render?: RenderPreferences;
-  curation?: CurationPreferences;
-  summary?: SummaryPreferences;
+  sources: SourcePreference[];
+  render: RenderPreferences;
+  curation: CurationPreferences;
+  summary: SummaryPreferences;
 }
 
 export interface FeedConfig {
   version?: number;
-  user_preferences?: UserPreferences;
-  summary?: {
+  user_preferences: UserPreferences;
+  summary: {
     notes?: string;
   };
 }

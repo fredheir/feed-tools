@@ -8,6 +8,7 @@ const {
   collectUniqueItems,
 } = require("../../lib/source-capture");
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
+import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.js";
 const {
   extractInstagramSourceItemId,
   isInstagramPermalinkUrl,
@@ -21,12 +22,57 @@ import type {
   FeedItem,
 } from "../../lib/types.js";
 
-function normalizeInstagramCandidate(item: FeedItem): FeedItem {
+type RawInstagramExtractionItem = Parameters<typeof normalizeItemShape>[0];
+
+type RawInstagramExtractionPayload = {
+  captured_at?: string | null;
+  items: RawInstagramExtractionItem[];
+};
+
+function assertRawInstagramExtractionPayload(
+  payload: unknown,
+): asserts payload is RawInstagramExtractionPayload {
+  if (!isPlainObject(payload) || !Array.isArray(payload.items)) {
+    throw new Error("Invalid instagram extraction payload");
+  }
+}
+
+function normalizeInstagramExtractionDocument(payload: unknown): FeedDocument {
+  assertRawInstagramExtractionPayload(payload);
+  const capturedAt =
+    typeof payload.captured_at === "string" && payload.captured_at
+      ? payload.captured_at
+      : new Date().toISOString();
+
   return {
-    ...item,
-    source_item_id:
-      extractInstagramSourceItemId(item?.url) || item?.source_item_id,
+    schema_version: 1,
+    source: "instagram",
+    captured_at: capturedAt,
+    items: payload.items.map((item, index) =>
+      normalizeItemShape(
+        {
+          ...item,
+          source_item_id:
+            extractInstagramSourceItemId(item.url) || item.source_item_id,
+        },
+        { source: "instagram", index: index + 1 },
+      ),
+    ),
   };
+}
+
+function normalizeInstagramCandidate(item: FeedItem): FeedItem {
+  return normalizeItemShape(
+    {
+      ...item,
+      source_item_id:
+        extractInstagramSourceItemId(item?.url) || item?.source_item_id,
+    },
+    {
+      source: item.source,
+      index: item.index,
+    },
+  );
 }
 
 const instagramIsPermalink = isInstagramPermalinkUrl;
@@ -294,7 +340,8 @@ async function captureDocument({
   const collectedItems: FeedItem[] = [];
   const seen = new Set<string>();
 
-  function mergeBatch(document: FeedDocument): void {
+  function mergeBatch(payload: unknown): void {
+    const document = normalizeInstagramExtractionDocument(payload);
     collectUniqueItems(document.items, {
       seen,
       sourceName: "instagram",
@@ -360,6 +407,7 @@ const source = {
 const prepareFeed = prepareInstagramFeed;
 
 module.exports = {
+  normalizeInstagramExtractionDocument,
   normalizeInstagramCandidate,
   source,
   prepareFeed,

@@ -52,11 +52,42 @@ class CaptureAccessError extends Error {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function assertMatchingSource(
+  value: unknown,
+  sourceName: string,
+  context: string,
+): void {
+  if (value == null) return;
+  if (typeof value !== "string" || value !== sourceName) {
+    throw new Error(
+      `Invalid ${sourceName} capture document: ${context} must match source "${sourceName}"`,
+    );
+  }
+}
+
+function assertCapturedAtValue(value: unknown, sourceName: string): void {
+  if (value !== undefined && value !== null && typeof value !== "string") {
+    throw new Error(
+      `Invalid ${sourceName} capture document: captured_at must be a string or null`,
+    );
+  }
+}
+
 function normalizeItem(
   item: unknown,
   index: number,
   sourceName: string,
 ): FeedItem {
+  if (!isRecord(item)) {
+    throw new Error(
+      `Invalid ${sourceName} capture document: item ${index + 1} must be an object`,
+    );
+  }
+  assertMatchingSource(item.source, sourceName, `item ${index + 1} source`);
   return normalizeItemShape(item, { source: sourceName, index: index + 1 });
 }
 
@@ -64,34 +95,67 @@ function normalizeDocument(
   document: unknown,
   sourceName: string,
 ): FeedDocument {
-  if (
-    !document ||
-    typeof document !== "object" ||
-    !Array.isArray((document as { items?: unknown[] }).items)
-  ) {
+  if (!isRecord(document) || !Array.isArray(document.items)) {
     throw new Error(`Invalid ${sourceName} capture document`);
   }
 
-  const sourceDocument = document as {
-    captured_at?: string | null;
-    items: unknown[];
-  };
+  if (document.schema_version !== undefined && document.schema_version !== 1) {
+    throw new Error(
+      `Invalid ${sourceName} capture document: schema_version must be 1`,
+    );
+  }
+
+  assertMatchingSource(document.source, sourceName, "document source");
+  assertCapturedAtValue(document.captured_at, sourceName);
 
   return {
     schema_version: 1,
     source: sourceName,
-    captured_at: sourceDocument.captured_at || new Date().toISOString(),
-    items: sourceDocument.items.map((item, index) =>
+    captured_at:
+      typeof document.captured_at === "string" && document.captured_at
+        ? document.captured_at
+        : new Date().toISOString(),
+    items: document.items.map((item, index) =>
       normalizeItem(item, index, sourceName),
     ),
   };
+}
+
+function assertStandardizedDocument(
+  document: FeedDocument,
+  sourceName: string,
+): void {
+  if (document.schema_version !== 1) {
+    throw new Error(
+      `Invalid ${sourceName} standardized document: schema_version must be 1`,
+    );
+  }
+  if (document.source !== sourceName) {
+    throw new Error(
+      `Invalid ${sourceName} standardized document: document source must match source "${sourceName}"`,
+    );
+  }
+  if (typeof document.captured_at !== "string" || !document.captured_at) {
+    throw new Error(
+      `Invalid ${sourceName} standardized document: captured_at must be a non-empty string`,
+    );
+  }
+  for (let index = 0; index < document.items.length; index += 1) {
+    const item = document.items[index];
+    if (item.source !== sourceName) {
+      throw new Error(
+        `Invalid ${sourceName} standardized document: item ${index + 1} source must match source "${sourceName}"`,
+      );
+    }
+  }
 }
 
 async function persistCapturedDocument(
   document: FeedDocument,
   { sourceName, assetsDir, saveDir }: PersistOptions,
 ): Promise<FeedDocument> {
-  let normalized = normalizeDocument(document, sourceName);
+  assertStandardizedDocument(document, sourceName);
+  let normalized = document;
   if (assetsDir) {
     normalized = await downloadDocumentAssets(normalized, assetsDir);
   }
@@ -162,7 +226,8 @@ async function runSourceCapture(
     limit,
     browserOptions: normalizedBrowserOptions,
   });
-  return persistCapturedDocument(document, {
+  const normalizedDocument = normalizeDocument(document, adapter.name);
+  return persistCapturedDocument(normalizedDocument, {
     sourceName: adapter.name,
     assetsDir,
     saveDir,

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 
-import { assertFeedDocument } from "./item-shape.js";
+import { assertFeedDocument, normalizeItemShape } from "./item-shape.js";
 import type {
   CurationPreferences,
   FeedAllocation,
@@ -14,6 +14,52 @@ interface SelectionRow {
 }
 
 type SelectionSpec = string | string[];
+type PartialFeedDocument = Partial<FeedDocument> & { items?: unknown[] };
+
+function normalizeSelectionDocument(
+  document: unknown,
+  context: string,
+): FeedDocument {
+  assertFeedDocument(document, context);
+  const candidate = document as PartialFeedDocument;
+  const items = Array.isArray(candidate.items) ? candidate.items : [];
+  const source =
+    typeof candidate.source === "string" ? candidate.source : "unknown";
+  return {
+    schema_version:
+      typeof candidate.schema_version === "number"
+        ? candidate.schema_version
+        : 1,
+    source,
+    captured_at:
+      typeof candidate.captured_at === "string" ? candidate.captured_at : null,
+    items: items.map((item, index) => {
+      const candidateItem = (item ?? {}) as Partial<FeedItem>;
+      const legacyItem = (item ?? {}) as { text?: unknown };
+      const contentText =
+        typeof candidateItem.content?.text === "string"
+          ? candidateItem.content.text
+          : typeof legacyItem.text === "string"
+            ? legacyItem.text
+            : undefined;
+      return normalizeItemShape(
+        contentText === undefined
+          ? candidateItem
+          : {
+              ...candidateItem,
+              content: {
+                ...candidateItem.content,
+                text: contentText,
+              },
+            },
+        {
+          source,
+          index: index + 1,
+        },
+      );
+    }),
+  };
+}
 
 function hasPositiveLimit(limit: number | null | undefined): limit is number {
   return typeof limit === "number" && Number.isInteger(limit) && limit > 0;
@@ -21,13 +67,10 @@ function hasPositiveLimit(limit: number | null | undefined): limit is number {
 
 export function loadDocument(inputPath: string): FeedDocument {
   const document = JSON.parse(fs.readFileSync(inputPath, "utf8")) as unknown;
-  assertFeedDocument(document, "loadDocument");
-  return document;
+  return normalizeSelectionDocument(document, "loadDocument");
 }
 
 export function buildRows(document: FeedDocument): SelectionRow[] {
-  assertFeedDocument(document, "buildRows");
-
   return document.items.map((item, index) => ({
     row: index + 1,
     item,

@@ -80,6 +80,7 @@ describe("renderDocument", () => {
 
     expect(html).toContain("Legacy tab item");
     expect(html).toContain('class="tab-panel tab-panel-0"');
+    expect(html).toContain('class="group-block"');
   });
 
   test("renders threaded x replies after the original post", () => {

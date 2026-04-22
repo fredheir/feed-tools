@@ -9,8 +9,11 @@ import type {
   RawFeedBrowserConfig,
   RawFeedConfig,
   RawSourcePreference,
+  RenderPreferences,
+  SummaryPreferences,
   SourceCaptureConfig,
   SourcePreference,
+  UserPreferences,
 } from "./types.js";
 import { isSupportedSource } from "./source-catalog.js";
 
@@ -37,8 +40,8 @@ function toStringArray(value: unknown): string[] | undefined {
   return value.map((entry) => String(entry)).filter(Boolean);
 }
 
-function normalizeBrowserConfig(value: unknown): FeedBrowserConfig | undefined {
-  if (!isRecord(value)) return undefined;
+function normalizeBrowserConfig(value: unknown): FeedBrowserConfig {
+  if (!isRecord(value)) return {};
   const raw = value as RawFeedBrowserConfig;
   return {
     cdp: toOptionalString(raw.cdp),
@@ -58,10 +61,23 @@ function normalizeBrowserConfig(value: unknown): FeedBrowserConfig | undefined {
   };
 }
 
+function normalizeCaptureConfig(
+  value: unknown,
+): SourceCaptureConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  return {
+    default_limit:
+      typeof value.default_limit === "number" ? value.default_limit : undefined,
+    assets_dir: toOptionalString(value.assets_dir) ?? undefined,
+    save_dir: toOptionalString(value.save_dir) ?? undefined,
+    browser: normalizeBrowserConfig(value.browser),
+  };
+}
+
 function normalizeSourcePreference(
   value: unknown,
   configPath: string,
-): SourcePreference | null {
+): SourcePreference {
   if (!isRecord(value)) {
     throw new Error(`Invalid source config entry: ${configPath}`);
   }
@@ -69,104 +85,94 @@ function normalizeSourcePreference(
   if (!raw.name || !isSupportedSource(raw.name)) {
     throw new Error(`Unsupported source in config: ${String(raw.name || "")}`);
   }
-  const capture = isRecord(raw.capture)
-    ? {
-        default_limit:
-          typeof raw.capture.default_limit === "number"
-            ? raw.capture.default_limit
-            : undefined,
-        assets_dir: toOptionalString(raw.capture.assets_dir) ?? undefined,
-        save_dir: toOptionalString(raw.capture.save_dir) ?? undefined,
-        browser: normalizeBrowserConfig(raw.capture.browser),
-      }
-    : undefined;
 
   return {
     name: raw.name as FeedSourceName,
     enabled: toOptionalBoolean(raw.enabled),
     default: toOptionalBoolean(raw.default),
-    capture,
+    capture: normalizeCaptureConfig(raw.capture),
   };
 }
 
-function parseConfigPayload(payload: string, configPath: string): FeedConfig {
+function normalizeRenderPreferences(value: unknown): RenderPreferences {
+  if (!isRecord(value)) return {};
+  return {
+    show_summary: toOptionalBoolean(value.show_summary),
+    show_tabs: toOptionalBoolean(value.show_tabs),
+  };
+}
+
+function normalizeCurationPreferences(value: unknown): CurationPreferences {
+  if (!isRecord(value)) return {};
+  return {
+    default_mode: toOptionalString(value.default_mode) ?? undefined,
+    preferred_categories: toStringArray(value.preferred_categories),
+    allow_multi_tab_views: toOptionalBoolean(value.allow_multi_tab_views),
+    target_items_per_tab:
+      typeof value.target_items_per_tab === "number"
+        ? value.target_items_per_tab
+        : undefined,
+    fallback_category: toOptionalString(value.fallback_category) ?? undefined,
+    relevance_policy: toOptionalString(value.relevance_policy) ?? undefined,
+  };
+}
+
+function normalizeSummaryPreferences(value: unknown): SummaryPreferences {
+  if (!isRecord(value)) return {};
+  return {
+    default_style: toOptionalString(value.default_style) ?? undefined,
+    populate_on_request_only: toOptionalBoolean(value.populate_on_request_only),
+    custom_instructions:
+      toOptionalString(value.custom_instructions) ?? undefined,
+    purpose: toOptionalString(value.purpose) ?? undefined,
+    prefer_minimal_agent_writing: toOptionalBoolean(
+      value.prefer_minimal_agent_writing,
+    ),
+  };
+}
+
+function normalizeUserPreferences(
+  value: unknown,
+  configPath: string,
+): UserPreferences {
+  if (!isRecord(value)) {
+    return {
+      sources: [],
+      render: {},
+      curation: {},
+      summary: {},
+    };
+  }
+  const sources = Array.isArray(value.sources)
+    ? value.sources.map((entry) => normalizeSourcePreference(entry, configPath))
+    : [];
+  return {
+    sources,
+    render: normalizeRenderPreferences(value.render),
+    curation: normalizeCurationPreferences(value.curation),
+    summary: normalizeSummaryPreferences(value.summary),
+  };
+}
+
+export function parseConfigPayload(
+  payload: string,
+  configPath: string,
+): FeedConfig {
   const parsed: unknown = JSON.parse(payload);
   if (!isRecord(parsed)) {
     throw new Error(`Invalid config object: ${configPath}`);
   }
   const raw = parsed as RawFeedConfig;
-  const sources = Array.isArray(raw.user_preferences?.sources)
-    ? raw.user_preferences.sources.map((entry) =>
-        normalizeSourcePreference(entry, configPath),
-      )
-    : [];
 
   return {
     version: typeof raw.version === "number" ? raw.version : undefined,
-    user_preferences: {
-      sources: sources.filter((entry): entry is SourcePreference =>
-        Boolean(entry),
-      ),
-      render: isRecord(raw.user_preferences?.render)
-        ? {
-            show_summary: toOptionalBoolean(
-              raw.user_preferences.render.show_summary,
-            ),
-            show_tabs: toOptionalBoolean(raw.user_preferences.render.show_tabs),
-          }
-        : undefined,
-      curation: isRecord(raw.user_preferences?.curation)
-        ? {
-            default_mode:
-              toOptionalString(raw.user_preferences.curation.default_mode) ??
-              undefined,
-            preferred_categories: toStringArray(
-              raw.user_preferences.curation.preferred_categories,
-            ),
-            allow_multi_tab_views: toOptionalBoolean(
-              raw.user_preferences.curation.allow_multi_tab_views,
-            ),
-            target_items_per_tab:
-              typeof raw.user_preferences.curation.target_items_per_tab ===
-              "number"
-                ? raw.user_preferences.curation.target_items_per_tab
-                : undefined,
-            fallback_category:
-              toOptionalString(
-                raw.user_preferences.curation.fallback_category,
-              ) ?? undefined,
-            relevance_policy:
-              toOptionalString(
-                raw.user_preferences.curation.relevance_policy,
-              ) ?? undefined,
-          }
-        : undefined,
-      summary: isRecord(raw.user_preferences?.summary)
-        ? {
-            default_style:
-              toOptionalString(raw.user_preferences.summary.default_style) ??
-              undefined,
-            populate_on_request_only: toOptionalBoolean(
-              raw.user_preferences.summary.populate_on_request_only,
-            ),
-            custom_instructions:
-              toOptionalString(
-                raw.user_preferences.summary.custom_instructions,
-              ) ?? undefined,
-            purpose:
-              toOptionalString(raw.user_preferences.summary.purpose) ??
-              undefined,
-            prefer_minimal_agent_writing: toOptionalBoolean(
-              raw.user_preferences.summary.prefer_minimal_agent_writing,
-            ),
-          }
-        : undefined,
-    },
+    user_preferences: normalizeUserPreferences(
+      raw.user_preferences,
+      configPath,
+    ),
     summary: isRecord(raw.summary)
-      ? {
-          notes: toOptionalString(raw.summary.notes) ?? undefined,
-        }
-      : undefined,
+      ? { notes: toOptionalString(raw.summary.notes) ?? undefined }
+      : {},
   };
 }
 
@@ -223,7 +229,7 @@ export function loadOptionalConfig(): FeedConfig | null {
 }
 
 function getSources(config: FeedConfig): SourcePreference[] {
-  return config?.user_preferences?.sources || [];
+  return config.user_preferences.sources;
 }
 
 function getEnabledSources(config: FeedConfig): SourcePreference[] {
@@ -257,14 +263,14 @@ export function getCaptureDefaults(
   sourceName: string,
 ): SourceCaptureConfig {
   const source = getSourcePreferences(config, sourceName);
-  return source?.capture || {};
+  return source?.capture || { browser: {} };
 }
 
 export function getCaptureBrowserOptions(
   config: FeedConfig,
   sourceName: string,
 ): FeedBrowserConfig {
-  return getCaptureDefaults(config, sourceName).browser || {};
+  return getCaptureDefaults(config, sourceName).browser;
 }
 
 export function getSaveDir(
@@ -287,5 +293,5 @@ export function getSaveDir(
 export function getCurationPreferences(
   config: FeedConfig,
 ): CurationPreferences {
-  return config?.user_preferences?.curation || {};
+  return config.user_preferences.curation;
 }

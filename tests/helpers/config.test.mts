@@ -9,6 +9,7 @@ import {
   getCurationPreferences,
   getDefaultSource,
   getEnabledSourceNames,
+  parseConfigPayload,
   getSaveDir,
   resolveCanonicalSaveDir,
 } from "../../lib/config.js";
@@ -41,6 +42,7 @@ describe("config helpers", () => {
             enabled: false,
             capture: {
               save_dir: "./var/linkedin-archive",
+              browser: {},
             },
           },
         ],
@@ -48,7 +50,10 @@ describe("config helpers", () => {
           fallback_category: "Other",
           preferred_categories: ["Coding"],
         },
+        render: {},
+        summary: {},
       },
+      summary: {},
     };
 
     expect(getEnabledSourceNames(config)).toEqual(["x"]);
@@ -77,10 +82,15 @@ describe("config helpers", () => {
             name: "x",
             capture: {
               save_dir: "./var/source-specific",
+              browser: {},
             },
           },
         ],
+        render: {},
+        curation: {},
+        summary: {},
       },
+      summary: {},
     };
 
     expect(resolveCanonicalSaveDir(config, "./tmp/custom", "x")).toBe(
@@ -102,15 +112,19 @@ describe("config helpers", () => {
           {
             name: "x",
             enabled: true,
-            capture: { save_dir: "./var/x-archive" },
+            capture: { save_dir: "./var/x-archive", browser: {} },
           },
           {
             name: "bluesky",
             enabled: true,
-            capture: { save_dir: "./var/bsky-archive" },
+            capture: { save_dir: "./var/bsky-archive", browser: {} },
           },
         ],
+        render: {},
+        curation: {},
+        summary: {},
       },
+      summary: {},
     };
 
     expect(resolveCanonicalSaveDir(config, null, null)).toBe(
@@ -119,5 +133,74 @@ describe("config helpers", () => {
     expect(resolveCanonicalSaveDir(config, null, "bluesky")).toBe(
       path.join(repoRoot, "var/bsky-archive"),
     );
+  });
+
+  test("parseConfigPayload normalizes raw browser aliases at the boundary", () => {
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: {
+          sources: [
+            {
+              name: "x",
+              capture: {
+                browser: {
+                  auto_connect: false,
+                  browser_args: ["--no-sandbox", 12],
+                  session_name: "feed-session",
+                  state_path: "./tmp/browser-state.json",
+                  allow_file_access: true,
+                  color_scheme: "dark",
+                  executable_path: "./chrome",
+                },
+              },
+            },
+          ],
+        },
+      }),
+      "/tmp/config.json",
+    );
+
+    expect(getCaptureDefaults(config, "x")).toEqual({
+      assets_dir: undefined,
+      browser: {
+        autoConnect: false,
+        args: ["--no-sandbox", "12"],
+        cdp: null,
+        sessionName: "feed-session",
+        session: null,
+        profile: null,
+        statePath: "./tmp/browser-state.json",
+        headed: undefined,
+        allowFileAccess: true,
+        colorScheme: "dark",
+        executablePath: "./chrome",
+      },
+      default_limit: undefined,
+      save_dir: undefined,
+    });
+    expect(getCaptureBrowserOptions(config, "x")).not.toHaveProperty(
+      "auto_connect",
+    );
+    expect(getCaptureBrowserOptions(config, "x")).not.toHaveProperty(
+      "browser_args",
+    );
+    expect(getCaptureBrowserOptions(config, "x")).not.toHaveProperty(
+      "session_name",
+    );
+  });
+
+  test("parseConfigPayload returns normalized empty preference objects", () => {
+    const config = parseConfigPayload("{}", "/tmp/config.json");
+
+    expect(config.user_preferences).toEqual({
+      sources: [],
+      render: {},
+      curation: {},
+      summary: {},
+    });
+    expect(config.summary).toEqual({});
+    expect(getEnabledSourceNames(config)).toEqual([]);
+    expect(getCaptureDefaults(config, "x")).toEqual({ browser: {} });
+    expect(getCurationPreferences(config)).toEqual({});
   });
 });

@@ -3,36 +3,27 @@
 const { getRenderCss } = require("./css");
 const { escapeHtml, renderItemCard, toSourceClass } = require("./item");
 const { getItemMaskKeys } = require("../item");
-const { orderItemsByThread } = require("../mask");
+const { normalizeMaskTabs, orderItemsByThread } = require("../mask") as {
+  normalizeMaskTabs: (
+    mask: FeedDocument["mask"],
+  ) => Array<Omit<FeedTab, "groups" | "item_ids"> & { groups: FeedTabGroup[] }>;
+  orderItemsByThread: (document: FeedDocument) => FeedItem[];
+};
 const {
   getPlatformIconDataUri,
   getPlatformIconMeta,
 } = require("./platform-icons");
-import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
-
-function getTabGroups(
-  tab: FeedTab,
-): Array<{ label?: string; item_ids: string[] }> {
-  if (Array.isArray(tab.groups)) return tab.groups;
-  if (Array.isArray(tab.item_ids)) {
-    return [
-      {
-        item_ids: tab.item_ids,
-      },
-    ];
-  }
-  return [];
-}
+import type {
+  FeedDocument,
+  FeedItem,
+  FeedTab,
+  FeedTabGroup,
+} from "../types.js";
 
 function renderDocument(document: FeedDocument): string {
   const rows: FeedItem[] = orderItemsByThread(document);
   const sourceLabel = String(document.source || "feed").toUpperCase();
-  const tabs =
-    document.mask &&
-    "tabs" in document.mask &&
-    Array.isArray(document.mask.tabs)
-      ? document.mask.tabs
-      : [];
+  const tabs = normalizeMaskTabs(document.mask);
   const tabbed = document.mask?.tabbed === true || tabs.length > 0;
   const summary = document.mask?.summary || "";
   const platforms = Array.from(
@@ -71,8 +62,10 @@ function renderDocument(document: FeedDocument): string {
       .join("\n");
   }
 
-  function buildGroups(tab: FeedTab): string {
-    return getTabGroups(tab)
+  function buildGroups(
+    tab: Omit<FeedTab, "groups" | "item_ids"> & { groups: FeedTabGroup[] },
+  ): string {
+    return tab.groups
       .map(
         (group) => `
       <section class="group-block">
@@ -90,7 +83,7 @@ function renderDocument(document: FeedDocument): string {
       ? `<section class="feed">${cards}</section>`
       : `
     <section class="feed">
-      ${tabs.map((tab: FeedTab) => buildGroups(tab)).join("")}
+      ${tabs.map((tab) => buildGroups(tab)).join("")}
     </section>
   `;
   const tabMarkup =
@@ -98,11 +91,11 @@ function renderDocument(document: FeedDocument): string {
       ? ""
       : `
     <div class="tab-shell">
-      ${tabs.map((tab: FeedTab, index: number) => `<input class="tab-toggle" type="checkbox" name="feed-tabs" id="feed-tab-${index}" ${String(tab.label || "").toLowerCase() === "ads" ? "" : "checked"} />`).join("")}
+      ${tabs.map((tab, index: number) => `<input class="tab-toggle" type="checkbox" name="feed-tabs" id="feed-tab-${index}" ${String(tab.label || "").toLowerCase() === "ads" ? "" : "checked"} />`).join("")}
       ${platforms.map((platform, index: number) => `<input class="platform-toggle" type="checkbox" name="feed-platforms" id="feed-platform-${index}" checked />`).join("")}
       <div class="tab-bar">
         <div class="tab-label-group">
-          ${tabs.map((tab: FeedTab, index: number) => `<label class="tab-label" for="feed-tab-${index}">${escapeHtml(tab.label || `Tab ${index + 1}`)}</label>`).join("")}
+          ${tabs.map((tab, index: number) => `<label class="tab-label" for="feed-tab-${index}">${escapeHtml(tab.label || `Tab ${index + 1}`)}</label>`).join("")}
         </div>
         ${
           platforms.length > 0
@@ -118,7 +111,7 @@ function renderDocument(document: FeedDocument): string {
       <div class="tab-panels combined-panels">
         ${tabs
           .map(
-            (tab: FeedTab, index: number) => `
+            (tab, index: number) => `
         <section class="tab-panel tab-panel-${index}">
           ${tab.summary ? `<div class="tab-summary">${escapeHtml(tab.summary)}</div>` : ""}
           <div class="feed">${buildGroups(tab)}</div>
@@ -133,7 +126,7 @@ function renderDocument(document: FeedDocument): string {
     ? ""
     : tabs
         .map(
-          (_tab: FeedTab, index: number) => `
+          (_tab, index: number) => `
     #feed-tab-${index}:checked ~ .tab-bar label[for="feed-tab-${index}"] {
       background: #fff;
       color: var(--text);

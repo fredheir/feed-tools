@@ -21,9 +21,7 @@ type XExtractionMeta = {
   incomplete_count: number;
 };
 
-type NormalizableFeedItem = Parameters<typeof normalizeItemShape>[0];
-
-type RawXExtractionItem = NormalizableFeedItem & {
+type RawXExtractionItem = Parameters<typeof normalizeItemShape>[0] & {
   capture_incomplete?: boolean | null;
 };
 

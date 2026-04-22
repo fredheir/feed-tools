@@ -2,7 +2,17 @@
 
 const { getItemMaskKeys } = require("./item");
 import { assertFeedDocument } from "./item-shape.js";
-import type { FeedDocument, FeedItem, FeedMask, FeedTab } from "./types.js";
+import type {
+  FeedDocument,
+  FeedItem,
+  FeedMask,
+  FeedTab,
+  FeedTabGroup,
+} from "./types.js";
+
+interface NormalizedFeedTab extends Omit<FeedTab, "groups" | "item_ids"> {
+  groups: FeedTabGroup[];
+}
 
 function hasMaskTabs(mask: FeedMask): mask is FeedMask & { tabs: FeedTab[] } {
   return "tabs" in mask && Array.isArray(mask.tabs);
@@ -14,18 +24,30 @@ function hasMaskItemIds(
   return "item_ids" in mask && Array.isArray(mask.item_ids);
 }
 
-function getTabGroups(
-  tab: FeedTab,
-): Array<{ label?: string; item_ids: string[] }> {
+function getTabGroups(tab: FeedTab): FeedTabGroup[] {
   if (Array.isArray(tab.groups)) return tab.groups;
   if (Array.isArray(tab.item_ids)) {
-    return [
-      {
-        item_ids: tab.item_ids,
-      },
-    ];
+    return [{ item_ids: tab.item_ids }];
   }
   return [];
+}
+
+function normalizeTab(tab: FeedTab): NormalizedFeedTab {
+  const { item_ids: _itemIds, ...normalizedTab } = tab;
+  return {
+    ...normalizedTab,
+    groups: getTabGroups(tab).map((group) => ({
+      ...group,
+      item_ids: Array.isArray(group.item_ids) ? group.item_ids : [],
+    })),
+  };
+}
+
+function normalizeMaskTabs(
+  mask: FeedMask | null | undefined,
+): NormalizedFeedTab[] {
+  if (!mask || !hasMaskTabs(mask)) return [];
+  return mask.tabs.map(normalizeTab);
 }
 
 function resolveThreadChild(
@@ -261,10 +283,9 @@ function expandThreadSelection(
 }
 
 function collectMaskIdentifiers(mask: FeedMask): string[] {
-  if (hasMaskTabs(mask)) {
-    return mask.tabs.flatMap((tab: FeedTab) =>
-      getTabGroups(tab).flatMap((group) => group.item_ids),
-    );
+  const tabs = normalizeMaskTabs(mask);
+  if (tabs.length > 0) {
+    return tabs.flatMap((tab) => tab.groups.flatMap((group) => group.item_ids));
   }
   if (hasMaskItemIds(mask)) return mask.item_ids;
   return [];
@@ -282,19 +303,21 @@ function expandMask(document: FeedDocument, mask: FeedMask): FeedMask {
   if (!hasMaskTabs(mask) && !hasMaskItemIds(mask)) return mask;
 
   const context = buildExpansionContext(document);
+  const normalizedTabs = normalizeMaskTabs(mask);
 
-  if (hasMaskTabs(mask)) {
+  if (normalizedTabs.length > 0) {
     return {
       ...mask,
-      tabs: mask.tabs.map((tab: FeedTab) => ({
+      tabs: normalizedTabs.map((tab) => ({
         ...tab,
-        groups: getTabGroups(tab).map((group) => ({
+        groups: tab.groups.map((group) => ({
           ...group,
           item_ids: expandThreadSelection(group.item_ids, context),
         })),
       })),
     };
   }
+  if (!hasMaskItemIds(mask)) return mask;
   return {
     ...mask,
     item_ids: expandThreadSelection(mask.item_ids, context),
@@ -342,5 +365,6 @@ function applyMask(
 
 module.exports = {
   applyMask,
+  normalizeMaskTabs,
   orderItemsByThread,
 };

@@ -58,6 +58,77 @@ interface ItemState {
 }
 
 type CategoryMapEntry = FeedAllocation["items"][string];
+type PartialFeedDocument = Partial<FeedDocument> & { items?: unknown[] };
+
+function normalizeStoredItem(
+  item: unknown,
+  fallback: { source: string; index: number },
+): FeedItem {
+  const candidate = (item ?? {}) as Partial<FeedItem>;
+  const contentText =
+    typeof candidate.content?.text === "string"
+      ? candidate.content.text
+      : typeof (item as { text?: unknown })?.text === "string"
+        ? (item as { text: string }).text
+        : undefined;
+  return {
+    ...normalizeItemShape(
+      contentText === undefined
+        ? candidate
+        : {
+            ...candidate,
+            content: {
+              ...candidate.content,
+              text: contentText,
+            },
+          },
+      fallback,
+    ),
+    first_seen_at:
+      typeof candidate.first_seen_at === "string"
+        ? candidate.first_seen_at
+        : null,
+    last_seen_at:
+      typeof candidate.last_seen_at === "string"
+        ? candidate.last_seen_at
+        : null,
+    capture_count:
+      typeof candidate.capture_count === "number"
+        ? candidate.capture_count
+        : null,
+  };
+}
+
+function normalizeStoredDocument(
+  document: unknown,
+  options: {
+    context: string;
+    fallbackSource?: string;
+  },
+): FeedDocument {
+  assertFeedDocument(document, options.context);
+  const candidate = document as PartialFeedDocument;
+  const items = Array.isArray(candidate.items) ? candidate.items : [];
+  const source =
+    typeof candidate.source === "string"
+      ? candidate.source
+      : options.fallbackSource || "unknown";
+  return {
+    schema_version:
+      typeof candidate.schema_version === "number"
+        ? candidate.schema_version
+        : 1,
+    source,
+    captured_at:
+      typeof candidate.captured_at === "string" ? candidate.captured_at : null,
+    items: items.map((item, index) =>
+      normalizeStoredItem(item, {
+        source,
+        index: index + 1,
+      }),
+    ),
+  };
+}
 
 function getDatabasePath(saveDir: string): string {
   return path.join(saveDir, "feed.sqlite");
@@ -144,27 +215,9 @@ function parseDocumentRow(
   row: DocumentJsonRow | undefined,
 ): FeedDocument | null {
   if (!row?.document_json) return null;
-  return parseStoredDocument(JSON.parse(row.document_json) as unknown);
-}
-
-function parseStoredDocument(document: unknown): FeedDocument {
-  assertFeedDocument(document, "sqlite-store");
-  return {
-    ...document,
-    items: document.items.map(
-      (item, index) =>
-        ({
-          ...normalizeItemShape(item, {
-            source: item?.source || document.source,
-            index: typeof item?.index === "number" ? item.index : index + 1,
-          }),
-          first_seen_at: item?.first_seen_at ?? null,
-          last_seen_at: item?.last_seen_at ?? null,
-          capture_count:
-            typeof item?.capture_count === "number" ? item.capture_count : null,
-        }) satisfies FeedItem,
-    ),
-  };
+  return normalizeStoredDocument(JSON.parse(row.document_json) as unknown, {
+    context: "sqlite-store",
+  });
 }
 
 function listStoredSourceRows(db: SqliteDatabase): SourceDocumentRow[] {
@@ -216,6 +269,15 @@ function persistSourceDocument(
 ): number {
   const db = openDatabase(saveDir);
   try {
+    const normalizedBaseDocument = normalizeStoredDocument(document, {
+      context: "persistSourceDocument",
+      fallbackSource: sourceName,
+    });
+    const normalizedDocument: FeedDocument = {
+      ...normalizedBaseDocument,
+      captured_at:
+        normalizedBaseDocument.captured_at || new Date().toISOString(),
+    };
     const captureInsert = db.prepare(
       `INSERT INTO captures (source, captured_at, snapshot_path, latest_path)
        VALUES (?, ?, ?, ?)`,
@@ -267,18 +329,18 @@ function persistSourceDocument(
     db.exec("BEGIN");
     const capture = captureInsert.run(
       sourceName,
-      document.captured_at,
+      normalizedDocument.captured_at,
       snapshotPath,
       latestPath,
     ) as { lastInsertRowid: number | bigint };
     const captureId = Number(capture.lastInsertRowid);
     sourceUpsert.run(
       sourceName,
-      document.captured_at,
-      JSON.stringify(document),
+      normalizedDocument.captured_at,
+      JSON.stringify(normalizedDocument),
     );
 
-    for (const [index, item] of document.items.entries()) {
+    for (const [index, item] of normalizedDocument.items.entries()) {
       const itemKey = getPreferredItemKey(item, {
         source: item.source || sourceName,
         index: item.index ?? index + 1,
@@ -290,8 +352,8 @@ function persistSourceDocument(
         item.source_item_id || null,
         item.url || null,
         JSON.stringify(item),
-        item.first_seen_at || document.captured_at,
-        item.last_seen_at || document.captured_at,
+        item.first_seen_at || normalizedDocument.captured_at,
+        item.last_seen_at || normalizedDocument.captured_at,
         Number.isInteger(item.capture_count) ? item.capture_count : 1,
         0,
         null,
@@ -430,7 +492,10 @@ function exportDocumentsFromDb(
     const docsBySource = new Map(
       rows.map((row) => [
         row.source,
-        parseStoredDocument(JSON.parse(row.document_json) as unknown),
+        normalizeStoredDocument(JSON.parse(row.document_json) as unknown, {
+          context: "exportDocumentsFromDb",
+          fallbackSource: row.source,
+        }),
       ]),
     );
     const documents = selectedSources

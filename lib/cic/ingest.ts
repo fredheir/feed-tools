@@ -8,7 +8,7 @@ const {
 } = require("../source-capture.js");
 
 export async function ingestDocument(
-  rawDocument: FeedDocument,
+  rawDocument: unknown,
   {
     sourceName,
     assetsDir,

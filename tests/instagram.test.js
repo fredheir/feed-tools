@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { prepareFeed } from "../sources/instagram/capture.js";
-import { normalizeInstagramCandidate } from "../sources/instagram/capture.js";
+import {
+  normalizeInstagramCandidate,
+  normalizeInstagramExtractionDocument,
+} from "../sources/instagram/capture.js";
 import {
   extractInstagramSourceItemId,
   isInstagramItemWorthKeeping,
@@ -85,6 +88,39 @@ describe("instagram capture bootstrap", () => {
 });
 
 describe("instagram capture integration", () => {
+  test("normalizes browser extraction output before shared filtering/dedupe", () => {
+    const document = normalizeInstagramExtractionDocument({
+      captured_at: "2026-04-22T10:00:00Z",
+      items: [
+        {
+          url: "https://www.instagram.com/p/DW6Oe10jEFH/",
+          author: { handle: "@example" },
+          content: { text: "caption" },
+          stats: { like: "12" },
+          media: [{ src: "https://cdn.example.com/image.jpg" }],
+        },
+      ],
+    });
+
+    expect(document).toMatchObject({
+      source: "instagram",
+      captured_at: "2026-04-22T10:00:00Z",
+      items: [
+        {
+          source: "instagram",
+          source_item_id: "p:DW6Oe10jEFH",
+          index: 1,
+          url: "https://www.instagram.com/p/DW6Oe10jEFH",
+          author: { handle: "@example" },
+          content: { text: "caption" },
+          stats: { like: "12" },
+          media: [{ src: "https://cdn.example.com/image.jpg" }],
+        },
+      ],
+    });
+    expect(document.items[0].id).toBe("instagram:p:DW6Oe10jEFH");
+  });
+
   test("derives source_item_id from permalink before filtering", () => {
     const item = normalizeInstagramCandidate({
       source: "instagram",
@@ -96,6 +132,13 @@ describe("instagram capture integration", () => {
     });
 
     expect(item.source_item_id).toBe("p:DW6Oe10jEFH");
+    expect(item.id).toBe("instagram:p:DW6Oe10jEFH");
+  });
+
+  test("rejects malformed browser extraction payloads", () => {
+    expect(() =>
+      normalizeInstagramExtractionDocument({ items: "bad" }),
+    ).toThrow(/Invalid instagram extraction payload/);
   });
 
   test("real-browser feed fixture still exposes extractor signals", () => {
