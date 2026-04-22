@@ -2,11 +2,14 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { loadConfig, getSaveDir } = require("./config");
-const { getDocumentSources } = require("./document-sources");
-const { loadAllocationFromDb, saveAllocationToDb } = require("./sqlite-store");
-const { resolveSelectionList } = require("./selection");
-const { assertFeedDocument, isPlainObject } = require("./item-shape");
+const { loadConfig, getSaveDir } = require("./config.js");
+const { getDocumentSources } = require("./document-sources.js");
+const {
+  loadAllocationFromDb,
+  saveAllocationToDb,
+} = require("./sqlite-store.js");
+const { resolveSelectionList } = require("./selection.js");
+const { assertFeedDocument, isPlainObject } = require("./item-shape.js");
 import type {
   CategoryAssignment,
   FeedAllocation,

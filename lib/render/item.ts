@@ -1,10 +1,10 @@
 "use strict";
 
-const { getItemMaskKeys } = require("../item");
+const { getItemMaskKeys } = require("../item.js");
 const {
   getPlatformIconDataUri,
   getPlatformIconMeta,
-} = require("./platform-icons");
+} = require("./platform-icons.js");
 import type { FeedCard, FeedItem, FeedMedia } from "../types.js";
 
 function escapeHtml(value: unknown): string {

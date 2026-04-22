@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { persistSourceDocument } from "../lib/sqlite-store.js";
+import type { FeedDocument } from "../lib/types.js";
 import {
   repoRoot,
   runCli,
@@ -89,7 +91,7 @@ describe("pipeline e2e", () => {
     );
 
     const ingestOutput = runCli(
-      "./lib/cic-capture-cli.js",
+      "./bin/feed-capture-cic",
       ["ingest", "x", capturePath, "--save-dir", saveDir],
       configPath,
     );
@@ -102,7 +104,7 @@ describe("pipeline e2e", () => {
     expect(fs.existsSync(path.join(saveDir, "feed.sqlite"))).toBe(true);
 
     const firstCurate = spawnCli(
-      "./lib/curate-cli.js",
+      "./bin/feed-curate",
       [worksetPath, "--save-dir", saveDir, "--source", "x"],
       configPath,
     );
@@ -117,13 +119,13 @@ describe("pipeline e2e", () => {
     );
 
     runCli(
-      "./lib/classify-cli.js",
+      "./bin/feed-classify",
       [worksetPath, "--save-dir", saveDir, "--category", "Coding:1"],
       configPath,
     );
 
     const secondCurate = runCli(
-      "./lib/curate-cli.js",
+      "./bin/feed-curate",
       [worksetPath, "--save-dir", saveDir, "--source", "x"],
       configPath,
     );
@@ -132,7 +134,7 @@ describe("pipeline e2e", () => {
     expect(secondCurate).toContain("x:123456789");
 
     runCli(
-      "./lib/render-cli.js",
+      "./bin/feed-render",
       [worksetPath, htmlPath, "--no-open"],
       configPath,
     );
@@ -182,12 +184,140 @@ describe("pipeline e2e", () => {
     );
 
     const ingest = spawnCli(
-      "./lib/cic-capture-cli.js",
+      "./bin/feed-capture-cic",
       ["ingest", "x", capturePath, "--save-dir", saveDir],
       configPath,
     );
 
     expect(ingest.status).not.toBe(0);
     expect(ingest.stderr).toContain('document source must match source "x"');
+  });
+
+  test("renders persisted youtube local video through the normal curate/render path", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-pipeline-e2e-"));
+    tempDirs.push(dir);
+
+    const saveDir = path.join(dir, "save");
+    const worksetPath = path.join(dir, "workset.json");
+    const htmlPath = path.join(dir, "feed.html");
+    const capturePath = path.join(dir, "capture.json");
+    const assetDir = path.join(dir, "assets");
+    fs.mkdirSync(assetDir, { recursive: true });
+    const posterPath = path.join(assetDir, "poster.jpg");
+    const videoPath = path.join(assetDir, "video.mp4");
+    fs.writeFileSync(posterPath, "poster");
+    fs.writeFileSync(videoPath, "video");
+
+    const configPath = writeTestConfig(repoRoot, {
+      user_preferences: {
+        sources: [
+          {
+            name: "youtube",
+            enabled: true,
+            default: true,
+            capture: {
+              save_dir: saveDir,
+              assets_dir: assetDir,
+              default_limit: 12,
+              browser: {},
+            },
+          },
+        ],
+      },
+    });
+
+    fs.writeFileSync(
+      capturePath,
+      JSON.stringify(
+        {
+          schema_version: 1,
+          source: "youtube",
+          captured_at: "2026-04-22T10:00:00Z",
+          items: [
+            {
+              source: "youtube",
+              source_item_id: "ZN4njIQcSR4",
+              index: 1,
+              url: "https://www.youtube.com/watch?v=ZN4njIQcSR4",
+              author: {
+                handle: "LastWeekTonight",
+                display_name: "LastWeekTonight",
+                profile_image_url: null,
+              },
+              content: {
+                text: "Prediction Markets",
+              },
+              stats: {
+                reply: null,
+                share: null,
+                like: null,
+                view: "2.3m views",
+              },
+              media: [
+                {
+                  src: "https://i.ytimg.com/vi/ZN4njIQcSR4/hq720.jpg",
+                  local_src: posterPath,
+                  local_video_src: videoPath,
+                  href: "https://www.youtube.com/watch?v=ZN4njIQcSR4",
+                  media_kind: "video",
+                  source: "youtube",
+                },
+              ],
+              cards: [],
+              thread: {
+                has_thread_line: false,
+                thread_line_height: null,
+                thread_line_x: null,
+              },
+              embedded_links: [],
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    const captureDocument = JSON.parse(
+      fs.readFileSync(capturePath, "utf8"),
+    ) as FeedDocument;
+    persistSourceDocument(saveDir, {
+      sourceName: "youtube",
+      document: captureDocument,
+    });
+
+    const firstCurate = spawnCli(
+      "./bin/feed-curate",
+      [worksetPath, "--save-dir", saveDir, "--source", "youtube"],
+      configPath,
+    );
+
+    expect(firstCurate.status).toBe(2);
+    expect(firstCurate.stdout).toContain(
+      "ERROR: classification step incomplete.",
+    );
+
+    runCli(
+      "./bin/feed-classify",
+      [worksetPath, "--save-dir", saveDir, "--category", "Other:1"],
+      configPath,
+    );
+
+    runCli(
+      "./bin/feed-curate",
+      [worksetPath, "--save-dir", saveDir, "--source", "youtube"],
+      configPath,
+    );
+
+    runCli(
+      "./bin/feed-render",
+      [worksetPath, htmlPath, "--no-open"],
+      configPath,
+    );
+
+    const html = fs.readFileSync(htmlPath, "utf8");
+    expect(html).toContain("<video");
+    expect(html).toContain("Prediction Markets");
+    expect(html).toContain("assets/video.mp4");
   });
 });

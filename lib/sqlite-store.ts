@@ -3,9 +3,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
-const { combineDocuments } = require("./document-ops");
-const { buildNormalizedFeedDocument } = require("./feed-document-normalize.js");
-import { assertFeedDocument, getPreferredItemKey } from "./item-shape.js";
+const { combineDocuments } = require("./document-ops.js");
+const { normalizePersistedDocument } = require("./feed-document-normalize.js");
+import { getPreferredItemKey } from "./item-shape.js";
+import { hasPositiveLimit } from "./selection.js";
 import type { FeedAllocation, FeedDocument, FeedItem } from "./types.js";
 
 type SqliteDatabase = InstanceType<typeof DatabaseSync>;
@@ -55,7 +56,6 @@ interface ItemState {
 }
 
 type CategoryMapEntry = FeedAllocation["items"][string];
-type PartialFeedDocument = Partial<FeedDocument> & { items?: unknown[] };
 
 function normalizeStoredDocument(
   document: unknown,
@@ -64,20 +64,9 @@ function normalizeStoredDocument(
     fallbackSource?: string;
   },
 ): FeedDocument {
-  assertFeedDocument(document, options.context);
-  const candidate = document as PartialFeedDocument;
-  const source =
-    typeof candidate.source === "string"
-      ? candidate.source
-      : options.fallbackSource || "unknown";
-  return buildNormalizedFeedDocument(candidate, {
-    source,
-    schemaVersion:
-      typeof candidate.schema_version === "number"
-        ? candidate.schema_version
-        : 1,
-    capturedAt:
-      typeof candidate.captured_at === "string" ? candidate.captured_at : null,
+  return normalizePersistedDocument(document, {
+    context: options.context,
+    fallbackSource: options.fallbackSource,
     includeCaptureMetadata: true,
   });
 }
@@ -349,7 +338,7 @@ function applyStateFilters(
       return true;
     });
   }
-  if (typeof limit === "number" && Number.isInteger(limit) && limit > 0) {
+  if (hasPositiveLimit(limit)) {
     items = items.slice(0, limit);
   }
   return {
@@ -548,6 +537,16 @@ function saveAllocationToDb(
     db.close();
   }
 }
+
+export {
+  exportDocumentsFromDb,
+  getDatabasePath,
+  listStoredSources,
+  loadCurrentDocumentFromDb,
+  loadAllocationFromDb,
+  persistSourceDocument,
+  saveAllocationToDb,
+};
 
 module.exports = {
   exportDocumentsFromDb,

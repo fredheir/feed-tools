@@ -1,16 +1,16 @@
 "use strict";
 
-const { getRenderCss } = require("./css");
-const { escapeHtml, renderItemCard, toSourceClass } = require("./item");
-const { getItemMaskKeys } = require("../item");
-const { normalizeMaskTabs, orderItemsByThread } = require("../mask") as {
+const { getRenderCss } = require("./css.js");
+const { escapeHtml, renderItemCard, toSourceClass } = require("./item.js");
+const { getItemMaskKeys } = require("../item.js");
+const { normalizeMaskTabs, orderItemsByThread } = require("../mask.js") as {
   normalizeMaskTabs: (mask: FeedDocument["mask"]) => FeedTab[];
   orderItemsByThread: (document: FeedDocument) => FeedItem[];
 };
 const {
   getPlatformIconDataUri,
   getPlatformIconMeta,
-} = require("./platform-icons");
+} = require("./platform-icons.js");
 import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
 
 function renderDocument(document: FeedDocument): string {

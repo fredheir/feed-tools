@@ -7,11 +7,11 @@ const {
   getCaptureBrowserOptions,
   resolveCanonicalSaveDir,
   DEFAULT_ASSETS_DIR,
-} = require("./config");
-const { requireArgValue } = require("./cli-args");
-const { combineDocuments } = require("./document-ops");
-const { hasNewUnclassifiedItems } = require("./source-capture");
-const { getCaptureHandler } = require("./source-registry");
+} = require("./config.js");
+const { requireArgValue } = require("./cli-args.js");
+const { combineDocuments } = require("./document-ops.js");
+const { hasNewUnclassifiedItems } = require("./source-capture.js");
+const { getCaptureHandler } = require("./source-registry.js");
 import { isSupportedSource } from "./source-catalog.js";
 import type {
   FeedBrowserConfig,

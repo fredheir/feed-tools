@@ -1,10 +1,9 @@
-import { isSupportedSource, listSupportedSources } from "./source-catalog.js";
 import type {
   BrowserSession,
+  CaptureAdapter,
   FeedBrowserConfig,
   FeedDocument,
   FeedSourceName,
-  NormalizedBrowserOptions,
 } from "./types.js";
 
 const {
@@ -28,6 +27,10 @@ const {
   prepareFeed: prepareTikTokFeed,
 } = require("../sources/tiktok/capture.js");
 const {
+  source: youtubeSource,
+  prepareFeed: prepareYouTubeFeed,
+} = require("../sources/youtube/capture.js");
+const {
   source: xSource,
   prepareFeed: prepareXFeed,
 } = require("../sources/x/capture.js");
@@ -38,14 +41,6 @@ type CaptureOptions = {
   assetsDir?: string;
   saveDir?: string;
   browserOptions?: FeedBrowserConfig;
-};
-
-type CaptureAdapter = {
-  name: FeedSourceName;
-  captureDocument: (options: {
-    limit: number;
-    browserOptions: NormalizedBrowserOptions;
-  }) => Promise<FeedDocument>;
 };
 
 type BootstrapHandler =
@@ -61,6 +56,7 @@ const SOURCE_MODULES: Record<
   instagram: { source: instagramSource, prepareFeed: prepareInstagramFeed },
   linkedin: { source: linkedinSource, prepareFeed: prepareLinkedInFeed },
   tiktok: { source: tiktokSource, prepareFeed: prepareTikTokFeed },
+  youtube: { source: youtubeSource, prepareFeed: prepareYouTubeFeed },
   x: { source: xSource, prepareFeed: prepareXFeed },
 };
 
@@ -79,5 +75,3 @@ export function getBootstrapHandler(
 ): BootstrapHandler {
   return SOURCE_MODULES[sourceName]?.prepareFeed || null;
 }
-
-export { isSupportedSource, listSupportedSources };

@@ -5,11 +5,11 @@ const {
   buildBrowserRuntimeScript,
   normalizeCount,
   makeAbsoluteUrl,
-} = require("../browser-runtime/core");
+} = require("../browser-runtime/core.js");
 const {
   assertFeedUrlAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture");
+} = require("../../lib/source-capture.js");
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
 import type {
   BrowserSession,

@@ -4,10 +4,8 @@ import {
   normalizeBlueskyExtractionDocument,
 } from "../sources/bluesky/capture.js";
 import { renderItemCard } from "../lib/render/item.js";
-import {
-  getCaptureHandler,
-  isSupportedSource,
-} from "../lib/source-registry.js";
+import { getCaptureHandler } from "../lib/source-registry.js";
+import { isSupportedSource } from "../lib/source-catalog.js";
 import { readFixture } from "./helpers/cli-config.mts";
 
 describe("bluesky support", () => {

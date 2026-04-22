@@ -1,22 +1,18 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  getBootstrapHandler,
-  getCaptureHandler,
+  SUPPORTED_SOURCES,
   isSupportedSource,
   listSupportedSources,
+} from "../lib/source-catalog.js";
+import {
+  getBootstrapHandler,
+  getCaptureHandler,
 } from "../lib/source-registry.js";
 
 describe("source registry", () => {
   test("lists the supported capture sources from the canonical registry", () => {
-    expect(listSupportedSources()).toEqual([
-      "bluesky",
-      "facebook",
-      "instagram",
-      "linkedin",
-      "tiktok",
-      "x",
-    ]);
+    expect(listSupportedSources()).toEqual([...SUPPORTED_SOURCES]);
   });
 
   test("resolves handlers for every supported source", () => {

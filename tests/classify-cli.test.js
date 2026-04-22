@@ -26,7 +26,7 @@ describe("feed-classify", () => {
     const configPath = writeTestConfig(repoRoot);
     const output = execFileSync(
       process.execPath,
-      ["./lib/classify-cli.js", "--help"],
+      ["./bin/feed-classify", "--help"],
       {
         cwd: repoRoot,
         encoding: "utf8",
@@ -73,7 +73,7 @@ describe("feed-classify", () => {
     execFileSync(
       process.execPath,
       [
-        "./lib/classify-cli.js",
+        "./bin/feed-classify",
         outputPath,
         "--save-dir",
         saveDir,

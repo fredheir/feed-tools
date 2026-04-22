@@ -91,7 +91,10 @@ function listCookieProfiles(): string[] {
 }
 
 function resolveVideoUrl(item: FeedItem, media: FeedMedia): string | null {
-  const candidates = [media?.href, item?.url];
+  const candidates =
+    item?.source === "youtube"
+      ? [item?.url, media?.href]
+      : [media?.href, item?.url];
   for (const candidate of candidates) {
     if (!candidate) continue;
     try {
@@ -114,7 +117,11 @@ function shouldUseYtDlpForVideo(item: FeedItem, media: FeedMedia): boolean {
 }
 
 function shouldUseCookiesForVideo(item: FeedItem): boolean {
-  return item?.source === "x" || item?.source === "instagram";
+  return (
+    item?.source === "x" ||
+    item?.source === "instagram" ||
+    item?.source === "youtube"
+  );
 }
 
 type VideoProbeResult =
@@ -301,15 +308,17 @@ function downloadVideoWithYtDlp(
         `chrome:${profile}`,
       ])
     : [];
+  const jsRuntimeArgs = commandExists("node") ? ["--js-runtimes", "node"] : [];
   const args = [
     ...tool.args,
+    ...jsRuntimeArgs,
     ...cookieArgs,
     "--no-playlist",
     "--no-progress",
     "--format",
-    "bv*+ba/b",
-    "-S",
-    "ext:mp4:m4a",
+    "bv*[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a][ext=m4a]/b[vcodec^=avc1][ext=mp4]/bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b",
+    "--merge-output-format",
+    "mp4",
     "--output",
     targetTemplate,
     "--print",
@@ -333,10 +342,16 @@ function downloadVideoWithYtDlp(
         fs.existsSync(line) &&
         line.startsWith(expectedPrefix),
     );
-  if (!downloadedPath) {
-    throw new Error(`yt-dlp did not report a downloaded file for ${url}`);
+  if (downloadedPath) return downloadedPath;
+
+  const materializedFile = fs
+    .readdirSync(assetsDir)
+    .find((name: string) => name.startsWith(`${prefix}-${hash}.`));
+  if (materializedFile) {
+    return path.join(assetsDir, materializedFile);
   }
-  return downloadedPath;
+
+  throw new Error(`yt-dlp did not report a downloaded file for ${url}`);
 }
 
 async function download(

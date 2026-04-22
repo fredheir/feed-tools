@@ -7,15 +7,15 @@ import { requireArgValue } from "./cli-args.js";
 const {
   getDefaultDocumentPath,
   getDefaultHtmlPath,
-} = require("./document-paths");
+} = require("./document-paths.js");
 const {
   groupPickedRowsByCategory,
   loadAllocationFromDocument,
-} = require("./allocation");
-const { loadConfig, getCurationPreferences } = require("./config");
-const { applyMask } = require("./mask");
-const { renderDocument } = require("./render/html");
-const { resolveSelectionList } = require("./selection");
+} = require("./allocation.js");
+const { loadConfig, getCurationPreferences } = require("./config.js");
+const { applyMask } = require("./mask.js");
+const { renderDocument } = require("./render/html.js");
+const { resolveSelectionList } = require("./selection.js");
 import { createBrowserSession } from "./browser.js";
 import { assertFeedDocument } from "./item-shape.js";
 import type { FeedDocument } from "./types.js";

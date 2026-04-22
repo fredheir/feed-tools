@@ -4,7 +4,7 @@ import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const CLI = join(import.meta.dirname, "..", "lib", "cic-capture-cli.js");
+const CLI = join(import.meta.dirname, "..", "bin", "feed-capture-cic");
 
 function run(args) {
   return execFileSync("node", [CLI, ...args], {

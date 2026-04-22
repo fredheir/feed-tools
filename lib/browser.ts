@@ -3,7 +3,7 @@
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-const { createBrowserSession: createSession } = require("./browser/session");
+const { createBrowserSession: createSession } = require("./browser/session.js");
 import type {
   BrowserSession,
   FeedBrowserConfig,

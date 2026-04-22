@@ -74,6 +74,63 @@ describe("renderItemCard", () => {
     expect(html).toContain("Open on TikTok");
   });
 
+  test("renders youtube watch items as local video players when available", () => {
+    const html = renderItemCard({
+      id: "youtube:1",
+      source: "youtube",
+      index: 1,
+      url: "https://www.youtube.com/watch?v=ZN4njIQcSR4",
+      author: { handle: "LastWeekTonight" },
+      content: { text: "Prediction Markets" },
+      stats: {},
+      media: [
+        {
+          media_kind: "video",
+          href: "https://www.youtube.com/watch?v=ZN4njIQcSR4",
+          src: "https://i.ytimg.com/vi/ZN4njIQcSR4/hq720.jpg",
+          local_src: "feed-assets/poster.jpg",
+          local_video_src: "feed-assets/video.mp4",
+          alt: "Prediction Markets",
+          source: "youtube",
+        },
+      ],
+      cards: [],
+      thread: {},
+    });
+
+    expect(html).toContain("<video");
+    expect(html).toContain('src="feed-assets/video.mp4"');
+    expect(html).toContain("Open on YouTube");
+    expect(html).toContain('class="media-player"');
+  });
+
+  test("renders youtube items without local video as linked thumbnails", () => {
+    const html = renderItemCard({
+      id: "youtube:short1",
+      source: "youtube",
+      index: 1,
+      url: "https://www.youtube.com/shorts/aIvHf8vsWBM",
+      author: { handle: "Shorts" },
+      content: { text: "Why Vibe Coding Fails - Ilya Sutskever" },
+      stats: {},
+      media: [
+        {
+          media_kind: "video",
+          href: "https://www.youtube.com/shorts/aIvHf8vsWBM",
+          src: "https://i.ytimg.com/vi/aIvHf8vsWBM/oardefault.jpg",
+          alt: "Why Vibe Coding Fails - Ilya Sutskever",
+          source: "youtube",
+        },
+      ],
+      cards: [],
+      thread: {},
+    });
+
+    expect(html).toContain('class="media-thumb"');
+    expect(html).toContain("View on YouTube");
+    expect(html).not.toContain("<iframe");
+  });
+
   test("does not emit an empty stats link when item url is missing", () => {
     const html = renderItemCard({
       id: "instagram:synthetic:1",

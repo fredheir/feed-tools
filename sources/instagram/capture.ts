@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 "use strict";
 
-const { buildBrowserRuntimeScript } = require("../browser-runtime/core");
+const { buildBrowserRuntimeScript } = require("../browser-runtime/core.js");
 const {
   assertAuthenticatedCapture,
   assertFeedUrlAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture");
+} = require("../../lib/source-capture.js");
 import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.js";
 const {
@@ -14,7 +14,7 @@ const {
   isInstagramPermalinkUrl,
   isInstagramProfileUrl,
   isInstagramItemWorthKeeping,
-} = require("./parse");
+} = require("./parse.js");
 import type {
   BrowserSession,
   FeedBrowserConfig,

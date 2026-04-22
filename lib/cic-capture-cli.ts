@@ -20,16 +20,16 @@
  */
 
 const fs = require("node:fs");
-const { requireArgValue } = require("./cli-args");
+const { requireArgValue } = require("./cli-args.js");
 const {
   loadOptionalConfig,
   getCaptureDefaults,
   resolveCanonicalSaveDir,
-} = require("./config");
-const { getSourceConfig, listCicSources } = require("./cic/source-config");
-const { getExtractionScript, isCicSupported } = require("./cic/extract");
-const { ingestDocument } = require("./cic/ingest");
-const { hasNewUnclassifiedItems } = require("./source-capture");
+} = require("./config.js");
+const { getSourceConfig, listCicSources } = require("./cic/source-config.js");
+const { getExtractionScript, isCicSupported } = require("./cic/extract.js");
+const { ingestDocument } = require("./cic/ingest.js");
+const { hasNewUnclassifiedItems } = require("./source-capture.js");
 
 function usage(): never {
   console.log(`Usage:
