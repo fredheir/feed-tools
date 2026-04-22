@@ -24,6 +24,9 @@ export function getRenderCss(): string {
     .feed-briefing { margin-bottom: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 20px; background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,253,0.98)); box-shadow: var(--shadow); }
     .briefing-label { margin-bottom: 6px; color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
     .feed-briefing p { margin: 0; color: #25313d; font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
+    .dev-banner { margin-bottom: 14px; padding: 12px 14px; border: 1px dashed rgba(15, 122, 229, 0.28); border-radius: 16px; background: rgba(233, 242, 255, 0.5); }
+    .dev-banner-label { margin-bottom: 6px; color: #0f5eb0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dev-banner-grid { display: flex; gap: 10px 14px; flex-wrap: wrap; color: #35506c; font-size: 12px; line-height: 1.35; }
     .feed { display: grid; gap: 0; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; background: var(--panel-strong); box-shadow: var(--shadow); }
     .tab-shell { display: grid; gap: 0; margin-bottom: 14px; }
     .tab-toggle, .platform-toggle { display: none; }
@@ -79,7 +82,6 @@ export function getRenderCss(): string {
     .media-thumb { display: block; width: 100%; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: #dfe8eb; text-decoration: none; position: relative; }
     .media-thumb img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; background: #dfe8eb; }
     .media-video { display: block; width: 100%; max-height: min(78vh, 960px); aspect-ratio: 9 / 16; border-radius: 16px; border: 1px solid var(--border); background: #000; object-fit: contain; }
-    .media-embed { min-height: min(78vh, 960px); }
     .media-player.landscape .media-video { aspect-ratio: 16 / 9; }
     .media-player.landscape .media-thumb img { aspect-ratio: 16 / 9; }
     .media-action { position: absolute; right: 10px; bottom: 10px; padding: 7px 10px; border-radius: 8px; background: rgba(15, 20, 25, 0.8); color: white; font-size: 12px; font-weight: 700; }
@@ -90,6 +92,18 @@ export function getRenderCss(): string {
     .action-icon { font-size: 13px; line-height: 1; opacity: 0.85; }
     .action-label { font-size: 12px; font-weight: 700; }
     .action-value { max-width: 180px; font-size: 12px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .refresh-rail { position: fixed; right: 16px; top: 120px; z-index: 60; display: grid; gap: 10px; width: min(164px, calc(100vw - 24px)); padding: 12px; border: 1px solid rgba(221, 229, 236, 0.95); border-radius: 18px; background: rgba(255,255,255,0.92); box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12); backdrop-filter: blur(12px); }
+    .refresh-source-list { display: flex; gap: 8px; flex-wrap: wrap; }
+    .refresh-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .refresh-button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .refresh-button.is-complete { border-color: rgba(18, 148, 80, 0.28); background: rgba(231, 249, 239, 0.95); color: #0e7a41; }
+    .refresh-button.is-busy { border-color: rgba(15, 122, 229, 0.32); background: rgba(233, 242, 255, 0.95); color: #0f5eb0; }
+    .refresh-button.is-warning { border-color: rgba(190, 132, 0, 0.32); background: rgba(255, 246, 216, 0.95); color: #8d5c00; }
+    .refresh-icon { width: 18px; height: 18px; border-radius: 999px; object-fit: cover; }
+    .refresh-status-list { display: grid; gap: 6px; }
+    .refresh-status { display: grid; gap: 1px; padding: 6px 8px; border-radius: 12px; background: rgba(246, 249, 252, 0.95); }
+    .refresh-status-name { font-size: 11px; font-weight: 700; color: var(--text); }
+    .refresh-status-text { font-size: 11px; color: var(--muted); }
     @media (max-width: 720px) {
       .app-shell { padding: 10px 6px 40px; }
       .app-topbar { top: 0; align-items: flex-start; flex-direction: column; padding: 12px 12px 10px; }
@@ -104,6 +118,7 @@ export function getRenderCss(): string {
       .media-video { max-height: 62vh; }
       .action-link { margin-left: 0; width: 100%; }
       .action-value { max-width: none; }
+      .refresh-rail { position: static; width: auto; margin: 12px 6px 0; }
     }
   `;
 }

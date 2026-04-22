@@ -10,6 +10,8 @@ describe("render css", () => {
     expect(css).toContain(".platform-filter-group");
     expect(css).toContain(".app-topbar");
     expect(css).toContain(".actions");
+    expect(css).toContain(".dev-banner");
+    expect(css).toContain(".refresh-rail");
     expect(css).toContain("@media (max-width: 720px)");
   });
 });

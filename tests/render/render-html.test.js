@@ -16,6 +16,38 @@ describe("renderDocument", () => {
     expect(html).toContain("0 sources");
   });
 
+  test("renders dev diagnostics and refresh controls when dev metadata is provided", () => {
+    const html = renderDocument(
+      {
+        schema_version: 1,
+        source: "youtube",
+        captured_at: "2026-04-01T00:00:00Z",
+        items: [],
+      },
+      {
+        devMeta: {
+          generated_at: "2026-04-01T00:00:01Z",
+          input_path: "/tmp/feed.json",
+          output_path: "/tmp/feed.html",
+          captured_at: "2026-04-01T00:00:00Z",
+          local_media_count: 1,
+          remote_media_count: 2,
+          pending_video_count: 3,
+          control_base_url: "http://127.0.0.1:4871",
+          refresh_sources: ["youtube", "x"],
+          artifact_source_label: "dev-workset",
+        },
+      },
+    );
+
+    expect(html).toContain('class="dev-banner"');
+    expect(html).toContain("Pending videos:");
+    expect(html).toContain('class="refresh-rail"');
+    expect(html).toContain("http://127.0.0.1:4871");
+    expect(html).toContain('data-source="youtube"');
+    expect(html).toContain('data-refresh-all="true"');
+  });
+
   test("renders ads unchecked by default and platform filters checked", () => {
     const html = renderDocument({
       schema_version: 1,

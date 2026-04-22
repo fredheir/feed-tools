@@ -129,9 +129,9 @@ describe("renderItemCard", () => {
       thread: {},
     });
 
-    expect(html).toContain("<iframe");
-    expect(html).toContain("youtube-nocookie.com/embed/aIvHf8vsWBM");
-    expect(html).toContain("Open on YouTube");
+    expect(html).toContain('class="media-thumb"');
+    expect(html).toContain("Watch on YouTube");
+    expect(html).not.toContain("<iframe");
   });
 
   test("falls back to remote video sources so autoplay-capable players still render", () => {

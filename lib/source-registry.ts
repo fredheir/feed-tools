@@ -41,6 +41,7 @@ type CaptureOptions = {
   assetsDir?: string;
   saveDir?: string;
   browserOptions?: FeedBrowserConfig;
+  downloadVideos?: boolean;
 };
 
 type BootstrapHandler =

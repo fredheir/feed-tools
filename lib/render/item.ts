@@ -66,25 +66,6 @@ function inferVideoType(value: string | null | undefined): string {
   return "video/mp4";
 }
 
-function extractYouTubeVideoId(
-  value: string | null | undefined,
-): string | null {
-  if (!value) return null;
-  try {
-    const parsed = new URL(value, "https://www.youtube.com");
-    if (parsed.hostname === "youtu.be") {
-      return parsed.pathname.replace(/^\/+/, "").split("/")[0] || null;
-    }
-    const watchId = parsed.searchParams.get("v");
-    if (watchId) return watchId;
-    const shortsMatch = parsed.pathname.match(/^\/shorts\/([^/?#]+)/);
-    if (shortsMatch) return shortsMatch[1] || null;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 function compactUrl(value: string | null | undefined): string {
   if (!value) return "";
   return String(value)
@@ -131,29 +112,6 @@ function renderMedia(items: FeedMedia[], sourceName = ""): string {
             ${openLink}
           </div>
         `;
-      }
-      if (String(sourceName || item.source || "").toLowerCase() === "youtube") {
-        const youtubeId = extractYouTubeVideoId(item.href || item.src || null);
-        if (youtubeId) {
-          const embedUrl = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(youtubeId)}?rel=0&modestbranding=1&playsinline=1`;
-          const openLink = item.href
-            ? `<a class="media-link" href="${escapeHtml(item.href)}" target="_blank" rel="noreferrer">Open on ${escapeHtml(platformLabel)}</a>`
-            : "";
-          return `
-            <div class="media-player landscape media-player-embed">
-              <iframe
-                class="media-video media-embed"
-                src="${escapeHtml(embedUrl)}"
-                title="${escapeHtml(item.alt || "YouTube video")}"
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin"
-                allowfullscreen
-              ></iframe>
-              ${openLink}
-            </div>
-          `;
-        }
       }
       const source = item.local_src || item.src;
       if (!source) {

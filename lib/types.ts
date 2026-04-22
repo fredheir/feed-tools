@@ -143,6 +143,7 @@ export interface SourceCaptureConfig {
   default_limit?: number;
   assets_dir?: string;
   save_dir?: string;
+  download_videos?: boolean;
   browser: FeedBrowserConfig;
 }
 
@@ -150,6 +151,7 @@ export interface RawSourceCaptureConfig {
   default_limit?: number;
   assets_dir?: string;
   save_dir?: string;
+  download_videos?: boolean;
   browser?: RawFeedBrowserConfig;
 }
 
@@ -202,6 +204,19 @@ export interface FeedConfig {
   summary: {
     notes?: string;
   };
+}
+
+export interface RenderArtifactMeta {
+  generated_at: string;
+  input_path: string;
+  output_path: string;
+  captured_at: string | null;
+  local_media_count: number;
+  remote_media_count: number;
+  pending_video_count: number;
+  control_base_url?: string;
+  refresh_sources?: FeedSourceName[];
+  artifact_source_label?: string;
 }
 
 export interface RawUserPreferences {

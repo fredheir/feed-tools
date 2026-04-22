@@ -4,7 +4,10 @@ import path from "node:path";
 import crypto from "node:crypto";
 import childProcess from "node:child_process";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { downloadDocumentAssets } from "../../lib/assets.js";
+import {
+  downloadDocumentAssets,
+  downloadMissingVideoAssets,
+} from "../../lib/assets.js";
 
 const tempDirs = [];
 const originalFetch = global.fetch;
@@ -363,6 +366,116 @@ describe("downloadDocumentAssets", () => {
       downloadedDocument.items[0].media[0].local_video_src.endsWith(".mp4"),
     ).toBe(true);
     expect(downloadedDocument.items[0].media[0].local_src).toContain(assetsDir);
+  });
+
+  test("can skip foreground video downloads while still materializing images", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    prependFakeBin(["yt-dlp"]);
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get(name) {
+          return name === "content-type" ? "image/jpeg" : null;
+        },
+      },
+      async arrayBuffer() {
+        return Uint8Array.from([7, 8, 9]).buffer;
+      },
+    }));
+    const execSpy = vi.spyOn(childProcess, "execFileSync");
+
+    const document = {
+      items: [
+        {
+          index: 9,
+          source: "youtube",
+          url: "https://www.youtube.com/watch?v=demo",
+          author: {},
+          media: [
+            {
+              src: "https://example.com/cover.jpg",
+              href: "https://www.youtube.com/watch?v=demo",
+              media_kind: "video",
+            },
+          ],
+          cards: [],
+        },
+      ],
+    };
+
+    const downloadedDocument = await downloadDocumentAssets(
+      document,
+      assetsDir,
+      {
+        downloadVideos: false,
+      },
+    );
+
+    expect(downloadedDocument.items[0].media[0].local_src).toContain(assetsDir);
+    expect(
+      downloadedDocument.items[0].media[0].local_video_src,
+    ).toBeUndefined();
+    expect(execSpy).not.toHaveBeenCalled();
+  });
+
+  test("enriches missing video assets without redownloading images", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    prependFakeBin(["yt-dlp", "ffprobe", "ffmpeg"]);
+    const localImage = path.join(assetsDir, "media-1-1-existing.jpg");
+    fs.writeFileSync(localImage, Uint8Array.from([1, 2, 3]));
+    const downloadedVideo = hashedAssetPath(
+      assetsDir,
+      "video-1",
+      "https://www.youtube.com/watch?v=demo",
+    );
+    fs.writeFileSync(downloadedVideo, Uint8Array.from([4, 5, 6]));
+    global.fetch = vi.fn(async () => {
+      throw new Error("image download should not run");
+    });
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(
+      (command, args) => {
+        const joined = [command, ...(args || [])].join(" ");
+        if (joined.includes("after_move:filepath")) {
+          return `${downloadedVideo}\n`;
+        }
+        if (joined.includes("-show_entries")) {
+          return JSON.stringify({ streams: [{ codec_name: "h264" }] });
+        }
+        return "";
+      },
+    );
+
+    const document = {
+      items: [
+        {
+          index: 1,
+          source: "youtube",
+          url: "https://www.youtube.com/watch?v=demo",
+          author: {},
+          media: [
+            {
+              src: "https://example.com/cover.jpg",
+              local_src: localImage,
+              href: "https://www.youtube.com/watch?v=demo",
+              media_kind: "video",
+            },
+          ],
+          cards: [],
+        },
+      ],
+    };
+
+    const enrichedDocument = await downloadMissingVideoAssets(
+      document,
+      assetsDir,
+    );
+
+    expect(enrichedDocument.items[0].media[0].local_src).toBe(localImage);
+    expect(enrichedDocument.items[0].media[0].local_video_src).toBe(
+      downloadedVideo,
+    );
   });
 
   test("fails when video probe cannot establish browser-playable output", async () => {

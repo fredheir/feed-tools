@@ -58,6 +58,7 @@ function normalizeCaptureConfig(
       typeof value.default_limit === "number" ? value.default_limit : undefined,
     assets_dir: toOptionalString(value.assets_dir) ?? undefined,
     save_dir: toOptionalString(value.save_dir) ?? undefined,
+    download_videos: toOptionalBoolean(value.download_videos),
     browser: normalizeBrowserConfig(value.browser),
   };
 }

@@ -157,7 +157,7 @@ describe("feed-render", () => {
     );
 
     const html = fs.readFileSync(outputPath, "utf8");
-    expect(html).toContain("youtube-nocookie.com/embed/demo");
+    expect(html).toContain('src="https://example.com/thumb.jpg"');
     expect(html).not.toContain('src="var/missing-thumb.jpg"');
     expect(html).toContain('src="https://example.com/profile.jpg"');
   });

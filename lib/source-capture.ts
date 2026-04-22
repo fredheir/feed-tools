@@ -24,6 +24,7 @@ interface PersistOptions {
   sourceName: string;
   assetsDir: string;
   saveDir: string;
+  downloadVideos?: boolean;
 }
 
 interface CaptureAccessContext {
@@ -142,12 +143,14 @@ function assertStandardizedDocument(
 
 async function persistCapturedDocument(
   document: FeedDocument,
-  { sourceName, assetsDir, saveDir }: PersistOptions,
+  { sourceName, assetsDir, saveDir, downloadVideos = true }: PersistOptions,
 ): Promise<FeedDocument> {
   assertStandardizedDocument(document, sourceName);
   let normalized = document;
   if (assetsDir) {
-    normalized = await downloadDocumentAssets(normalized, assetsDir);
+    normalized = await downloadDocumentAssets(normalized, assetsDir, {
+      downloadVideos,
+    });
   }
 
   const paths = getSourceStoragePaths(
@@ -194,6 +197,7 @@ async function runSourceCapture(
     assetsDir?: string;
     saveDir?: string;
     browserOptions?: Record<string, unknown>;
+    downloadVideos?: boolean;
   } = {},
 ): Promise<FeedDocument> {
   const {
@@ -201,6 +205,7 @@ async function runSourceCapture(
     assetsDir = "",
     saveDir = DEFAULT_SAVE_DIR,
     browserOptions = {},
+    downloadVideos = true,
   } = options;
   const normalizedBrowserOptions = normalizeBrowserOptions(browserOptions);
   const shouldResetSession =
@@ -221,6 +226,7 @@ async function runSourceCapture(
     sourceName: adapter.name,
     assetsDir,
     saveDir,
+    downloadVideos,
   });
 }
 

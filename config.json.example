@@ -10,6 +10,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
+          "download_videos": true,
           "browser": {
             "cdp": "9222",
             "auto_connect": false,
@@ -26,6 +27,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
+          "download_videos": true,
           "browser": {
             "cdp": "9222",
             "auto_connect": false,
@@ -42,6 +44,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
+          "download_videos": true,
           "browser": {
             "cdp": "9222",
             "auto_connect": false,
@@ -58,6 +61,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
+          "download_videos": true,
           "browser": {
             "cdp": "9222",
             "auto_connect": false,
@@ -74,6 +78,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
+          "download_videos": true,
           "browser": {
             "cdp": "9222",
             "auto_connect": false,
@@ -90,6 +95,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
+          "download_videos": true,
           "browser": {
             "cdp": "9222",
             "auto_connect": false,
@@ -106,6 +112,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
+          "download_videos": false,
           "browser": {
             "cdp": "9222",
             "auto_connect": false,

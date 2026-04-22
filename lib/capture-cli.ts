@@ -50,6 +50,7 @@ function parseCaptureCliArgs(
   assetsDir: string;
   saveDir: string;
   browserOptions: FeedBrowserConfig;
+  downloadVideos: boolean;
 } {
   const { sourceNames, remainingArgs } = parseSourceNames(argv);
   if (sourceNames.length === 0) {
@@ -69,6 +70,7 @@ function parseCaptureCliArgs(
     primarySource,
   );
   let browserOptions = getCaptureBrowserOptions(config, primarySource);
+  let downloadVideos = defaults.download_videos !== false;
   let args = remainingArgs;
 
   if (args[0] && !args[0].startsWith("--")) {
@@ -142,6 +144,14 @@ function parseCaptureCliArgs(
       browserOptions = { ...browserOptions, autoConnect: false };
       continue;
     }
+    if (arg === "--download-video") {
+      downloadVideos = true;
+      continue;
+    }
+    if (arg === "--no-download-video") {
+      downloadVideos = false;
+      continue;
+    }
     throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -151,6 +161,7 @@ function parseCaptureCliArgs(
     assetsDir,
     saveDir,
     browserOptions,
+    downloadVideos,
   };
 }
 
@@ -168,14 +179,20 @@ if (
   process.argv.length < 3
 ) {
   console.log(
-    "Usage: feed-capture <source>... [limit] [--assets-dir DIR] [--save-dir DIR] [--session NAME] [--state FILE] [--profile DIR] [--browser-arg ARG] [--headed] [--auto-connect|--no-auto-connect]",
+    "Usage: feed-capture <source>... [limit] [--assets-dir DIR] [--save-dir DIR] [--session NAME] [--state FILE] [--profile DIR] [--browser-arg ARG] [--headed] [--auto-connect|--no-auto-connect] [--download-video|--no-download-video]",
   );
   process.exit(0);
 }
 
 const config = loadConfig();
-const { sourceNames, limit, assetsDir, saveDir, browserOptions } =
-  parseCaptureCliArgs(process.argv, config);
+const {
+  sourceNames,
+  limit,
+  assetsDir,
+  saveDir,
+  browserOptions,
+  downloadVideos,
+} = parseCaptureCliArgs(process.argv, config);
 
 (async () => {
   const documents: FeedDocument[] = [];
@@ -195,6 +212,7 @@ const { sourceNames, limit, assetsDir, saveDir, browserOptions } =
       assetsDir: assetsDir || sourceDefaults.assets_dir || DEFAULT_ASSETS_DIR,
       saveDir: sourceSaveDir,
       browserOptions: sourceBrowserOptions,
+      downloadVideos,
     });
     if (hasNewUnclassifiedItems(document, sourceSaveDir)) {
       printCategorizationHint(sourceName);

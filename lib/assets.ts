@@ -378,13 +378,8 @@ async function download(
   return target;
 }
 
-async function downloadDocumentAssets(
-  document: FeedDocument,
-  assetsDir: string,
-): Promise<FeedDocument> {
-  fs.mkdirSync(assetsDir, { recursive: true });
-  const existingFiles = fs.readdirSync(assetsDir);
-  const clonedDocument: FeedDocument = {
+function cloneDocument(document: FeedDocument): FeedDocument {
+  return {
     ...document,
     items: document.items.map((item) => ({
       ...item,
@@ -403,9 +398,15 @@ async function downloadDocumentAssets(
         : [],
     })),
   };
+}
 
+async function downloadImageAssets(
+  document: FeedDocument,
+  assetsDir: string,
+  existingFiles: string[],
+): Promise<void> {
   const jobs: Promise<void>[] = [];
-  for (const item of clonedDocument.items) {
+  for (const item of document.items) {
     if (item.author?.profile_image_url) {
       jobs.push(
         download(
@@ -423,68 +424,110 @@ async function downloadDocumentAssets(
         }),
       );
     }
+
     const mediaItems = Array.isArray(item.media) ? item.media : [];
     for (const [index, media] of mediaItems.entries()) {
-      if (media?.media_kind === "video") {
-        jobs.push(
-          Promise.resolve()
-            .then(() =>
-              downloadMediaVideo(item, media, assetsDir, existingFiles),
-            )
-            .then((local) => {
-              if (!local) {
-                throw new Error(
-                  `Failed to materialize video asset for item ${item.index}`,
-                );
-              }
-              media.local_video_src = local;
-            }),
-        );
-      }
-      if (media.src) {
-        jobs.push(
-          download(
-            media.src,
-            `media-${item.index}-${index + 1}`,
-            assetsDir,
-            existingFiles,
-          ).then((local) => {
-            if (!local) {
-              throw new Error(
-                `Failed to materialize media asset for item ${item.index}`,
-              );
-            }
-            media.local_src = local;
-          }),
-        );
-      }
+      if (!media.src) continue;
+      jobs.push(
+        download(
+          media.src,
+          `media-${item.index}-${index + 1}`,
+          assetsDir,
+          existingFiles,
+        ).then((local) => {
+          if (!local) {
+            throw new Error(
+              `Failed to materialize media asset for item ${item.index}`,
+            );
+          }
+          media.local_src = local;
+        }),
+      );
     }
+
     const cards = Array.isArray(item.cards) ? item.cards : [];
     for (const [index, card] of cards.entries()) {
-      if (card.image_url) {
-        jobs.push(
-          download(
-            card.image_url,
-            `card-${item.index}-${index + 1}`,
-            assetsDir,
-            existingFiles,
-          ).then((local) => {
-            if (!local) {
-              throw new Error(
-                `Failed to materialize card image for item ${item.index}`,
-              );
-            }
-            card.image_local = local;
-          }),
-        );
-      }
+      if (!card.image_url) continue;
+      jobs.push(
+        download(
+          card.image_url,
+          `card-${item.index}-${index + 1}`,
+          assetsDir,
+          existingFiles,
+        ).then((local) => {
+          if (!local) {
+            throw new Error(
+              `Failed to materialize card image for item ${item.index}`,
+            );
+          }
+          card.image_local = local;
+        }),
+      );
     }
   }
   await Promise.all(jobs);
+}
 
+async function downloadVideoAssets(
+  document: FeedDocument,
+  assetsDir: string,
+  existingFiles: string[],
+  options: { missingOnly?: boolean } = {},
+): Promise<void> {
+  const { missingOnly = false } = options;
+  const jobs: Promise<void>[] = [];
+  for (const item of document.items) {
+    const mediaItems = Array.isArray(item.media) ? item.media : [];
+    for (const media of mediaItems) {
+      if (media?.media_kind !== "video") continue;
+      if (missingOnly && media.local_video_src) continue;
+      jobs.push(
+        Promise.resolve()
+          .then(() => downloadMediaVideo(item, media, assetsDir, existingFiles))
+          .then((local) => {
+            if (!local) {
+              throw new Error(
+                `Failed to materialize video asset for item ${item.index}`,
+              );
+            }
+            media.local_video_src = local;
+          }),
+      );
+    }
+  }
+  await Promise.all(jobs);
+}
+
+async function downloadDocumentAssets(
+  document: FeedDocument,
+  assetsDir: string,
+  options: { downloadVideos?: boolean } = {},
+): Promise<FeedDocument> {
+  const { downloadVideos = true } = options;
+  fs.mkdirSync(assetsDir, { recursive: true });
+  const existingFiles = fs.readdirSync(assetsDir);
+  const clonedDocument = cloneDocument(document);
+  await downloadImageAssets(clonedDocument, assetsDir, existingFiles);
+  if (downloadVideos) {
+    await downloadVideoAssets(clonedDocument, assetsDir, existingFiles);
+  }
+  return clonedDocument;
+}
+
+async function downloadMissingVideoAssets(
+  document: FeedDocument,
+  assetsDir: string,
+): Promise<FeedDocument> {
+  fs.mkdirSync(assetsDir, { recursive: true });
+  const existingFiles = fs.readdirSync(assetsDir);
+  const clonedDocument = cloneDocument(document);
+  await downloadVideoAssets(clonedDocument, assetsDir, existingFiles, {
+    missingOnly: true,
+  });
   return clonedDocument;
 }
 
 module.exports = {
   downloadDocumentAssets,
+  downloadMissingVideoAssets,
 };

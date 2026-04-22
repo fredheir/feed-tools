@@ -11,15 +11,25 @@ const {
   getPlatformIconDataUri,
   getPlatformIconMeta,
 } = require("./platform-icons.js");
-import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
+import type {
+  FeedDocument,
+  FeedItem,
+  FeedTab,
+  FeedSourceName,
+  RenderArtifactMeta,
+} from "../types.js";
 
-function renderDocument(document: FeedDocument): string {
+function renderDocument(
+  document: FeedDocument,
+  options: { devMeta?: RenderArtifactMeta | null } = {},
+): string {
   const rows: FeedItem[] = orderItemsByThread(document);
   const sourceLabel = String(document.source || "feed").toUpperCase();
   const tabs = normalizeMaskTabs(document.mask);
   const tabbed = document.mask?.tabbed === true || tabs.length > 0;
   const summary = document.mask?.summary || "";
   const selectedTabCount = tabs.length || 1;
+  const devMeta = options.devMeta || null;
   const platforms = Array.from(
     new Map(
       rows.map((item) => {
@@ -242,6 +252,104 @@ function renderDocument(document: FeedDocument): string {
       });
     })();
   `;
+  const devBanner = !devMeta
+    ? ""
+    : `
+    <section class="dev-banner">
+      <div class="dev-banner-label">Dev Artifact</div>
+      <div class="dev-banner-grid">
+        <span><strong>Generated:</strong> ${escapeHtml(devMeta.generated_at)}</span>
+        <span><strong>Captured:</strong> ${escapeHtml(devMeta.captured_at || "unknown")}</span>
+        <span><strong>Source:</strong> ${escapeHtml(devMeta.artifact_source_label || devMeta.input_path)}</span>
+        <span><strong>Local media:</strong> ${escapeHtml(devMeta.local_media_count)}</span>
+        <span><strong>Remote media:</strong> ${escapeHtml(devMeta.remote_media_count)}</span>
+        <span><strong>Pending videos:</strong> ${escapeHtml(devMeta.pending_video_count)}</span>
+      </div>
+    </section>
+  `;
+  const refreshRail =
+    !devMeta?.control_base_url || !Array.isArray(devMeta.refresh_sources)
+      ? ""
+      : `
+    <aside class="refresh-rail" data-control-base-url="${escapeHtml(devMeta.control_base_url)}">
+      <button class="refresh-button refresh-all" type="button" data-refresh-all="true">All</button>
+      <div class="refresh-source-list">
+        ${devMeta.refresh_sources
+          .map((source: FeedSourceName) => {
+            const meta = getPlatformIconMeta(source);
+            const icon = getPlatformIconDataUri(source);
+            return `<button class="refresh-button refresh-source" type="button" data-source="${escapeHtml(source)}" title="Refresh ${escapeHtml(meta.label)}"><img class="refresh-icon" src="${escapeHtml(icon)}" alt="${escapeHtml(meta.label)}" loading="lazy" /></button>`;
+          })
+          .join("")}
+      </div>
+      <div class="refresh-status-list"></div>
+    </aside>
+  `;
+  const devScript =
+    !devMeta?.control_base_url || !Array.isArray(devMeta.refresh_sources)
+      ? ""
+      : `
+    (() => {
+      const rail = document.querySelector(".refresh-rail");
+      if (!rail) return;
+      const baseUrl = rail.getAttribute("data-control-base-url");
+      if (!baseUrl) return;
+      const statusList = rail.querySelector(".refresh-status-list");
+      const sourceButtons = Array.from(rail.querySelectorAll("[data-source]"));
+      const allButton = rail.querySelector("[data-refresh-all]");
+
+      async function post(path) {
+        const response = await fetch(baseUrl + path, { method: "POST" });
+        if (!response.ok) throw new Error("refresh request failed");
+      }
+
+      function renderStatus(payload) {
+        const states = payload?.sources || [];
+        if (statusList) {
+          statusList.innerHTML = states
+            .map((entry) => \`<div class="refresh-status refresh-status-\${entry.status || "idle"}"><span class="refresh-status-name">\${entry.label || entry.source}</span><span class="refresh-status-text">\${entry.message || entry.status || "idle"}</span></div>\`)
+            .join("");
+        }
+        const busy = states.some((entry) =>
+          ["queued", "capturing", "rendering", "downloading_video"].includes(entry.status),
+        );
+        for (const button of sourceButtons) {
+          const source = button.getAttribute("data-source");
+          const entry = states.find((state) => state.source === source);
+          button.disabled = busy && (!entry || entry.status !== "error");
+          button.classList.toggle("is-complete", entry?.status === "done");
+          button.classList.toggle("is-busy", ["queued", "capturing", "rendering", "downloading_video"].includes(entry?.status || ""));
+          button.classList.toggle("is-warning", entry?.status === "needs_classification");
+        }
+        if (allButton) {
+          allButton.disabled = busy;
+        }
+      }
+
+      async function refreshStatus() {
+        const response = await fetch(baseUrl + "/api/status");
+        if (!response.ok) return;
+        renderStatus(await response.json());
+      }
+
+      for (const button of sourceButtons) {
+        button.addEventListener("click", async () => {
+          const source = button.getAttribute("data-source");
+          if (!source) return;
+          await post("/api/refresh/" + source);
+          await refreshStatus();
+        });
+      }
+      if (allButton) {
+        allButton.addEventListener("click", async () => {
+          await post("/api/refresh-all");
+          await refreshStatus();
+        });
+      }
+      refreshStatus();
+      setInterval(refreshStatus, 1500);
+    })();
+  `;
 
   return `<!doctype html>
 <html lang="en">
@@ -271,10 +379,13 @@ function renderDocument(document: FeedDocument): string {
       <div class="briefing-label">For you</div>
       <p>${escapeHtml(feedSubtitle)}</p>
     </section>
+    ${devBanner}
     ${tabMarkup || groupedMarkup}
   </main>
+  ${refreshRail}
   <script>
   ${autoplayScript}
+  ${devScript}
   </script>
 </body>
 </html>`;
