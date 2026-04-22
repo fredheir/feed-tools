@@ -5,7 +5,7 @@ import {
   scoreLinkedInItemQuality,
 } from "../sources/linkedin/capture.js";
 import { normalizeItemShape } from "../lib/item-shape.js";
-import { readFixture } from "./helpers/cli-config.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 describe("extractLinkedInSourceItemId", () => {
   test("extracts feed update urns", () => {

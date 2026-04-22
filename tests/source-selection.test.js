@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { persistSourceDocument } from "../lib/sqlite-store.js";
+import { buildRows, loadDocument } from "../lib/selection.js";
 import {
   appendCommaList,
   resolveSelectedSources,
@@ -71,5 +72,73 @@ describe("source selection", () => {
         new Set(["x", "linkedin"]),
       ),
     ).toThrow("Unsupported source selection: invalid");
+  });
+});
+
+describe("selection document loading", () => {
+  test("normalizes mixed document payloads at load time", () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "feed-selection-doc-"),
+    );
+    tempDirs.push(tempDir);
+    const inputPath = path.join(tempDir, "feed.json");
+    fs.writeFileSync(
+      inputPath,
+      JSON.stringify({
+        source: "linkedin",
+        items: [
+          {
+            source_item_id: "urn:li:activity:1",
+            content: {},
+            text: "typed at the boundary",
+          },
+        ],
+      }),
+    );
+
+    const document = loadDocument(inputPath);
+
+    expect(document).toEqual({
+      schema_version: 1,
+      source: "linkedin",
+      captured_at: null,
+      items: [
+        {
+          id: "linkedin:urn:li:activity:1",
+          source: "linkedin",
+          source_item_id: "urn:li:activity:1",
+          index: 1,
+          url: null,
+          author: {
+            handle: null,
+            display_name: null,
+            profile_image_url: null,
+            profile_image_local: null,
+          },
+          content: {
+            text: "typed at the boundary",
+          },
+          stats: {
+            reply: null,
+            share: null,
+            like: null,
+            view: null,
+          },
+          media: [],
+          cards: [],
+          thread: {
+            has_thread_line: false,
+            thread_line_height: null,
+            thread_line_x: null,
+            child_candidate_index: null,
+            child_candidate_handle: null,
+            child_candidate_url: null,
+            relationship_confidence: null,
+          },
+          embedded_links: [],
+        },
+      ],
+    });
+    expect(buildRows(document)).toEqual([{ row: 1, item: document.items[0] }]);
   });
 });

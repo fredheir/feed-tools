@@ -7,10 +7,12 @@ import {
   assertFeedPageAccessible,
   assertFeedUrlAccessible,
   CaptureAccessError,
+  normalizeDocument,
+  persistCapturedDocument,
   runSourceCapture,
 } from "../lib/source-capture.js";
 import { exportDocumentsFromDb, getDatabasePath } from "../lib/sqlite-store.js";
-import { readFixture, repoRoot } from "./helpers/cli-config.js";
+import { readFixture, repoRoot } from "./helpers/cli-config.mts";
 
 const tempDirs = [];
 
@@ -217,5 +219,40 @@ describe("runSourceCapture", () => {
         },
       ),
     ).toThrow(CaptureAccessError);
+  });
+
+  test("rejects a document whose declared source does not match the capture boundary", () => {
+    expect(() =>
+      normalizeDocument(
+        {
+          schema_version: 1,
+          source: "linkedin",
+          captured_at: "2026-04-18T10:00:00Z",
+          items: [],
+        },
+        "x",
+      ),
+    ).toThrow(/document source must match source "x"/);
+  });
+
+  test("rejects persistence of documents that were not standardized at the boundary", async () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-tools-test-"));
+    tempDirs.push(saveDir);
+
+    await expect(
+      persistCapturedDocument(
+        {
+          schema_version: 1,
+          source: "x",
+          captured_at: null,
+          items: [],
+        },
+        {
+          sourceName: "x",
+          assetsDir: "",
+          saveDir,
+        },
+      ),
+    ).rejects.toThrow(/captured_at must be a non-empty string/);
   });
 });

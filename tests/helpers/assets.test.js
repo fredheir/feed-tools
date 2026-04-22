@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import crypto from "node:crypto";
 import childProcess from "node:child_process";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { downloadDocumentAssets } from "../../lib/assets.js";
@@ -17,6 +18,16 @@ function prependFakeBin(commands) {
     fs.writeFileSync(path.join(binDir, command), "");
   }
   process.env.PATH = `${binDir}${path.delimiter}${originalPath}`;
+}
+
+function limitPathToFirstEntry() {
+  process.env.PATH =
+    String(process.env.PATH || "").split(path.delimiter)[0] || "";
+}
+
+function hashedAssetPath(assetsDir, prefix, url, ext = "mp4") {
+  const hash = crypto.createHash("sha1").update(url).digest("hex").slice(0, 12);
+  return path.join(assetsDir, `${prefix}-${hash}.${ext}`);
 }
 
 afterEach(() => {
@@ -59,25 +70,35 @@ describe("downloadDocumentAssets", () => {
       ],
     };
 
-    await downloadDocumentAssets(document, assetsDir);
+    const downloadedDocument = await downloadDocumentAssets(
+      document,
+      assetsDir,
+    );
 
-    expect(document.items[0].author.profile_image_local).toContain(assetsDir);
-    expect(document.items[0].media[0].local_src).toContain(assetsDir);
-    expect(document.items[0].cards[0].image_local).toContain(assetsDir);
-    expect(fs.existsSync(document.items[0].author.profile_image_local)).toBe(
+    expect(downloadedDocument.items[0].author.profile_image_local).toContain(
+      assetsDir,
+    );
+    expect(downloadedDocument.items[0].media[0].local_src).toContain(assetsDir);
+    expect(downloadedDocument.items[0].cards[0].image_local).toContain(
+      assetsDir,
+    );
+    expect(
+      fs.existsSync(downloadedDocument.items[0].author.profile_image_local),
+    ).toBe(true);
+    expect(fs.existsSync(downloadedDocument.items[0].media[0].local_src)).toBe(
       true,
     );
-    expect(fs.existsSync(document.items[0].media[0].local_src)).toBe(true);
-    expect(fs.existsSync(document.items[0].cards[0].image_local)).toBe(true);
+    expect(
+      fs.existsSync(downloadedDocument.items[0].cards[0].image_local),
+    ).toBe(true);
   });
 
-  test("falls back to placeholders or original urls when downloads fail", async () => {
+  test("fails closed when asset downloads do not materialize local files", async () => {
     const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
     tempDirs.push(assetsDir);
     global.fetch = vi.fn(async () => {
       throw new Error("offline");
     });
-    vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const document = {
       items: [
@@ -90,17 +111,50 @@ describe("downloadDocumentAssets", () => {
       ],
     };
 
-    await downloadDocumentAssets(document, assetsDir);
+    await expect(downloadDocumentAssets(document, assetsDir)).rejects.toThrow(
+      /offline/,
+    );
+    expect(document.items[0].author.profile_image_local).toBeUndefined();
+    expect(document.items[0].media[0].local_src).toBeUndefined();
+    expect(document.items[0].cards[0].image_local).toBeUndefined();
+  });
 
-    expect(document.items[0].author.profile_image_local).toMatch(
-      /^data:image\/svg\+xml/,
+  test("does not leak partially materialized local fields on failure", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    global.fetch = vi.fn(async (url) => {
+      if (String(url).includes("profile")) {
+        return {
+          ok: true,
+          headers: {
+            get(name) {
+              return name === "content-type" ? "image/png" : null;
+            },
+          },
+          async arrayBuffer() {
+            return Uint8Array.from([1, 2, 3]).buffer;
+          },
+        };
+      }
+      throw new Error("offline");
+    });
+
+    const document = {
+      items: [
+        {
+          index: 3,
+          author: { profile_image_url: "https://example.com/profile" },
+          media: [{ src: "https://example.com/media.jpg" }],
+          cards: [],
+        },
+      ],
+    };
+
+    await expect(downloadDocumentAssets(document, assetsDir)).rejects.toThrow(
+      /offline/,
     );
-    expect(document.items[0].media[0].local_src).toBe(
-      "https://example.com/media.jpg",
-    );
-    expect(document.items[0].cards[0].image_local).toBe(
-      "https://example.com/card",
-    );
+    expect(document.items[0].author.profile_image_local).toBeUndefined();
+    expect(document.items[0].media[0].local_src).toBeUndefined();
   });
 
   test("downloads local x video assets with yt-dlp when video media is present", async () => {
@@ -126,11 +180,24 @@ describe("downloadDocumentAssets", () => {
       },
     }));
 
-    const downloadedVideo = path.join(assetsDir, "video-7-abcd1234.mp4");
+    const downloadedVideo = hashedAssetPath(
+      assetsDir,
+      "video-7",
+      "https://x.com/example/status/123",
+    );
     fs.writeFileSync(downloadedVideo, Uint8Array.from([1, 2, 3]));
-    const execSpy = vi
-      .spyOn(childProcess, "execFileSync")
-      .mockImplementation(() => `${downloadedVideo}\n`);
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(
+      (command, args) => {
+        const joined = [command, ...(args || [])].join(" ");
+        if (joined.includes("after_move:filepath")) {
+          return `${downloadedVideo}\n`;
+        }
+        if (joined.includes("-show_entries")) {
+          return JSON.stringify({ streams: [{ codec_name: "h264" }] });
+        }
+        return "";
+      },
+    );
 
     const document = {
       items: [
@@ -151,19 +218,18 @@ describe("downloadDocumentAssets", () => {
       ],
     };
 
-    await downloadDocumentAssets(document, assetsDir);
-
-    expect(execSpy).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.arrayContaining([
-        "--cookies-from-browser",
-        `chrome:${path.join(repoRoot, "chrome-profile", "Default")}`,
-      ]),
-      expect.any(Object),
+    const downloadedDocument = await downloadDocumentAssets(
+      document,
+      assetsDir,
     );
-    expect(document.items[0].media[0].local_video_src).toBe(downloadedVideo);
-    expect(document.items[0].media[0].local_src).toContain(assetsDir);
-    expect(fs.existsSync(document.items[0].media[0].local_src)).toBe(true);
+
+    expect(downloadedDocument.items[0].media[0].local_video_src).toBe(
+      downloadedVideo,
+    );
+    expect(downloadedDocument.items[0].media[0].local_src).toContain(assetsDir);
+    expect(fs.existsSync(downloadedDocument.items[0].media[0].local_src)).toBe(
+      true,
+    );
   });
 
   test("transcodes unsupported downloaded video codecs for browser playback", async () => {
@@ -182,10 +248,14 @@ describe("downloadDocumentAssets", () => {
       },
     }));
 
-    const downloadedVideo = path.join(assetsDir, "video-3-abcd1234.mp4");
+    const downloadedVideo = hashedAssetPath(
+      assetsDir,
+      "video-3",
+      "https://www.tiktok.com/@demo/video/123",
+    );
     const transcodedVideo = path.join(
       assetsDir,
-      "video-3-abcd1234-browser.mp4",
+      `${path.parse(downloadedVideo).name}-browser.mp4`,
     );
     fs.writeFileSync(downloadedVideo, Uint8Array.from([1, 2, 3]));
 
@@ -225,16 +295,21 @@ describe("downloadDocumentAssets", () => {
       ],
     };
 
-    await downloadDocumentAssets(document, assetsDir);
+    const downloadedDocument = await downloadDocumentAssets(
+      document,
+      assetsDir,
+    );
 
-    expect(document.items[0].media[0].local_video_src).toBe(transcodedVideo);
+    expect(downloadedDocument.items[0].media[0].local_video_src).toBe(
+      transcodedVideo,
+    );
     expect(fs.existsSync(transcodedVideo)).toBe(true);
   });
 
   test("downloads direct video sources when media provides a video_src", async () => {
     const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
     tempDirs.push(assetsDir);
-    prependFakeBin(["yt-dlp"]);
+    prependFakeBin(["yt-dlp", "ffprobe", "ffmpeg"]);
     global.fetch = vi.fn(async (url) => ({
       ok: true,
       headers: {
@@ -247,21 +322,87 @@ describe("downloadDocumentAssets", () => {
         return Uint8Array.from([7, 8, 9]).buffer;
       },
     }));
-    vi.spyOn(childProcess, "execFileSync").mockImplementation(() => {
-      throw new Error("yt-dlp disabled in tests");
-    });
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(
+      (command, args) => {
+        const joined = [command, ...(args || [])].join(" ");
+        if (joined.includes("-show_entries")) {
+          return JSON.stringify({ streams: [{ codec_name: "h264" }] });
+        }
+        throw new Error("yt-dlp disabled in tests");
+      },
+    );
 
     const document = {
       items: [
         {
           index: 2,
           source: "tiktok",
-          url: "https://www.tiktok.com/@demo/video/123",
+          url: null,
           author: {},
           media: [
             {
               src: "https://example.com/cover.jpg",
               video_src: "https://example.com/video.mp4",
+              media_kind: "video",
+            },
+          ],
+          cards: [],
+        },
+      ],
+    };
+
+    const downloadedDocument = await downloadDocumentAssets(
+      document,
+      assetsDir,
+    );
+
+    expect(downloadedDocument.items[0].media[0].local_video_src).toContain(
+      assetsDir,
+    );
+    expect(
+      downloadedDocument.items[0].media[0].local_video_src.endsWith(".mp4"),
+    ).toBe(true);
+    expect(downloadedDocument.items[0].media[0].local_src).toContain(assetsDir);
+  });
+
+  test("fails when video probe cannot establish browser-playable output", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    prependFakeBin(["yt-dlp"]);
+    limitPathToFirstEntry();
+
+    const downloadedVideo = hashedAssetPath(
+      assetsDir,
+      "video-5",
+      "https://www.tiktok.com/@demo/video/123",
+    );
+    fs.writeFileSync(downloadedVideo, Uint8Array.from([1, 2, 3]));
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(() => {
+      return `${downloadedVideo}\n`;
+    });
+
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get(name) {
+          return name === "content-type" ? "image/jpeg" : null;
+        },
+      },
+      async arrayBuffer() {
+        return Uint8Array.from([4, 5, 6]).buffer;
+      },
+    }));
+
+    const document = {
+      items: [
+        {
+          index: 5,
+          source: "tiktok",
+          url: "https://www.tiktok.com/@demo/video/123",
+          author: {},
+          media: [
+            {
+              src: "https://example.com/cover.jpg",
               href: "https://www.tiktok.com/@demo/video/123",
               media_kind: "video",
             },
@@ -271,12 +412,8 @@ describe("downloadDocumentAssets", () => {
       ],
     };
 
-    await downloadDocumentAssets(document, assetsDir);
-
-    expect(document.items[0].media[0].local_video_src).toContain(assetsDir);
-    expect(document.items[0].media[0].local_video_src.endsWith(".mp4")).toBe(
-      true,
+    await expect(downloadDocumentAssets(document, assetsDir)).rejects.toThrow(
+      /ffprobe is unavailable/,
     );
-    expect(document.items[0].media[0].local_src).toContain(assetsDir);
   });
 });

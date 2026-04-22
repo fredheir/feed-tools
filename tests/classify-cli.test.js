@@ -11,7 +11,7 @@ import {
   repoRoot,
   withConfigEnv,
   writeTestConfig,
-} from "./helpers/cli-config.js";
+} from "./helpers/cli-config.mts";
 
 const tempDirs = [];
 

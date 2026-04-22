@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { prepareFeed } from "../sources/x/capture.js";
-import { readFixture } from "./helpers/cli-config.js";
+import {
+  normalizeXExtractionDocument,
+  prepareFeed,
+} from "../sources/x/capture.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 function createBrowserStub(existingFeedState) {
   const calls = [];
@@ -85,5 +88,68 @@ describe("x fixture contract", () => {
     expect(html).toContain("View post analytics");
     expect(html).toContain("fixture_reposter");
     expect(html).toContain("@fixture_author");
+  });
+});
+
+describe("x extraction normalization", () => {
+  test("normalizes browser extraction output before it enters shared internals", () => {
+    const document = normalizeXExtractionDocument({
+      captured_at: "2026-04-22T10:00:00Z",
+      items: [
+        {
+          source_item_id: "123456789",
+          url: "https://x.com/example/status/123456789",
+          content: { text: "Hello from X" },
+          author: { handle: "@example", profile_image_url: "https://img" },
+          stats: { like: "5" },
+          capture_incomplete: true,
+        },
+      ],
+      meta: {
+        article_count: 3,
+        hydrated_count: 1,
+        incomplete_count: 2,
+      },
+    });
+
+    expect(document).toMatchObject({
+      source: "x",
+      captured_at: "2026-04-22T10:00:00Z",
+      items: [
+        {
+          id: "x:123456789",
+          source: "x",
+          source_item_id: "123456789",
+          index: 1,
+          content: { text: "Hello from X" },
+          stats: { like: "5" },
+        },
+      ],
+      meta: {
+        article_count: 3,
+        hydrated_count: 1,
+        incomplete_count: 2,
+      },
+    });
+    expect(document.items[0]).not.toHaveProperty("capture_incomplete");
+  });
+
+  test("rejects malformed browser extraction payloads", () => {
+    expect(() => normalizeXExtractionDocument({ items: "bad" })).toThrow(
+      /Invalid x extraction payload/,
+    );
+  });
+
+  test("rejects malformed extraction meta", () => {
+    expect(() =>
+      normalizeXExtractionDocument({
+        items: [],
+        meta: {
+          article_count: "bad",
+          hydrated_count: 1,
+          incomplete_count: 0,
+        },
+      }),
+    ).toThrow(/Invalid x extraction meta/);
   });
 });

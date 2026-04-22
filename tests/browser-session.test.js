@@ -2,6 +2,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, test } from "vitest";
 import {
+  createBrowserSession,
   toBrowserTarget,
   translateMountedPath,
 } from "../lib/browser/session.js";
@@ -48,5 +49,39 @@ describe("toBrowserTarget", () => {
     expect(toBrowserTarget("./var/feed.html")).toBe(
       pathToFileURL(path.resolve("./var/feed.html")).href,
     );
+  });
+});
+
+describe("createBrowserSession", () => {
+  test("keeps parsed mount and tab url fields string-strict", () => {
+    const calls = [];
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: (commandArgs) => {
+          calls.push(commandArgs);
+          if (commandArgs[0] === "tab") {
+            return JSON.stringify({
+              data: {
+                tabs: [
+                  { index: 1, url: 42 },
+                  { index: 2, url: "https://x.com" },
+                ],
+              },
+            });
+          }
+          return JSON.stringify({
+            filesystems: [{ target: 42, source: ["/host"] }],
+          });
+        },
+      },
+      {},
+    );
+
+    expect(session.listTabs()).toEqual([
+      { index: 1 },
+      { index: 2, url: "https://x.com" },
+    ]);
+    expect(calls).toEqual([["tab", "list", "--json"]]);
   });
 });

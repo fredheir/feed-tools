@@ -5,7 +5,7 @@ import {
   repoRoot,
   withConfigEnv,
   writeTestConfig,
-} from "./helpers/cli-config.js";
+} from "./helpers/cli-config.mts";
 
 describe("feed-capture", () => {
   test("prints usage for help", () => {

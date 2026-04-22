@@ -1,16 +1,46 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync, spawnSync } from "node:child_process";
+import {
+  execFileSync,
+  spawnSync,
+  type SpawnSyncReturns,
+} from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-export const repoRoot = path.resolve(import.meta.dirname, "../..");
-const fixturesRoot = path.resolve(import.meta.dirname, "..", "fixtures");
+import type { RawFeedConfig } from "../../lib/types.js";
 
-export function readFixture(...segments) {
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+export const repoRoot = path.resolve(dirname, "../..");
+const fixturesRoot = path.resolve(dirname, "..", "fixtures");
+
+type JsonLike =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonLike[]
+  | { [key: string]: JsonLike };
+
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Array<infer U>
+    ? Array<DeepPartial<U>>
+    : T[K] extends JsonLike | undefined
+      ? T[K]
+      : T[K] extends object
+        ? DeepPartial<T[K]>
+        : T[K];
+};
+
+export function readFixture(...segments: string[]): string {
   return fs.readFileSync(path.join(fixturesRoot, ...segments), "utf8");
 }
 
-export function runCli(scriptPath, args, configPath) {
+export function runCli(
+  scriptPath: string,
+  args: string[],
+  configPath: string,
+): string {
   return execFileSync(process.execPath, [scriptPath, ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -18,7 +48,11 @@ export function runCli(scriptPath, args, configPath) {
   });
 }
 
-export function spawnCli(scriptPath, args, configPath) {
+export function spawnCli(
+  scriptPath: string,
+  args: string[],
+  configPath: string,
+): SpawnSyncReturns<string> {
   return spawnSync(process.execPath, [scriptPath, ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -26,13 +60,18 @@ export function spawnCli(scriptPath, args, configPath) {
   });
 }
 
-export function writeTestConfig(directory, overrides = {}) {
+export function writeTestConfig(
+  _repoDir?: string,
+  overrides: DeepPartial<RawFeedConfig> = {},
+): string {
   const configDir = fs.mkdtempSync(
     path.join(os.tmpdir(), "feed-tools-config-"),
   );
   const configPath = path.join(configDir, "config.json");
-  const { user_preferences: userPreferencesOverrides, ...topLevelOverrides } =
-    overrides;
+  const {
+    user_preferences: userPreferencesOverrides = {},
+    ...topLevelOverrides
+  } = overrides;
   const config = {
     ...topLevelOverrides,
     user_preferences: {
@@ -95,13 +134,13 @@ export function writeTestConfig(directory, overrides = {}) {
       },
       ...userPreferencesOverrides,
     },
-  };
+  } satisfies DeepPartial<RawFeedConfig>;
 
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
   return configPath;
 }
 
-export function withConfigEnv(configPath) {
+export function withConfigEnv(configPath: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
     FEED_TOOLS_CONFIG: configPath,

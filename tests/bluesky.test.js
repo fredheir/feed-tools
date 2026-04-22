@@ -1,11 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { extractBlueskySourceItemId } from "../sources/bluesky/capture.js";
+import {
+  extractBlueskySourceItemId,
+  normalizeBlueskyExtractionDocument,
+} from "../sources/bluesky/capture.js";
 import { renderItemCard } from "../lib/render/item.js";
 import {
   getCaptureHandler,
   isSupportedSource,
 } from "../lib/source-registry.js";
-import { readFixture } from "./helpers/cli-config.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 describe("bluesky support", () => {
   test("extracts stable source ids from bluesky post urls", () => {
@@ -54,5 +57,41 @@ describe("bluesky support", () => {
     expect(html).toContain("/profile/");
     expect(html).toContain("/post/");
     expect(html).toContain("https://cdn.bsky.app/img/FIXTURE.jpg");
+  });
+
+  test("normalizes browser extraction output before merge/dedupe", () => {
+    const document = normalizeBlueskyExtractionDocument({
+      captured_at: "2026-04-22T10:00:00Z",
+      items: [
+        {
+          source_item_id: "alice.bsky.social/post/abc123",
+          url: "https://bsky.app/profile/alice.bsky.social/post/abc123",
+          content: { text: "Hello from Bluesky" },
+          author: { handle: "@alice.bsky.social" },
+          stats: { like: "8" },
+        },
+      ],
+    });
+
+    expect(document).toMatchObject({
+      source: "bluesky",
+      captured_at: "2026-04-22T10:00:00Z",
+      items: [
+        {
+          id: "bluesky:alice.bsky.social/post/abc123",
+          source: "bluesky",
+          source_item_id: "alice.bsky.social/post/abc123",
+          index: 1,
+          content: { text: "Hello from Bluesky" },
+          stats: { like: "8" },
+        },
+      ],
+    });
+  });
+
+  test("rejects malformed browser extraction payloads", () => {
+    expect(() => normalizeBlueskyExtractionDocument({ items: "bad" })).toThrow(
+      /Invalid bluesky extraction payload/,
+    );
   });
 });

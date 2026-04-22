@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import {
   exportDocumentsFromDb,
   getDatabasePath,
+  loadCurrentDocumentFromDb,
   loadAllocationFromDb,
   persistSourceDocument,
   saveAllocationToDb,
@@ -140,6 +141,73 @@ describe("sqlite store", () => {
           updated_at: "2026-04-03T12:00:00Z",
         },
       },
+    });
+  });
+
+  test("normalizes stored documents at the sqlite boundary", () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-tools-db-"));
+    tempDirs.push(saveDir);
+
+    persistSourceDocument(saveDir, {
+      sourceName: "x",
+      document: {
+        items: [
+          {
+            source_item_id: "post-1",
+            text: "boundary text",
+            url: "https://x.com/acme/status/1?utm_source=test",
+            author: { handle: "acme" },
+          },
+        ],
+      },
+    });
+
+    const stored = loadCurrentDocumentFromDb(saveDir, "x");
+
+    expect(stored).not.toBeNull();
+    expect(stored?.captured_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(stored).toMatchObject({
+      schema_version: 1,
+      source: "x",
+      items: [
+        {
+          id: "x:post-1",
+          source: "x",
+          source_item_id: "post-1",
+          index: 1,
+          url: "https://x.com/acme/status/1",
+          author: {
+            handle: "acme",
+            display_name: null,
+            profile_image_url: null,
+            profile_image_local: null,
+          },
+          content: {
+            text: "boundary text",
+          },
+          stats: {
+            reply: null,
+            share: null,
+            like: null,
+            view: null,
+          },
+          media: [],
+          cards: [],
+          thread: {
+            has_thread_line: false,
+            thread_line_height: null,
+            thread_line_x: null,
+            child_candidate_index: null,
+            child_candidate_handle: null,
+            child_candidate_url: null,
+            relationship_confidence: null,
+          },
+          embedded_links: [],
+          first_seen_at: null,
+          last_seen_at: null,
+          capture_count: null,
+        },
+      ],
     });
   });
 });

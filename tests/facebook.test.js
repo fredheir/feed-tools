@@ -5,7 +5,7 @@ import {
   scoreFacebookItemQuality,
 } from "../sources/facebook/capture.js";
 import { canonicalizeItemUrl } from "../lib/item-shape.js";
-import { readFixture } from "./helpers/cli-config.js";
+import { readFixture } from "./helpers/cli-config.mts";
 
 describe("extractFacebookSourceItemId", () => {
   test("extracts profile post identifiers", () => {

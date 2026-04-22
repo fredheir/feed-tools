@@ -1,15 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
 import { execFileSync } from "node:child_process";
+import { afterEach, describe, expect, test } from "vitest";
+
 import {
   repoRoot,
   withConfigEnv,
   writeTestConfig,
-} from "./helpers/cli-config.js";
+} from "./helpers/cli-config.mts";
 
-const tempDirs = [];
+const tempDirs: string[] = [];
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {

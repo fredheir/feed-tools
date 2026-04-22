@@ -45,8 +45,36 @@ describe("applyMask", () => {
     });
 
     expect(masked.mask.tabs[0].label).toBe("Coding");
+    expect(masked.mask.tabs[0].groups).toEqual([
+      { label: "Coding", item_ids: ["x:2"] },
+    ]);
+    expect(masked.mask.tabs[0]).not.toHaveProperty("item_ids");
     expect(masked.items).toHaveLength(1);
     expect(masked.items[0].id).toBe("x:2");
+  });
+
+  test("normalizes legacy tab-level item_ids at the mask boundary", () => {
+    const doc = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        { id: "x:1", source_item_id: "1", index: 1, url: "a" },
+        { id: "x:2", source_item_id: "2", index: 2, url: "b" },
+      ],
+    };
+
+    const masked = applyMask(doc, {
+      tabs: [{ label: "Coding", item_ids: ["x:2"] }],
+    });
+
+    expect(masked.mask.tabs).toEqual([
+      {
+        label: "Coding",
+        groups: [{ item_ids: ["x:2"] }],
+      },
+    ]);
+    expect(masked.items.map((item) => item.id)).toEqual(["x:2"]);
   });
 
   test("expands direct item selection to include the whole connected thread", () => {
@@ -116,7 +144,7 @@ describe("applyMask", () => {
       tabs: [
         {
           label: "Politics",
-          groups: [{ label: "Politics", item_ids: ["x:1"] }],
+          item_ids: ["x:1"],
         },
       ],
     });
@@ -263,6 +291,65 @@ describe("applyMask", () => {
       "bluesky:1",
       "x:1",
       "facebook:1",
+    ]);
+  });
+
+  test("rejects masks that mix top-level item_ids and tabs", () => {
+    const doc = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [{ id: "x:1", source: "x", index: 1, url: "a", thread: {} }],
+    };
+
+    expect(() =>
+      applyMask(doc, {
+        item_ids: ["x:1"],
+        tabs: [
+          { label: "Coding", groups: [{ label: "Coding", item_ids: ["x:1"] }] },
+        ],
+      }),
+    ).toThrow("FeedMask cannot contain both item_ids and tabs");
+  });
+
+  test("expands grouped selections using index-based thread links in the stored order", () => {
+    const doc = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "x:reply",
+          source: "x",
+          index: 2,
+          url: "https://x.com/a/status/2",
+          thread: {},
+        },
+        {
+          id: "x:root",
+          source: "x",
+          index: 1,
+          url: "https://x.com/a/status/1",
+          thread: {
+            child_candidate_index: 2,
+          },
+        },
+      ],
+    };
+
+    const masked = applyMask(doc, {
+      tabs: [
+        {
+          label: "Thread",
+          groups: [{ label: "Thread", item_ids: ["x:reply"] }],
+        },
+      ],
+    });
+
+    expect(masked.items.map((item) => item.id)).toEqual(["x:root", "x:reply"]);
+    expect(masked.mask.tabs[0].groups[0].item_ids).toEqual([
+      "x:root",
+      "x:reply",
     ]);
   });
 });
