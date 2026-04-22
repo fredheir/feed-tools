@@ -13,6 +13,7 @@ describe("source catalog", () => {
       "instagram",
       "linkedin",
       "tiktok",
+      "youtube",
       "x",
     ]);
     expect(listSupportedSources()).toEqual(SUPPORTED_SOURCES);

@@ -181,6 +181,48 @@ function canonicalizeSocialUrl(
   }
 }
 
+function canonicalizeYouTubeUrl(
+  value: string | null | undefined,
+): string | null {
+  const normalized = canonicalizeGenericUrl(value, "https://www.youtube.com");
+  if (!normalized) return null;
+  try {
+    const parsed = new URL(normalized);
+    const isShortHost = parsed.hostname === "youtu.be";
+    if (isShortHost) {
+      const videoId = parsed.pathname.replace(/^\/+/, "").split("/")[0];
+      parsed.hostname = "www.youtube.com";
+      parsed.pathname = "/watch";
+      parsed.search = "";
+      if (videoId) parsed.searchParams.set("v", videoId);
+      parsed.hash = "";
+      return parsed.toString();
+    }
+    parsed.hash = "";
+
+    if (/^\/watch\/?$/.test(parsed.pathname)) {
+      const videoId = parsed.searchParams.get("v");
+      const playlistId = parsed.searchParams.get("list");
+      parsed.pathname = "/watch";
+      parsed.search = "";
+      if (videoId) parsed.searchParams.set("v", videoId);
+      if (!videoId && playlistId) parsed.searchParams.set("list", playlistId);
+      return parsed.toString();
+    }
+
+    const shortsMatch = parsed.pathname.match(/^\/shorts\/([^/?#]+)/);
+    if (shortsMatch) {
+      parsed.pathname = `/shorts/${shortsMatch[1]}`;
+      parsed.search = "";
+      return parsed.toString();
+    }
+
+    return parsed.toString();
+  } catch {
+    return normalized;
+  }
+}
+
 export function canonicalizeItemUrl(
   source: string,
   value: string | null | undefined,
@@ -192,6 +234,7 @@ export function canonicalizeItemUrl(
     return canonicalizeSocialUrl(normalized, "www.instagram.com");
   if (source === "linkedin")
     return canonicalizeSocialUrl(normalized, "www.linkedin.com");
+  if (source === "youtube") return canonicalizeYouTubeUrl(normalized);
   if (source === "x")
     return canonicalizeSocialUrl(normalized, "x.com", {
       alwaysClearSearch: true,

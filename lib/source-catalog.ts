@@ -6,6 +6,7 @@ export const SUPPORTED_SOURCES = Object.freeze([
   "instagram",
   "linkedin",
   "tiktok",
+  "youtube",
   "x",
 ]) satisfies readonly FeedSourceName[];
 

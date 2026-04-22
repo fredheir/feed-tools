@@ -4,6 +4,7 @@ export type FeedSourceName =
   | "instagram"
   | "linkedin"
   | "tiktok"
+  | "youtube"
   | "x";
 
 export type FeedStatValue = string | number | null;
@@ -288,6 +289,14 @@ export type RawFeedMask =
 export interface CategoryAssignment {
   category: string;
   selection: string | string[];
+}
+
+export interface CaptureAdapter {
+  name: FeedSourceName;
+  captureDocument: (options: {
+    limit: number;
+    browserOptions: NormalizedBrowserOptions;
+  }) => Promise<FeedDocument>;
 }
 
 export interface BrowserSession {

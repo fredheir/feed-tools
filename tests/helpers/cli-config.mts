@@ -113,6 +113,15 @@ export function writeTestConfig(
             browser: {},
           },
         },
+        {
+          name: "youtube",
+          enabled: true,
+          capture: {
+            save_dir: "./var/feed-archive",
+            default_limit: 12,
+            browser: {},
+          },
+        },
       ],
       curation: {
         preferred_categories: [
