@@ -30,8 +30,8 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 2. `pnpm install`
 3. Ensure chrome/chromium is installed
 4. Run `./bin/feed-doctor` to choose the capture path:
-   - If `agent-browser` is OK, prefer `capture.browser: {}` or omit the browser block.
    - If a `cdp:<port>` check is OK, set `capture.browser.cdp` to that port.
+   - If CDP is unavailable but `agent-browser` is OK, use `capture.browser: {}` or omit the browser block.
    - If neither is available but the host has Chrome connector MCP tools, use the CiC flow below.
 5. If using CDP, confirm the port exposes Chrome DevTools Protocol with `curl -sf http://127.0.0.1:<port>/json/version`.
 6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`.
@@ -42,37 +42,40 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 ## Setup gotchas
 
 - SSH clone requires a GitHub SSH key; in sandboxed or keyless environments use the HTTPS-with-token method from the Cloning section above.
-- If `corepack enable` fails in a read-only environment, install pnpm with npm into `~/.local` and prepend `~/.local/bin` to `PATH`.
+- If `corepack enable` fails in a read-only environment, install pnpm with npm into the repo-local `.local` directory and prepend `.local/bin` to `PATH`.
 - After `pnpm install`, run `pnpm approve-builds` and approve `agent-browser` if builds are blocked (its interactive).
 - If `pnpm approve-builds` blocks in a non-TTY environment, run `node node_modules/agent-browser/scripts/postinstall.js` directly.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
+- In Cowork sandboxes, run `./bin/feed-signin <source>...` before capture when auth is uncertain; it relaunches workspace Chrome, opens the platform pages, and waits until source-specific auth cookies are visible on disk.
 - Keep `assets_dir`, `save_dir`, and rendered HTML under the repo, not `/tmp`.
 - Open `./var/feed.html` directly in a browser so relative `feed-assets/` paths resolve; do not rely on a file viewer that fails to serve sibling directories.
 - For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
 
 ## Sandbox / ephemeral environment
 
-Home (`~`) is wiped between sessions. Install Chrome and keep the profile in the **persistent workspace folder** (wherever the repo lives):
+Home (`~`) is wiped between sessions. Keep tools, Chrome, and the profile in the **persistent workspace folder** (wherever the repo lives). `./bin/feed-setup-sandbox` installs pnpm, uv, yt-dlp, and Chrome under the repo and writes `source-env.sh`; run `source ./source-env.sh` in later shells.
 
 ```sh
 wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
 dpkg -x /tmp/chrome.deb <WORKSPACE>/chrome-install
 ```
 
-Daemonize with `setsid nohup` — plain `&` dies when the shell exits between tool calls:
+Launch Chrome only for the turn that will use it:
 
 ```sh
-DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
+DISPLAY=:0 <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
   --remote-debugging-port=9222 \
+  --remote-debugging-address=127.0.0.1 \
   --user-data-dir=<WORKSPACE>/chrome-profile \
+  --disable-features=LockProfileCookieDatabase \
   --no-sandbox \
-  > <WORKSPACE>/chrome.log 2>&1 &
+  > <WORKSPACE>/chrome.log 2>&1
 ```
 
 - `DISPLAY=:0` should work without Xvfb in the sandbox environments this project targets.
 - Confirm CDP is up with `curl -sf http://127.0.0.1:9222/json/version`.
-- Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet.
-- Because `--user-data-dir=<WORKSPACE>/chrome-profile` is stored in the persistent workspace, those sign-ins should usually persist for future sessions and be a one-off setup step.
+- In Cowork VMs, Chrome is reaped at turn end even if launched with `setsid nohup`. Do sign-in and capture in the same turn; the profile on disk persists, but the browser process does not.
+- Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet. Prefer `./bin/feed-signin <source>...`; it keeps the turn open, prints per-source auth-cookie status, and closes Chrome once auth cookies are detected.
 - Then set `"cdp": "9222"` in each source's `capture.browser` block.
 - When `capture.browser.cdp` is set, omit `headed` and `auto_connect`.
 
@@ -117,6 +120,8 @@ feed-capture <source>... [limit] [--assets-dir DIR] [--save-dir DIR]
              [--session NAME] [--state FILE] [--profile DIR]
              [--browser-arg ARG] [--headed]
              [--auto-connect|--no-auto-connect]
+
+feed-signin  <source>... [--cdp PORT] [--interval SECONDS] [--timeout MINUTES]
 
 feed-curate  [output-json] [--sources name1,name2,...] [--save-dir DIR]
              [--limit N] [--exclude-seen] [--exclude-completed]

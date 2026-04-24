@@ -2,26 +2,30 @@ import { describe, expect, test } from "vitest";
 
 import {
   applyBrowserConfigToPayload,
+  detectSandboxSignals,
+  isSshPrivateKeyFilename,
+  isSshRemote,
   recommendedBrowserConfig,
+  redactRemoteUrl,
 } from "../lib/doctor-cli.js";
 
 describe("feed-doctor config helpers", () => {
-  test("prefers agent-browser by writing empty browser config", () => {
+  test("prefers verified CDP over agent-browser when both are available", () => {
     expect(
       recommendedBrowserConfig([
         { name: "agent-browser", ok: true, detail: "agent-browser 0.23.4" },
         { name: "cdp:9222", ok: true, detail: "Chrome" },
       ]),
-    ).toEqual({});
+    ).toEqual({ cdp: "9222" });
   });
 
-  test("falls back to verified CDP when agent-browser is unavailable", () => {
+  test("falls back to agent-browser when CDP is unavailable", () => {
     expect(
       recommendedBrowserConfig([
-        { name: "agent-browser", ok: false, detail: "missing" },
-        { name: "cdp:9223", ok: true, detail: "Chrome" },
+        { name: "agent-browser", ok: true, detail: "agent-browser 0.23.4" },
+        { name: "cdp:9223", ok: false, detail: "missing" },
       ]),
-    ).toEqual({ cdp: "9223" });
+    ).toEqual({});
   });
 
   test("updates every source browser block while preserving preferences", () => {
@@ -78,5 +82,43 @@ describe("feed-doctor config helpers", () => {
     expect(config.user_preferences.curation).toEqual({
       fallback_category: "Other",
     });
+  });
+
+  test("detects explicit sandbox environment markers", () => {
+    expect(
+      detectSandboxSignals({
+        CODEX_SANDBOX: "1",
+        HOME: process.env.HOME,
+      }).some((signal) => signal.name === "CODEX_SANDBOX"),
+    ).toBe(true);
+  });
+
+  test("redacts credentialed HTTPS remotes before reporting them", () => {
+    expect(
+      redactRemoteUrl("https://oauth2:ghp_secret@example.com/org/repo.git"),
+    ).toBe("https://redacted:redacted@example.com/org/repo.git");
+    expect(redactRemoteUrl("ssh://git:secret@example.com/org/repo.git")).toBe(
+      "ssh://redacted:redacted@example.com/org/repo.git",
+    );
+    expect(redactRemoteUrl("git@example.com:org/repo.git")).toBe(
+      "git@example.com:org/repo.git",
+    );
+  });
+
+  test("recognizes both scp-like and URL SSH remotes", () => {
+    expect(isSshRemote("git@github.com:org/repo.git")).toBe(true);
+    expect(isSshRemote("ssh://git@github.com/org/repo.git")).toBe(true);
+    expect(isSshRemote("https://github.com/org/repo.git")).toBe(false);
+  });
+
+  test("accepts custom SSH private key filenames", () => {
+    expect(isSshPrivateKeyFilename("id_ed25519")).toBe(true);
+    expect(isSshPrivateKeyFilename("github_ed25519")).toBe(true);
+    expect(isSshPrivateKeyFilename("github-rsa-work")).toBe(true);
+    expect(isSshPrivateKeyFilename("github_ed25519.pub")).toBe(false);
+    expect(isSshPrivateKeyFilename("known_hosts")).toBe(false);
+    expect(isSshPrivateKeyFilename("config")).toBe(false);
+    expect(isSshPrivateKeyFilename("allowed_signers")).toBe(false);
+    expect(isSshPrivateKeyFilename("helper")).toBe(false);
   });
 });

@@ -10,9 +10,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
-          "browser": {
-            "cdp": "9222"
-          }
+          "browser": {}
         }
       },
       {
@@ -23,9 +21,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
-          "browser": {
-            "cdp": "9222"
-          }
+          "browser": {}
         }
       },
       {
@@ -36,9 +32,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
-          "browser": {
-            "cdp": "9222"
-          }
+          "browser": {}
         }
       },
       {
@@ -49,9 +43,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
-          "browser": {
-            "cdp": "9222"
-          }
+          "browser": {}
         }
       },
       {
@@ -62,9 +54,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
-          "browser": {
-            "cdp": "9222"
-          }
+          "browser": {}
         }
       },
       {
@@ -75,9 +65,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
-          "browser": {
-            "cdp": "9222"
-          }
+          "browser": {}
         }
       },
       {
@@ -88,9 +76,7 @@
           "default_limit": 12,
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
-          "browser": {
-            "cdp": "9222"
-          }
+          "browser": {}
         }
       }
     ],

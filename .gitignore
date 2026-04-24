@@ -1,5 +1,7 @@
 config.json
 node_modules/
+.local/
+source-env.sh
 .tmp/
 var/
 .desloppify/

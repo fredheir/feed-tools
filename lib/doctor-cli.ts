@@ -2,6 +2,7 @@
 "use strict";
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -13,6 +14,15 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CDP_PORTS = [9222, 9223, 9333];
 const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
+const WORKSPACE_CHROME_BIN = path.join(
+  REPO_ROOT,
+  "chrome-install",
+  "opt",
+  "google",
+  "chrome",
+  "google-chrome",
+);
+const WORKSPACE_CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
 
 interface CheckResult {
   name: string;
@@ -27,11 +37,16 @@ interface ConfigResult {
   path?: string;
 }
 
+interface SandboxSignal {
+  name: string;
+  detail: string;
+}
+
 type RecommendedBrowserConfig = Record<string, never> | { cdp: string };
 
 function usage(): never {
   console.log(
-    "Usage: feed-doctor [--json] [--no-config] [--write-config] [--cdp PORT] [--cdp PORT]...\n\nChecks capture avenues and creates config.json from config.json.example when missing.",
+    "Usage: feed-doctor [--json] [--no-config] [--write-config] [--cdp PORT] [--cdp PORT]...\n\nChecks capture paths, reports sandbox setup gaps, and creates config.json from config.json.example when a browser path is verified.",
   );
   process.exit(0);
 }
@@ -94,15 +109,24 @@ function localAgentBrowserBinary(): string {
   );
 }
 
+function commandResponds(command: string, args: string[]): string | null {
+  try {
+    return execFileSync(command, args, {
+      encoding: "utf8",
+      timeout: 5000,
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
 function checkAgentBrowser(): CheckResult {
   const command = fs.existsSync(localAgentBrowserBinary())
     ? localAgentBrowserBinary()
     : "agent-browser";
-  try {
-    const version = execFileSync(command, ["--version"], {
-      encoding: "utf8",
-      timeout: 5000,
-    }).trim();
+  const version = commandResponds(command, ["--version"]);
+  if (version !== null) {
     return {
       name: "agent-browser",
       ok: true,
@@ -110,14 +134,13 @@ function checkAgentBrowser(): CheckResult {
       recommendation:
         "Use browser: {} or omit capture.browser so feed-capture can auto-connect through agent-browser.",
     };
-  } catch {
-    return {
-      name: "agent-browser",
-      ok: false,
-      detail: "agent-browser did not respond",
-      recommendation: "Run pnpm install, then retry ./bin/feed-doctor.",
-    };
   }
+  return {
+    name: "agent-browser",
+    ok: false,
+    detail: "agent-browser did not respond",
+    recommendation: "Run pnpm install, then retry ./bin/feed-doctor.",
+  };
 }
 
 function getCdpVersion(port: number): CheckResult {
@@ -156,6 +179,226 @@ function checkCdpPorts(ports: number[]): CheckResult[] {
   return ports.map((port) => getCdpVersion(port));
 }
 
+export function detectSandboxSignals(env = process.env): SandboxSignal[] {
+  const signals: SandboxSignal[] = [];
+  for (const name of [
+    "CODEX_SANDBOX",
+    "CODEX_ENV",
+    "CLAUDECODE",
+    "CLAUDE_CODE",
+    "CLAUDE_CODE_IS_COWORK",
+    "COWORK",
+    "CONTAINER",
+  ]) {
+    if (env[name]) signals.push({ name, detail: `${name} is set` });
+  }
+  if (fs.existsSync("/.dockerenv")) {
+    signals.push({ name: "dockerenv", detail: "/.dockerenv is present" });
+  }
+  if (fs.existsSync("/run/.containerenv")) {
+    signals.push({
+      name: "containerenv",
+      detail: "/run/.containerenv is present",
+    });
+  }
+  if (/\/sessions\/[^/]+\/mnt\//.test(REPO_ROOT)) {
+    signals.push({
+      name: "session-mount",
+      detail: "repo is under an ephemeral session mount",
+    });
+  }
+  if (env.HOME) {
+    try {
+      fs.accessSync(env.HOME, fs.constants.W_OK);
+    } catch {
+      signals.push({ name: "home", detail: `${env.HOME} is not writable` });
+    }
+  }
+  return signals;
+}
+
+function isCoworkEnvironment(): boolean {
+  return (
+    Boolean(process.env.CLAUDE_CODE_IS_COWORK) ||
+    !process.env.DBUS_SESSION_BUS_ADDRESS
+  );
+}
+
+function checkSandbox(): CheckResult {
+  const signals = detectSandboxSignals();
+  if (signals.length === 0) {
+    return {
+      name: "sandbox",
+      ok: true,
+      detail: "no sandbox markers detected",
+    };
+  }
+  return {
+    name: "sandbox",
+    ok: true,
+    detail: signals.map((signal) => signal.detail).join("; "),
+    recommendation:
+      "Use a workspace Chrome install/profile and CDP. See AGENTS.md Sandbox / ephemeral environment.",
+  };
+}
+
+function isSandbox(results: CheckResult[]): boolean {
+  const sandbox = results.find((result) => result.name === "sandbox");
+  return Boolean(sandbox && sandbox.detail !== "no sandbox markers detected");
+}
+
+function checkCommand(
+  name: string,
+  command: string,
+  args: string[],
+  recommendation: string,
+): CheckResult {
+  const version = commandResponds(command, args);
+  if (version !== null) {
+    return { name, ok: true, detail: version || `${command} responded` };
+  }
+  return {
+    name,
+    ok: false,
+    detail: `${command} did not respond`,
+    recommendation,
+  };
+}
+
+function checkWorkspaceChrome(): CheckResult {
+  if (fs.existsSync(WORKSPACE_CHROME_BIN)) {
+    const profileDetail = fs.existsSync(WORKSPACE_CHROME_PROFILE)
+      ? `; profile at ${WORKSPACE_CHROME_PROFILE}`
+      : "";
+    return {
+      name: "workspace-chrome",
+      ok: true,
+      detail: `${WORKSPACE_CHROME_BIN}${profileDetail}`,
+    };
+  }
+  return {
+    name: "workspace-chrome",
+    ok: false,
+    detail: `${WORKSPACE_CHROME_BIN} not found`,
+    recommendation:
+      "Run ./bin/feed-setup-sandbox to install Chrome under ./chrome-install.",
+  };
+}
+
+export function redactRemoteUrl(remote: string): string {
+  try {
+    const parsed = new URL(remote);
+    if (parsed.username) parsed.username = "redacted";
+    if (parsed.password) parsed.password = "redacted";
+    return parsed.toString();
+  } catch {
+    return remote;
+  }
+}
+
+export function isSshRemote(remote: string): boolean {
+  return remote.startsWith("git@") || /^ssh:\/\//i.test(remote);
+}
+
+const NON_PRIVATE_SSH_FILES = new Set([
+  "allowed_signers",
+  "authorized_keys",
+  "authorized_principals",
+  "config",
+  "environment",
+  "known_hosts",
+  "known_hosts2",
+  "known_hosts.old",
+  "rc",
+]);
+
+export function isSshPrivateKeyFilename(filename: string): boolean {
+  return (
+    !filename.startsWith(".") &&
+    !filename.endsWith(".pub") &&
+    !filename.endsWith("-cert.pub") &&
+    !NON_PRIVATE_SSH_FILES.has(filename) &&
+    (/^id_/.test(filename) ||
+      /(^|[-_])(rsa|dsa|ecdsa|ed25519|ed448)($|[-_])/i.test(filename))
+  );
+}
+
+function hasSshPrivateKey(sshDir: string): boolean {
+  try {
+    return fs
+      .readdirSync(sshDir, { withFileTypes: true })
+      .some(
+        (entry) =>
+          (entry.isFile() || entry.isSymbolicLink()) &&
+          isSshPrivateKeyFilename(entry.name),
+      );
+  } catch {
+    return false;
+  }
+}
+
+function hasSshAgentKey(): boolean {
+  return (
+    Boolean(process.env.SSH_AUTH_SOCK) &&
+    commandResponds("ssh-add", ["-l"]) !== null
+  );
+}
+
+function hasSshCredentials(sshDir: string): boolean {
+  return hasSshAgentKey() || hasSshPrivateKey(sshDir);
+}
+
+function checkGitRemote(): CheckResult {
+  const remote = commandResponds("git", [
+    "-C",
+    REPO_ROOT,
+    "remote",
+    "get-url",
+    "origin",
+  ]);
+  if (remote === null) {
+    return {
+      name: "git-remote",
+      ok: true,
+      detail: "origin remote unavailable; skipped",
+    };
+  }
+  const redactedRemote = redactRemoteUrl(remote);
+  if (!isSshRemote(remote)) {
+    return { name: "git-remote", ok: true, detail: redactedRemote };
+  }
+  const sshDir = path.join(os.homedir(), ".ssh");
+  if (hasSshCredentials(sshDir))
+    return { name: "git-remote", ok: true, detail: redactedRemote };
+  return {
+    name: "git-remote",
+    ok: false,
+    detail: `${redactedRemote}; no private key found in ${sshDir}`,
+    recommendation:
+      "Use gh auth plus an HTTPS remote in keyless sandboxes, or add an SSH key.",
+  };
+}
+
+function checkSandboxDependencies(): CheckResult[] {
+  return [
+    checkCommand("pnpm", "pnpm", ["--version"], "Install pnpm before setup."),
+    checkCommand(
+      "uv",
+      "uv",
+      ["--version"],
+      "Install uv, then run pnpm setup:yt-dlp for video sources.",
+    ),
+    checkCommand(
+      "yt-dlp",
+      "yt-dlp",
+      ["--version"],
+      "Run pnpm setup:yt-dlp before capturing video sources.",
+    ),
+    checkWorkspaceChrome(),
+    checkGitRemote(),
+  ];
+}
+
 function checkCic(): CheckResult {
   return {
     name: "cic",
@@ -169,14 +412,14 @@ function checkCic(): CheckResult {
 export function recommendedBrowserConfig(
   results: CheckResult[],
 ): RecommendedBrowserConfig | null {
-  if (results.find((result) => result.name === "agent-browser")?.ok) {
-    return {};
-  }
   const cdp = results.find(
     (result) => result.name.startsWith("cdp:") && result.ok,
   );
-  if (!cdp) return null;
-  return { cdp: cdp.name.replace(/^cdp:/, "") };
+  if (cdp) return { cdp: cdp.name.replace(/^cdp:/, "") };
+  if (results.find((result) => result.name === "agent-browser")?.ok) {
+    return {};
+  }
+  return null;
 }
 
 export function applyBrowserConfigToPayload(
@@ -259,6 +502,12 @@ function printConfigResult(configResult: ConfigResult): void {
 }
 
 function printText(results: CheckResult[], configResult: ConfigResult): void {
+  if (isCoworkEnvironment()) {
+    console.log(
+      "INFO cowork: Chrome is reaped at turn end; sign in and capture in the same turn, while the workspace profile on disk persists.",
+    );
+    console.log("");
+  }
   for (const result of results) {
     const status = result.ok ? "OK" : "NO";
     console.log(`${status} ${result.name}: ${result.detail}`);
@@ -274,10 +523,14 @@ function printText(results: CheckResult[], configResult: ConfigResult): void {
     (result) => result.name.startsWith("cdp:") && result.ok,
   );
   console.log("");
-  if (agentBrowser?.ok) {
-    console.log("Recommended capture path: agent-browser auto-connect.");
-  } else if (cdp) {
+  if (cdp) {
     console.log(`Recommended capture path: Chrome CDP via ${cdp.name}.`);
+  } else if (agentBrowser?.ok) {
+    console.log("Recommended capture path: agent-browser auto-connect.");
+  } else if (isSandbox(results)) {
+    console.log(
+      "Recommended capture path: workspace Chrome via CDP after sandbox setup.",
+    );
   } else {
     console.log(
       "Recommended capture path: launch dedicated Chrome with --remote-debugging-port=9222, or use CiC if the host Chrome connector is available.",
@@ -288,7 +541,15 @@ function printText(results: CheckResult[], configResult: ConfigResult): void {
 
 export async function main(): Promise<void> {
   const { json, cdpPorts, configure, forceConfig } = parseArgs(process.argv);
-  const results = [checkAgentBrowser(), ...checkCdpPorts(cdpPorts), checkCic()];
+  const results = [
+    checkAgentBrowser(),
+    ...checkCdpPorts(cdpPorts),
+    checkSandbox(),
+    checkCic(),
+  ];
+  if (isSandbox(results)) {
+    results.push(...checkSandboxDependencies());
+  }
   const configResult = configure
     ? maybeWriteConfig(results, forceConfig)
     : {

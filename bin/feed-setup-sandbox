@@ -1,0 +1,280 @@
+#!/usr/bin/env node
+// @ts-check
+
+const { execFileSync, spawn } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+const rootDir = path.resolve(__dirname, "..");
+const localPrefix = path.join(rootDir, ".local");
+const localBin = path.join(localPrefix, "bin");
+const localUvTools = path.join(localPrefix, "uv-tools");
+const localUvCache = path.join(localPrefix, "uv-cache");
+const sourceEnvPath = path.join(rootDir, "source-env.sh");
+const chromeDir = path.join(rootDir, "chrome-install");
+const chromeBin = path.join(
+  chromeDir,
+  "opt",
+  "google",
+  "chrome",
+  "google-chrome",
+);
+const chromeProfile = path.join(rootDir, "chrome-profile");
+const chromeLog = path.join(rootDir, "chrome.log");
+const cdpProbeTimeoutMs = 20_000;
+
+function usage() {
+  console.log(
+    "Usage: feed-setup-sandbox [--launch-chrome] [--cdp PORT]\n\nInstalls feed-tools sandbox dependencies into user/workspace-owned paths.",
+  );
+}
+
+function parseArgs(argv) {
+  let launchChrome = false;
+  let cdpPort = "9222";
+  for (let index = 2; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "-h" || arg === "--help") {
+      usage();
+      process.exit(0);
+    }
+    if (arg === "--launch-chrome") {
+      launchChrome = true;
+      continue;
+    }
+    if (arg === "--cdp") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --cdp");
+      }
+      if (!/^\d+$/.test(value)) throw new Error(`Invalid --cdp port: ${value}`);
+      cdpPort = value;
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+  return { launchChrome, cdpPort };
+}
+
+function localExecutablePath(command) {
+  const candidate = path.join(localBin, command);
+  try {
+    fs.accessSync(candidate, fs.constants.X_OK);
+    return candidate;
+  } catch {
+    return null;
+  }
+}
+
+function run(command, args, options = {}) {
+  console.log(`$ ${[command, ...args].join(" ")}`);
+  execFileSync(command, args, {
+    cwd: rootDir,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      PATH: `${localBin}${path.delimiter}${process.env.PATH || ""}`,
+      UV_CACHE_DIR: localUvCache,
+      UV_TOOL_BIN_DIR: localBin,
+      UV_TOOL_DIR: localUvTools,
+    },
+    ...options,
+  });
+}
+
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function ensurePnpm() {
+  const pnpm = localExecutablePath("pnpm");
+  if (pnpm) return pnpm;
+  fs.mkdirSync(localBin, { recursive: true });
+  run("npm", ["install", "-g", "--prefix", localPrefix, "pnpm"]);
+  const installed = localExecutablePath("pnpm");
+  if (!installed)
+    throw new Error(`pnpm install finished but ${localBin}/pnpm is missing`);
+  return installed;
+}
+
+function writeSourceEnv() {
+  fs.writeFileSync(
+    sourceEnvPath,
+    `export PATH=${JSON.stringify(`${localBin}:$PATH`)}\n`,
+  );
+}
+
+function ensureUv() {
+  const uv = localExecutablePath("uv");
+  if (uv) return uv;
+  fs.mkdirSync(localBin, { recursive: true });
+  const installerPath = path.join(os.tmpdir(), "uv-installer.sh");
+  run("wget", ["-q", "https://astral.sh/uv/install.sh", "-O", installerPath]);
+  run("sh", [installerPath], {
+    env: {
+      ...process.env,
+      INSTALLER_NO_MODIFY_PATH: "1",
+      PATH: `${localBin}${path.delimiter}${process.env.PATH || ""}`,
+      UV_INSTALL_DIR: localBin,
+    },
+  });
+  fs.rmSync(installerPath, { force: true });
+  const installed = localExecutablePath("uv");
+  if (!installed)
+    throw new Error(`uv install finished but ${localBin}/uv is missing`);
+  return installed;
+}
+
+function chromeIsRunnable() {
+  try {
+    fs.accessSync(chromeBin, fs.constants.X_OK);
+    execFileSync(chromeBin, ["--version"], {
+      stdio: "ignore",
+      timeout: 5000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function ensureChrome() {
+  if (chromeIsRunnable()) return;
+  const debPath = path.join(
+    os.tmpdir(),
+    "google-chrome-stable_current_amd64.deb",
+  );
+  run("wget", [
+    "-q",
+    "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb",
+    "-O",
+    debPath,
+  ]);
+  fs.rmSync(chromeDir, { force: true, recursive: true });
+  fs.mkdirSync(chromeDir, { recursive: true });
+  run("dpkg", ["-x", debPath, chromeDir]);
+  fs.rmSync(debPath, { force: true });
+  if (!chromeIsRunnable()) {
+    throw new Error(
+      `Chrome extraction finished but ${chromeBin} is not runnable`,
+    );
+  }
+}
+
+function ensureAgentBrowserBuild() {
+  const postinstallScript = path.join(
+    rootDir,
+    "node_modules",
+    "agent-browser",
+    "scripts",
+    "postinstall.js",
+  );
+  if (!fs.existsSync(postinstallScript)) {
+    throw new Error(
+      `agent-browser postinstall script missing: ${postinstallScript}`,
+    );
+  }
+  run(process.execPath, [postinstallScript]);
+}
+
+function cdpVersionUrl(cdpPort) {
+  return `http://127.0.0.1:${cdpPort}/json/version`;
+}
+
+function canReadCdpVersion(cdpPort) {
+  const script = `
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 1000);
+fetch(process.argv[1], { signal: controller.signal })
+  .then(async (response) => {
+    if (!response.ok) process.exit(1);
+    const payload = await response.json();
+    process.exit(typeof payload.webSocketDebuggerUrl === "string" ? 0 : 1);
+  })
+  .catch(() => process.exit(1))
+  .finally(() => clearTimeout(timeout));
+`;
+  try {
+    execFileSync(process.execPath, ["-e", script, cdpVersionUrl(cdpPort)], {
+      stdio: "ignore",
+      timeout: 2000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function launchWorkspaceChrome(cdpPort) {
+  if (canReadCdpVersion(cdpPort)) {
+    throw new Error(
+      `CDP port ${cdpPort} is already in use; choose another port with --cdp`,
+    );
+  }
+  fs.mkdirSync(chromeProfile, { recursive: true });
+  const logFd = fs.openSync(chromeLog, "a");
+  const child = spawn(
+    chromeBin,
+    [
+      `--remote-debugging-port=${cdpPort}`,
+      "--remote-debugging-address=127.0.0.1",
+      `--user-data-dir=${chromeProfile}`,
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-features=LockProfileCookieDatabase",
+      "--no-sandbox",
+    ],
+    {
+      detached: true,
+      stdio: ["ignore", logFd, logFd],
+      env: { ...process.env, DISPLAY: process.env.DISPLAY || ":0" },
+    },
+  );
+  const deadline = Date.now() + cdpProbeTimeoutMs;
+  while (Date.now() < deadline) {
+    if (canReadCdpVersion(cdpPort)) {
+      child.unref();
+      console.log(`Chrome launched on CDP port ${cdpPort}; log: ${chromeLog}`);
+      return;
+    }
+    sleep(500);
+  }
+  try {
+    if (child.pid) process.kill(child.pid, "SIGTERM");
+  } catch {
+    // Process already exited.
+  }
+  throw new Error(
+    `Chrome did not expose CDP at ${cdpVersionUrl(cdpPort)} within ${
+      cdpProbeTimeoutMs / 1000
+    }s; see ${chromeLog}`,
+  );
+}
+
+function main() {
+  const { launchChrome, cdpPort } = parseArgs(process.argv);
+  writeSourceEnv();
+  const pnpm = ensurePnpm();
+  ensureUv();
+  run(pnpm, ["install"]);
+  ensureAgentBrowserBuild();
+  run(pnpm, ["setup:yt-dlp"]);
+  ensureChrome();
+  fs.mkdirSync(chromeProfile, { recursive: true });
+  if (launchChrome) launchWorkspaceChrome(cdpPort);
+  console.log("Sandbox setup complete.");
+  console.log(`Sandbox tools: ${localBin}`);
+  console.log(`Shell env: source ${sourceEnvPath}`);
+  console.log(`Chrome binary: ${chromeBin}`);
+  console.log(`Chrome profile: ${chromeProfile}`);
+}
+
+try {
+  main();
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`Error: ${message}\n`);
+  process.exitCode = 1;
+}

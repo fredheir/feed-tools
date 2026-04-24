@@ -1,0 +1,12 @@
+{
+  "ignores": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.next/**",
+    "**/var/**",
+    "**/chrome-profile*/**",
+    "**/chrome.log",
+    "**/*.d.ts",
+    "**/*.d.mts"
+  ]
+}

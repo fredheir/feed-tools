@@ -192,4 +192,66 @@ describe("createBrowserSession", () => {
     expect(calls).toContainEqual(["tab", "1"]);
     expect(calls).not.toContainEqual(["tab", "new", "https://www.tiktok.com/"]);
   });
+
+  test("tryWaitForFunction returns false for wait timeouts", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error("TimeoutError: waiting for function timed out");
+        },
+      },
+      {},
+    );
+
+    expect(session.tryWaitForFunction("window.ready", 100)).toBe(false);
+  });
+
+  test("tryWaitForFunction returns false for child process ETIMEDOUT", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error("spawnSync agent-browser ETIMEDOUT");
+        },
+      },
+      {},
+    );
+
+    expect(session.tryWaitForFunction("window.ready", 100)).toBe(false);
+  });
+
+  test("tryWaitForFunction rethrows unexpected browser failures", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error("CDP connection closed");
+        },
+      },
+      {},
+    );
+
+    expect(() => session.tryWaitForFunction("window.ready", 100)).toThrow(
+      "CDP connection closed",
+    );
+  });
+
+  test("tryWaitForFunction does not treat the timeout flag as a timeout error", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error(
+            "Command failed: agent-browser wait --fn window.ready --timeout 100\nCDP connection closed",
+          );
+        },
+      },
+      {},
+    );
+
+    expect(() => session.tryWaitForFunction("window.ready", 100)).toThrow(
+      "CDP connection closed",
+    );
+  });
 });
