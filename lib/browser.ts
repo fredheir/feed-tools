@@ -225,9 +225,10 @@ function assertCdpEndpoint(cdp: string): void {
   let output = "";
   try {
     output = readCdpVersionPayload(url);
-  } catch {
+  } catch (error) {
     throw new Error(
       `CDP endpoint ${cdp} did not respond at ${url}. If port ${cdp} is owned by Codex Desktop or another embedded browser, launch a dedicated Chrome profile on another port such as 9223 and set capture.browser.cdp to that port.`,
+      { cause: error },
     );
   }
 
