@@ -195,21 +195,6 @@ function saveAllocationToDocument(
   return Array.from(resolvedLocations).join("\n");
 }
 
-function loadAllocationForDocument(
-  document: FeedDocument,
-  explicitPath: string | null = null,
-): FeedAllocation {
-  return loadAllocationFromDocument(document, explicitPath);
-}
-
-function saveAllocationForDocument(
-  document: FeedDocument,
-  allocation: FeedAllocation,
-  explicitPath: string | null = null,
-): string {
-  return saveAllocationToDocument(document, allocation, explicitPath);
-}
-
 function groupPickedRowsByCategory(
   document: FeedDocument,
   allocation: FeedAllocation | null | undefined,
@@ -257,10 +242,8 @@ module.exports = {
   loadAllocation: loadAllocationFromPath,
   loadAllocationFromPath,
   loadAllocationFromDocument,
-  loadAllocationForDocument,
   mergeAllocations,
   saveAllocation: saveAllocationToPath,
   saveAllocationToPath,
   saveAllocationToDocument,
-  saveAllocationForDocument,
 };

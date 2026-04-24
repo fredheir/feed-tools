@@ -27,6 +27,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
 export const DEFAULT_ASSETS_DIR = path.join(REPO_ROOT, "var", "feed-assets");
 const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");
+const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
 
 function normalizeBrowserConfig(value: unknown): FeedBrowserConfig {
   if (!isRecord(value)) return {};
@@ -200,6 +201,15 @@ export function loadConfig(): FeedConfig {
     return readConfigFile(configPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (
+        !process.env.FEED_TOOLS_CONFIG &&
+        fs.existsSync(EXAMPLE_CONFIG_PATH)
+      ) {
+        process.stderr.write(
+          `Warning: ${configPath} not found; using ${EXAMPLE_CONFIG_PATH}. Copy it to config.json and tailor sources, render, curation, and summary preferences before live capture.\n`,
+        );
+        return readConfigFile(EXAMPLE_CONFIG_PATH);
+      }
       throw new Error(`Missing config: ${configPath}`);
     }
     throw error;

@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
@@ -13,6 +14,7 @@ import {
   getSaveDir,
   resolveCanonicalSaveDir,
 } from "../../lib/config.js";
+import { normalizeBrowserOptions } from "../../lib/browser.js";
 import type { FeedConfig } from "../../lib/types.js";
 
 const repoRoot = path.resolve(
@@ -230,5 +232,23 @@ describe("config helpers", () => {
     expect(getEnabledSourceNames(config)).toEqual([]);
     expect(getCaptureDefaults(config, "x")).toEqual({ browser: {} });
     expect(getCurationPreferences(config)).toEqual({});
+  });
+
+  test("example config leaves browser capture on auto-connect bootstrap path", () => {
+    const config = parseConfigPayload(
+      fs.readFileSync(path.join(repoRoot, "config.json.example"), "utf8"),
+      path.join(repoRoot, "config.json.example"),
+    );
+
+    expect(getEnabledSourceNames(config)).toContain("x");
+    for (const sourceName of getEnabledSourceNames(config)) {
+      const browserOptions = getCaptureBrowserOptions(config, sourceName);
+      expect(browserOptions.cdp).toBeNull();
+      expect(normalizeBrowserOptions(browserOptions)).toMatchObject({
+        autoConnect: true,
+        cdp: null,
+        headed: false,
+      });
+    }
   });
 });

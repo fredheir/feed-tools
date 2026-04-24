@@ -1,4 +1,7 @@
 .chrome-cdp/
+chrome-profile-feed*/
+node_modules/
 save/
 tests/fixtures/**/*.html
 tests/fixtures/**/*.txt
+var/

@@ -84,4 +84,34 @@ describe("createBrowserSession", () => {
     ]);
     expect(calls).toEqual([["tab", "list", "--json"]]);
   });
+
+  test("tryWaitForFunction returns false for wait timeouts", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error("TimeoutError: waiting for function timed out");
+        },
+      },
+      {},
+    );
+
+    expect(session.tryWaitForFunction("window.ready", 100)).toBe(false);
+  });
+
+  test("tryWaitForFunction rethrows unexpected browser failures", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error("CDP connection closed");
+        },
+      },
+      {},
+    );
+
+    expect(() => session.tryWaitForFunction("window.ready", 100)).toThrow(
+      "CDP connection closed",
+    );
+  });
 });

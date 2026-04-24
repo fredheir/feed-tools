@@ -109,6 +109,20 @@ function parseBrowserTabList(payload: string): BrowserTab[] {
   });
 }
 
+function errorText(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const details = [
+    error.message,
+    "stdout" in error ? String(error.stdout ?? "") : "",
+    "stderr" in error ? String(error.stderr ?? "") : "",
+  ];
+  return details.join("\n");
+}
+
+function isWaitTimeoutError(error: unknown): boolean {
+  return /\b(timeout|timed out|TimeoutError)\b/i.test(errorText(error));
+}
+
 function getMountInfo(targetPath: string): MountInfo | null {
   let lookupTarget = path.resolve(targetPath);
   while (!fs.existsSync(lookupTarget)) {
@@ -228,12 +242,7 @@ function createBrowserSession(
     state = "networkidle",
     timeoutMs: number | null = null,
   ): boolean {
-    try {
-      waitForLoad(state, timeoutMs);
-      return true;
-    } catch {
-      return false;
-    }
+    return waitOrTimeout(() => waitForLoad(state, timeoutMs));
   }
 
   function waitForUrl(
@@ -251,12 +260,7 @@ function createBrowserSession(
     text: string,
     timeoutMs: number | null = null,
   ): boolean {
-    try {
-      waitForText(text, timeoutMs);
-      return true;
-    } catch {
-      return false;
-    }
+    return waitOrTimeout(() => waitForText(text, timeoutMs));
   }
 
   function waitForFunction(
@@ -270,10 +274,15 @@ function createBrowserSession(
     expression: string,
     timeoutMs: number | null = null,
   ): boolean {
+    return waitOrTimeout(() => waitForFunction(expression, timeoutMs));
+  }
+
+  function waitOrTimeout(wait: () => void): boolean {
     try {
-      waitForFunction(expression, timeoutMs);
+      wait();
       return true;
-    } catch {
+    } catch (error) {
+      if (!isWaitTimeoutError(error)) throw error;
       return false;
     }
   }

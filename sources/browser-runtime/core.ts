@@ -46,11 +46,8 @@ export function makeAbsoluteUrl(
   base?: string,
 ): string | null {
   if (!url) return null;
-  try {
-    return new URL(url, base).toString();
-  } catch {
-    return null;
-  }
+  if (!URL.canParse(url, base)) return null;
+  return new URL(url, base).toString();
 }
 
 function toBrowserFunctionSource(fn: (...args: never[]) => unknown): string {

@@ -1,0 +1,162 @@
+#!/usr/bin/env node
+// @ts-check
+
+const { execFileSync, spawn } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+const rootDir = path.resolve(__dirname, "..");
+const localPrefix = path.join(os.homedir(), ".local");
+const localBin = path.join(localPrefix, "bin");
+const chromeDir = path.join(rootDir, "chrome-install");
+const chromeBin = path.join(
+  chromeDir,
+  "opt",
+  "google",
+  "chrome",
+  "google-chrome",
+);
+const chromeProfile = path.join(rootDir, "chrome-profile");
+const chromeLog = path.join(rootDir, "chrome.log");
+
+function usage() {
+  console.log(
+    "Usage: feed-setup-sandbox [--launch-chrome] [--cdp PORT]\n\nInstalls feed-tools sandbox dependencies into user/workspace-owned paths.",
+  );
+}
+
+function parseArgs(argv) {
+  let launchChrome = false;
+  let cdpPort = "9222";
+  for (let index = 2; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "-h" || arg === "--help") {
+      usage();
+      process.exit(0);
+    }
+    if (arg === "--launch-chrome") {
+      launchChrome = true;
+      continue;
+    }
+    if (arg === "--cdp") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --cdp");
+      }
+      if (!/^\d+$/.test(value)) throw new Error(`Invalid --cdp port: ${value}`);
+      cdpPort = value;
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+  return { launchChrome, cdpPort };
+}
+
+function executablePath(command) {
+  const candidates = [
+    path.join(localBin, command),
+    ...String(process.env.PATH || "")
+      .split(path.delimiter)
+      .filter(Boolean)
+      .map((entry) => path.join(entry, command)),
+  ];
+  return candidates.find((candidate) => {
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+function run(command, args, options = {}) {
+  console.log(`$ ${[command, ...args].join(" ")}`);
+  execFileSync(command, args, {
+    cwd: rootDir,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      PATH: `${localBin}${path.delimiter}${process.env.PATH || ""}`,
+    },
+    ...options,
+  });
+}
+
+function ensurePnpm() {
+  const pnpm = executablePath("pnpm");
+  if (pnpm) return pnpm;
+  fs.mkdirSync(localBin, { recursive: true });
+  run("npm", ["install", "-g", "--prefix", localPrefix, "pnpm"]);
+  const installed = executablePath("pnpm");
+  if (!installed)
+    throw new Error(`pnpm install finished but ${localBin}/pnpm is missing`);
+  return installed;
+}
+
+function ensureChrome() {
+  if (fs.existsSync(chromeBin)) return;
+  const debPath = path.join(
+    os.tmpdir(),
+    "google-chrome-stable_current_amd64.deb",
+  );
+  run("wget", [
+    "-q",
+    "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb",
+    "-O",
+    debPath,
+  ]);
+  fs.rmSync(chromeDir, { force: true, recursive: true });
+  fs.mkdirSync(chromeDir, { recursive: true });
+  run("dpkg", ["-x", debPath, chromeDir]);
+  fs.rmSync(debPath, { force: true });
+  if (!fs.existsSync(chromeBin)) {
+    throw new Error(`Chrome extraction finished but ${chromeBin} is missing`);
+  }
+}
+
+function launchWorkspaceChrome(cdpPort) {
+  fs.mkdirSync(chromeProfile, { recursive: true });
+  const logFd = fs.openSync(chromeLog, "a");
+  const child = spawn(
+    chromeBin,
+    [
+      `--remote-debugging-port=${cdpPort}`,
+      "--remote-debugging-address=127.0.0.1",
+      `--user-data-dir=${chromeProfile}`,
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--no-sandbox",
+    ],
+    {
+      detached: true,
+      stdio: ["ignore", logFd, logFd],
+      env: { ...process.env, DISPLAY: process.env.DISPLAY || ":0" },
+    },
+  );
+  child.unref();
+  console.log(`Chrome launched on CDP port ${cdpPort}; log: ${chromeLog}`);
+}
+
+function main() {
+  const { launchChrome, cdpPort } = parseArgs(process.argv);
+  const pnpm = ensurePnpm();
+  run(pnpm, ["install"]);
+  run(pnpm, ["setup:yt-dlp"]);
+  ensureChrome();
+  fs.mkdirSync(chromeProfile, { recursive: true });
+  if (launchChrome) launchWorkspaceChrome(cdpPort);
+  console.log("Sandbox setup complete.");
+  console.log(`Chrome binary: ${chromeBin}`);
+  console.log(`Chrome profile: ${chromeProfile}`);
+}
+
+try {
+  main();
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`Error: ${message}\n`);
+  process.exitCode = 1;
+}

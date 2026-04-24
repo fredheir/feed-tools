@@ -97,12 +97,9 @@ function resolveVideoUrl(item: FeedItem, media: FeedMedia): string | null {
       : [media?.href, item?.url];
   for (const candidate of candidates) {
     if (!candidate) continue;
-    try {
-      const parsed = new URL(candidate);
-      if (/^https?:$/i.test(parsed.protocol)) return parsed.toString();
-    } catch {
-      /* fall through */
-    }
+    if (!URL.canParse(candidate)) continue;
+    const parsed = new URL(candidate);
+    if (/^https?:$/i.test(parsed.protocol)) return parsed.toString();
   }
   return null;
 }

@@ -12,7 +12,11 @@
     "format:check": "prettier --check .",
     "precommit": "prek run --all-files --stage pre-commit",
     "test": "vitest run",
+    "doctor": "./bin/feed-doctor",
+    "setup:sandbox": "./bin/feed-setup-sandbox",
     "deadcode": "knip --exclude exports,types",
+    "slop:scan": "slop-scan scan .",
+    "slop:lint": "slop-scan scan . --lint",
     "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode",
     "setup:yt-dlp": "uv tool install --force 'yt-dlp[default,curl-cffi]'"
   },
@@ -22,6 +26,8 @@
       "bin/feed-capture-cic",
       "bin/feed-classify",
       "bin/feed-curate",
+      "bin/feed-doctor",
+      "bin/feed-setup-sandbox",
       "bin/feed-render",
       "lib/*-cli.ts",
       "tests/**/*.{js,mts}"
@@ -47,10 +53,10 @@
     "tsx": "^4.20.6"
   },
   "devDependencies": {
-    "@j178/prek": "0.3.10",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^9.39.1",
+    "@j178/prek": "0.3.10",
     "@types/node": "^24.10.1",
     "agent-browser": "^0.23.4",
     "eslint": "^9.39.1",
@@ -58,6 +64,7 @@
     "husky": "^9.1.7",
     "knip": "^6.1.1",
     "prettier": "^3.6.2",
+    "slop-scan": "~0.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vite": "^8.0.9",
