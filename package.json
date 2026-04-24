@@ -41,8 +41,7 @@
     ],
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
-      "agent-browser",
-      "lefthook"
+      "agent-browser"
     ],
     "ignoreBinaries": [
       "uv"
