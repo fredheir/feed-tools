@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+// @ts-check
+
+const { runTsCli } = require("./_run-ts-cli.js");
+
+const cli = runTsCli("lib/doctor-cli.ts");
+if (cli?.main) {
+  void cli.main();
+}

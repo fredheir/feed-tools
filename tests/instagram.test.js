@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { prepareFeed } from "../sources/instagram/capture.js";
+import {
+  buildExtractionScript,
+  prepareFeed,
+} from "../sources/instagram/capture.js";
 import {
   normalizeInstagramCandidate,
   normalizeInstagramExtractionDocument,
@@ -88,6 +91,15 @@ describe("instagram capture bootstrap", () => {
 });
 
 describe("instagram capture integration", () => {
+  test("injects browser-safe permalink and profile helpers", () => {
+    const script = buildExtractionScript(1);
+
+    expect(script).toContain("function isInstagramPermalinkUrl");
+    expect(script).toContain("function isInstagramProfileUrl");
+    expect(script).toContain("isInstagramPermalinkUrl(href)");
+    expect(script).not.toContain("RESERVED_PROFILE_SEGMENTS");
+  });
+
   test("normalizes browser extraction output before shared filtering/dedupe", () => {
     const document = normalizeInstagramExtractionDocument({
       captured_at: "2026-04-22T10:00:00Z",

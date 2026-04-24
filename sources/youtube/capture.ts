@@ -390,7 +390,7 @@ function prepareYouTubeFeed(browser: BrowserSession): void {
   const shortWait = jitterTimeout(1000, 250);
   const mediumWait = jitterTimeout(2500, 750);
   const longWait = jitterTimeout(5000, 1000);
-  browser.ensureTab("https://www.youtube.com/", "https://www.youtube.com/");
+  browser.ensureUrl("https://www.youtube.com/");
   if (isBlockedYouTubeHome(browser)) {
     for (const tab of browser.listTabs()) {
       if (!String(tab.url || "").startsWith("https://www.youtube.com/")) {

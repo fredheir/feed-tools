@@ -11,10 +11,7 @@
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
           "browser": {
-            "cdp": "9222",
-            "auto_connect": false,
-            "headed": true,
-            "args": ["--no-sandbox"]
+            "cdp": "9222"
           }
         }
       },
@@ -27,10 +24,7 @@
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
           "browser": {
-            "cdp": "9222",
-            "auto_connect": false,
-            "headed": true,
-            "args": ["--no-sandbox"]
+            "cdp": "9222"
           }
         }
       },
@@ -43,10 +37,7 @@
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
           "browser": {
-            "cdp": "9222",
-            "auto_connect": false,
-            "headed": true,
-            "args": ["--no-sandbox"]
+            "cdp": "9222"
           }
         }
       },
@@ -59,10 +50,7 @@
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
           "browser": {
-            "cdp": "9222",
-            "auto_connect": false,
-            "headed": true,
-            "args": ["--no-sandbox"]
+            "cdp": "9222"
           }
         }
       },
@@ -75,10 +63,7 @@
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
           "browser": {
-            "cdp": "9222",
-            "auto_connect": false,
-            "headed": true,
-            "args": ["--no-sandbox"]
+            "cdp": "9222"
           }
         }
       },
@@ -91,10 +76,7 @@
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
           "browser": {
-            "cdp": "9222",
-            "auto_connect": false,
-            "headed": true,
-            "args": ["--no-sandbox"]
+            "cdp": "9222"
           }
         }
       },
@@ -107,10 +89,7 @@
           "assets_dir": "./var/feed-assets",
           "save_dir": "./var/feed-archive",
           "browser": {
-            "cdp": "9222",
-            "auto_connect": false,
-            "headed": true,
-            "args": ["--no-sandbox"]
+            "cdp": "9222"
           }
         }
       }

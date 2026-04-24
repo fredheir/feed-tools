@@ -9,7 +9,7 @@
 ## Config
 
 - Read `config.json` in full before making capture, curation, summary, or rendering decisions.
-- If `config.json` does not exist, ask the user how to populate `sources`, `render`, `curation`, and `summary` from `config.json.example`.
+- If `config.json` does not exist, the CLI falls back to `config.json.example` so commands can still run. Treat this as bootstrap only: ask the user how to tailor `sources`, `render`, `curation`, and `summary`, then write a real `config.json`.
 - Preferences file: `config.json`
 - Default config template: `config.json.example`
 
@@ -29,10 +29,13 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 1. Install node + npm + pnpm
 2. `pnpm install`
 3. Ensure chrome/chromium is installed
-4. Default to the user's existing Chrome via CDP. (check with ss -tlnp | grep 9222)
-5. If the user's browser exposes remote debugging on `127.0.0.1:9222`, set `capture.browser.cdp` to `9222` in `config.json` and reuse that browser
-6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`
-7. Default `capture.browser.args` to `["--no-sandbox"]`
+4. Run `./bin/feed-doctor` to choose the capture path:
+   - If `agent-browser` is OK, prefer `capture.browser: {}` or omit the browser block.
+   - If a `cdp:<port>` check is OK, set `capture.browser.cdp` to that port.
+   - If neither is available but the host has Chrome connector MCP tools, use the CiC flow below.
+5. If using CDP, confirm the port exposes Chrome DevTools Protocol with `curl -sf http://127.0.0.1:<port>/json/version`.
+6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`.
+7. Default `capture.browser.args` to `["--no-sandbox"]` only when launching a dedicated browser, not when reusing an existing daemon.
 8. For video sources (tiktok, x, instagram), install yt-dlp with curl_cffi impersonation: `pnpm setup:yt-dlp` (requires `uv`)
 9. Access each platform specified in `config.json`
 
@@ -73,11 +76,29 @@ DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chro
 - Then set `"cdp": "9222"` in each source's `capture.browser` block.
 - When `capture.browser.cdp` is set, omit `headed` and `auto_connect`.
 
+## CDP port selection
+
+Port `9222` must be a real Chrome DevTools Protocol endpoint. A local browser can listen on `9222` without serving CDP, for example Codex Desktop or another embedded Chromium surface. Always validate with:
+
+```sh
+curl -sf http://127.0.0.1:9222/json/version
+```
+
+- If this returns JSON with a `webSocketDebuggerUrl`, `capture.browser.cdp` may use `"9222"`.
+- If this returns `404`, HTML, or times out, do not use `"9222"` for feed capture.
+- If `9222` is occupied by Codex Desktop or another non-feed browser, launch a dedicated Chrome profile on another port such as `9223` and set `"cdp": "9223"` in `config.json`.
+- Keep one persistent profile per capture environment, for example `<WORKSPACE>/chrome-profile-feed`, so platform sign-ins persist and do not collide with the app's built-in browser.
+- `./bin/feed-doctor` performs these checks and reports whether agent-browser, CDP, or CiC is the best available path.
+
 ## Troubleshooting
 
 - Expect to make proactive fixes. If you hit friction, open an issue or send a verified PR.
 - If you are in a sandbox and hit errors with assets not being found, ask findmnt -T <path> for the mount target/source and use that to construct the right path to open in the user's browser.
 - If the first CDP command stalls, try `agent-browser --cdp 9222 snapshot` once to warm the daemon. A snapshot timeout is not fatal if `feed-capture` succeeds immediately afterward.
+
+## Git / PRs
+
+- Commit hooks require Conventional Commits. Use messages like `feat: add feed doctor` or `fix: handle missing render input`.
 
 ## Supported platforms
 
@@ -87,6 +108,7 @@ DISPLAY=:0 setsid nohup <WORKSPACE>/chrome-install/opt/google/chrome/google-chro
 - bluesky
 - linkedin
 - tiktok
+- youtube
 
 ## Core entry points
 
@@ -153,6 +175,11 @@ feed-render  [input-json] [output-html] [--pick rows|all] [--tab] [--summary TEX
 An alternative to the CDP/agent-browser capture path. Instead of
 launching or connecting to a headless browser, the agent drives the
 user's real Chrome via Cowork's Claude in Chrome MCP tools.
+
+Keep CiC as a separate, documented avenue. It is not a replacement for
+CDP capture: it exists for environments where the authenticated browser
+is available through the Chrome connector but not through a usable CDP
+daemon.
 
 ### When to use CiC
 

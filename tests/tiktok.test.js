@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  buildExtractionScript,
   buildTikTokItemsFromUniversalData,
   prepareFeed,
 } from "../sources/tiktok/capture.js";
@@ -9,8 +10,10 @@ function createBrowserStub(existingState) {
   const calls = [];
   return {
     calls,
-    ensureTab(...args) {
-      calls.push(["ensureTab", ...args]);
+    ensureUrl(url) {
+      calls.push(["ensureUrl", url]);
+      existingState.url = url;
+      return url;
     },
     tryWaitForFunction(expression) {
       calls.push(["tryWaitForFunction", expression]);
@@ -40,15 +43,41 @@ describe("tiktok capture bootstrap", () => {
 
     prepareFeed(browser);
 
-    expect(browser.calls.some(([name]) => name === "ensureTab")).toBe(true);
+    expect(browser.calls).toContainEqual([
+      "ensureUrl",
+      "https://www.tiktok.com/",
+    ]);
     expect(browser.calls.some(([name]) => name === "evalText")).toBe(true);
     expect(
       browser.calls.filter(([name]) => name === "tryWaitForFunction").length,
     ).toBeGreaterThan(0);
   });
+
+  test("requires the tiktok home feed rather than any tiktok page", () => {
+    const browser = createBrowserStub({
+      url: "https://www.tiktok.com/@demo/video/123",
+      text: "For You",
+    });
+
+    prepareFeed(browser);
+
+    expect(browser.calls).toContainEqual([
+      "ensureUrl",
+      "https://www.tiktok.com/",
+    ]);
+  });
 });
 
 describe("tiktok fixture contract", () => {
+  test("generated extractor handles universal data and visible DOM feed state", () => {
+    const script = buildExtractionScript(1);
+
+    expect(script).toContain("webapp.updated-items");
+    expect(script).toContain("buildTikTokItemsFromUniversalData");
+    expect(script).toContain("buildTikTokItemsFromDom");
+    expect(script).toContain("dom_item_count");
+  });
+
   test("maps real-browser universal items into the normalized feed shape", () => {
     const universalItems = JSON.parse(
       readFixture("tiktok", "universal-items.json"),

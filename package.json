@@ -12,6 +12,7 @@
     "format:check": "prettier --check .",
     "precommit": "prek run --all-files --stage pre-commit",
     "test": "vitest run",
+    "doctor": "./bin/feed-doctor",
     "deadcode": "knip --exclude exports,types",
     "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode",
     "setup:yt-dlp": "uv tool install --force 'yt-dlp[default,curl-cffi]'"
@@ -22,6 +23,7 @@
       "bin/feed-capture-cic",
       "bin/feed-classify",
       "bin/feed-curate",
+      "bin/feed-doctor",
       "bin/feed-render",
       "lib/*-cli.ts",
       "tests/**/*.{js,mts}"

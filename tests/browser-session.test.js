@@ -2,6 +2,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, test } from "vitest";
 import {
+  browserUrlMatchesTarget,
   createBrowserSession,
   toBrowserTarget,
   translateMountedPath,
@@ -52,6 +53,35 @@ describe("toBrowserTarget", () => {
   });
 });
 
+describe("browserUrlMatchesTarget", () => {
+  test("accepts redirected homepage query parameters", () => {
+    expect(
+      browserUrlMatchesTarget(
+        "https://www.tiktok.com/?is_from_webapp=1&sender_device=pc",
+        "https://www.tiktok.com/",
+      ),
+    ).toBe(true);
+  });
+
+  test("keeps explicit query strings exact", () => {
+    expect(
+      browserUrlMatchesTarget(
+        "https://www.youtube.com/?app=desktop",
+        "https://www.youtube.com/?app=feed",
+      ),
+    ).toBe(false);
+  });
+
+  test("does not accept same-domain different paths", () => {
+    expect(
+      browserUrlMatchesTarget(
+        "https://www.tiktok.com/@demo/video/123",
+        "https://www.tiktok.com/",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("createBrowserSession", () => {
   test("keeps parsed mount and tab url fields string-strict", () => {
     const calls = [];
@@ -83,5 +113,83 @@ describe("createBrowserSession", () => {
       { index: 2, url: "https://x.com" },
     ]);
     expect(calls).toEqual([["tab", "list", "--json"]]);
+  });
+
+  test("ensureUrl reuses exact tabs and does not accept same-domain pages", () => {
+    const calls = [];
+    let currentUrl = "https://www.tiktok.com/@demo/video/123";
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: (commandArgs) => {
+          calls.push(commandArgs);
+          if (commandArgs[0] === "get" && commandArgs[1] === "url") {
+            return currentUrl;
+          }
+          if (commandArgs[0] === "tab" && commandArgs[1] === "list") {
+            return JSON.stringify({
+              data: {
+                tabs: [
+                  { index: 1, url: "https://www.tiktok.com/@demo/video/123" },
+                  { index: 2, url: "https://www.tiktok.com/" },
+                ],
+              },
+            });
+          }
+          if (commandArgs[0] === "tab" && commandArgs[1] === "2") {
+            currentUrl = "https://www.tiktok.com/";
+            return "";
+          }
+          return "";
+        },
+      },
+      {},
+    );
+
+    expect(session.ensureUrl("https://www.tiktok.com/")).toBe(
+      "https://www.tiktok.com/",
+    );
+    expect(calls).toContainEqual(["tab", "2"]);
+    expect(calls).not.toContainEqual(["tab", "new", "https://www.tiktok.com/"]);
+  });
+
+  test("ensureUrl accepts redirected homepage query parameters", () => {
+    const calls = [];
+    let currentUrl = "about:blank";
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: (commandArgs) => {
+          calls.push(commandArgs);
+          if (commandArgs[0] === "get" && commandArgs[1] === "url") {
+            return currentUrl;
+          }
+          if (commandArgs[0] === "tab" && commandArgs[1] === "list") {
+            return JSON.stringify({
+              data: {
+                tabs: [
+                  {
+                    index: 1,
+                    url: "https://www.tiktok.com/?is_from_webapp=1",
+                  },
+                ],
+              },
+            });
+          }
+          if (commandArgs[0] === "tab" && commandArgs[1] === "1") {
+            currentUrl = "https://www.tiktok.com/?is_from_webapp=1";
+            return "";
+          }
+          return "";
+        },
+      },
+      {},
+    );
+
+    expect(session.ensureUrl("https://www.tiktok.com/")).toBe(
+      "https://www.tiktok.com/?is_from_webapp=1",
+    );
+    expect(calls).toContainEqual(["tab", "1"]);
+    expect(calls).not.toContainEqual(["tab", "new", "https://www.tiktok.com/"]);
   });
 });
