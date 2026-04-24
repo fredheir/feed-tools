@@ -19,6 +19,7 @@ const chromeBin = path.join(
 );
 const chromeProfile = path.join(rootDir, "chrome-profile");
 const chromeLog = path.join(rootDir, "chrome.log");
+const cdpProbeTimeoutMs = 20_000;
 
 function usage() {
   console.log(
@@ -85,6 +86,10 @@ function run(command, args, options = {}) {
   });
 }
 
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 function ensurePnpm() {
   const pnpm = executablePath("pnpm");
   if (pnpm) return pnpm;
@@ -93,6 +98,27 @@ function ensurePnpm() {
   const installed = executablePath("pnpm");
   if (!installed)
     throw new Error(`pnpm install finished but ${localBin}/pnpm is missing`);
+  return installed;
+}
+
+function ensureUv() {
+  const uv = executablePath("uv");
+  if (uv) return uv;
+  fs.mkdirSync(localBin, { recursive: true });
+  const installerPath = path.join(os.tmpdir(), "uv-installer.sh");
+  run("wget", ["-q", "https://astral.sh/uv/install.sh", "-O", installerPath]);
+  run("sh", [installerPath], {
+    env: {
+      ...process.env,
+      INSTALLER_NO_MODIFY_PATH: "1",
+      PATH: `${localBin}${path.delimiter}${process.env.PATH || ""}`,
+      UV_INSTALL_DIR: localBin,
+    },
+  });
+  fs.rmSync(installerPath, { force: true });
+  const installed = executablePath("uv");
+  if (!installed)
+    throw new Error(`uv install finished but ${localBin}/uv is missing`);
   return installed;
 }
 
@@ -117,6 +143,34 @@ function ensureChrome() {
   }
 }
 
+function cdpVersionUrl(cdpPort) {
+  return `http://127.0.0.1:${cdpPort}/json/version`;
+}
+
+function canReadCdpVersion(cdpPort) {
+  const script = `
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 1000);
+fetch(process.argv[1], { signal: controller.signal })
+  .then(async (response) => {
+    if (!response.ok) process.exit(1);
+    const payload = await response.json();
+    process.exit(typeof payload.webSocketDebuggerUrl === "string" ? 0 : 1);
+  })
+  .catch(() => process.exit(1))
+  .finally(() => clearTimeout(timeout));
+`;
+  try {
+    execFileSync(process.execPath, ["-e", script, cdpVersionUrl(cdpPort)], {
+      stdio: "ignore",
+      timeout: 2000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function launchWorkspaceChrome(cdpPort) {
   fs.mkdirSync(chromeProfile, { recursive: true });
   const logFd = fs.openSync(chromeLog, "a");
@@ -136,13 +190,31 @@ function launchWorkspaceChrome(cdpPort) {
       env: { ...process.env, DISPLAY: process.env.DISPLAY || ":0" },
     },
   );
-  child.unref();
-  console.log(`Chrome launched on CDP port ${cdpPort}; log: ${chromeLog}`);
+  const deadline = Date.now() + cdpProbeTimeoutMs;
+  while (Date.now() < deadline) {
+    if (canReadCdpVersion(cdpPort)) {
+      child.unref();
+      console.log(`Chrome launched on CDP port ${cdpPort}; log: ${chromeLog}`);
+      return;
+    }
+    sleep(500);
+  }
+  try {
+    if (child.pid) process.kill(child.pid, "SIGTERM");
+  } catch {
+    // Process already exited.
+  }
+  throw new Error(
+    `Chrome did not expose CDP at ${cdpVersionUrl(cdpPort)} within ${
+      cdpProbeTimeoutMs / 1000
+    }s; see ${chromeLog}`,
+  );
 }
 
 function main() {
   const { launchChrome, cdpPort } = parseArgs(process.argv);
   const pnpm = ensurePnpm();
+  ensureUv();
   run(pnpm, ["install"]);
   run(pnpm, ["setup:yt-dlp"]);
   ensureChrome();
