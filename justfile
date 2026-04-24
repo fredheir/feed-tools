@@ -66,12 +66,12 @@ hooks-install:
     config_tmp="$(mktemp)"; trap 'rm -f "$config_tmp"' EXIT; if git config --local --get-all core.hooksPath > "$config_tmp"; then git config --local --unset-all core.hooksPath; fi
     rm -f "$(git rev-parse --git-path hooks/pre-commit)" "$(git rev-parse --git-path hooks/commit-msg)" "$(git rev-parse --git-path hooks/prepare-commit-msg)" "$(git rev-parse --git-path hooks/pre-push)" "$(git rev-parse --git-path hooks/post-merge)" "$(git rev-parse --git-path hooks/post-checkout)"
     git config --local --replace-all hook.lefthook-pre-commit.event pre-commit
-    git config --local --replace-all hook.lefthook-pre-commit.command "lefthook run pre-commit --no-auto-install"
+    git config --local --replace-all hook.lefthook-pre-commit.command "pnpm exec lefthook run pre-commit --no-auto-install"
     git config --local --replace-all hook.lefthook-commit-msg.event commit-msg
-    git config --local --replace-all hook.lefthook-commit-msg.command "lefthook run commit-msg --no-auto-install"
+    git config --local --replace-all hook.lefthook-commit-msg.command "pnpm exec lefthook run commit-msg --no-auto-install"
     git config --local --replace-all hook.lefthook-pre-push.event pre-push
-    git config --local --replace-all hook.lefthook-pre-push.command "lefthook run pre-push --no-auto-install"
+    git config --local --replace-all hook.lefthook-pre-push.command "pnpm exec lefthook run pre-push --no-auto-install"
     git config --local --replace-all hook.lefthook-post-merge.event post-merge
-    git config --local --replace-all hook.lefthook-post-merge.command "lefthook run post-merge --no-auto-install"
+    git config --local --replace-all hook.lefthook-post-merge.command "pnpm exec lefthook run post-merge --no-auto-install"
     git config --local --replace-all hook.lefthook-post-checkout.event post-checkout
-    git config --local --replace-all hook.lefthook-post-checkout.command "lefthook run post-checkout --no-auto-install"
+    git config --local --replace-all hook.lefthook-post-checkout.command "pnpm exec lefthook run post-checkout --no-auto-install"
