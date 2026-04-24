@@ -84,4 +84,42 @@ describe("createBrowserSession", () => {
     ]);
     expect(calls).toEqual([["tab", "list", "--json"]]);
   });
+
+  test("ensureUrl reuses exact tabs and does not accept same-domain pages", () => {
+    const calls = [];
+    let currentUrl = "https://www.tiktok.com/@demo/video/123";
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: (commandArgs) => {
+          calls.push(commandArgs);
+          if (commandArgs[0] === "get" && commandArgs[1] === "url") {
+            return currentUrl;
+          }
+          if (commandArgs[0] === "tab" && commandArgs[1] === "list") {
+            return JSON.stringify({
+              data: {
+                tabs: [
+                  { index: 1, url: "https://www.tiktok.com/@demo/video/123" },
+                  { index: 2, url: "https://www.tiktok.com/" },
+                ],
+              },
+            });
+          }
+          if (commandArgs[0] === "tab" && commandArgs[1] === "2") {
+            currentUrl = "https://www.tiktok.com/";
+            return "";
+          }
+          return "";
+        },
+      },
+      {},
+    );
+
+    expect(session.ensureUrl("https://www.tiktok.com/")).toBe(
+      "https://www.tiktok.com/",
+    );
+    expect(calls).toContainEqual(["tab", "2"]);
+    expect(calls).not.toContainEqual(["tab", "new", "https://www.tiktok.com/"]);
+  });
 });

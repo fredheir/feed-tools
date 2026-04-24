@@ -140,6 +140,16 @@ function assertStandardizedDocument(
   }
 }
 
+function assertNonEmptyCapture(
+  document: FeedDocument,
+  sourceName: string,
+): void {
+  if (document.items.length > 0) return;
+  throw new Error(
+    `Capture failed for ${sourceName}: no items were extracted. Check authentication, selectors, and source-specific page state before rendering.`,
+  );
+}
+
 async function persistCapturedDocument(
   document: FeedDocument,
   { sourceName, assetsDir, saveDir }: PersistOptions,
@@ -217,6 +227,7 @@ async function runSourceCapture(
     browserOptions: normalizedBrowserOptions,
   });
   const normalizedDocument = normalizeDocument(document, adapter.name);
+  assertNonEmptyCapture(normalizedDocument, adapter.name);
   return persistCapturedDocument(normalizedDocument, {
     sourceName: adapter.name,
     assetsDir,
@@ -352,6 +363,7 @@ module.exports = {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
   assertFeedUrlAccessible,
+  assertNonEmptyCapture,
   collectUniqueItems,
   hasNewUnclassifiedItems,
   normalizeDocument,

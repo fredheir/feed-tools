@@ -96,6 +96,10 @@ curl -sf http://127.0.0.1:9222/json/version
 - If you are in a sandbox and hit errors with assets not being found, ask findmnt -T <path> for the mount target/source and use that to construct the right path to open in the user's browser.
 - If the first CDP command stalls, try `agent-browser --cdp 9222 snapshot` once to warm the daemon. A snapshot timeout is not fatal if `feed-capture` succeeds immediately afterward.
 
+## Git / PRs
+
+- Commit hooks require Conventional Commits. Use messages like `feat: add feed doctor` or `fix: handle missing render input`.
+
 ## Supported platforms
 
 - facebook

@@ -364,17 +364,19 @@ function enrichFacebookItem(
 }
 
 function captureFacebookSnapshot(browser: BrowserSession): string {
-  try {
+  const hasMain = browser.evalJson<boolean>(
+    `(() => JSON.stringify(Boolean(document.querySelector("main"))))()`,
+  );
+  if (hasMain) {
     return browser.snapshotText(["-c", "-s", "main"]);
-  } catch {
-    return browser.snapshotText(["-c"]);
   }
+  return browser.snapshotText(["-c"]);
 }
 
 function prepareFacebookFeed(browser: BrowserSession): void {
   const shortWait = jitterTimeout(900, 300);
   const mediumWait = jitterTimeout(1600, 500);
-  browser.ensureTab("https://www.facebook.com/", "https://www.facebook.com/");
+  browser.ensureUrl("https://www.facebook.com/");
   browser.reloadCurrentTab();
   browser.tryWaitForFunction("document.readyState === 'complete'", shortWait);
   browser.evalText(`(() => {

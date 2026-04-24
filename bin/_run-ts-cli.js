@@ -33,9 +33,10 @@ process.on("unhandledRejection", printCliError);
 function runTsCli(entrypoint) {
   const rootDir = path.resolve(__dirname, "..");
   try {
-    require(path.resolve(rootDir, entrypoint));
+    return require(path.resolve(rootDir, entrypoint));
   } catch (error) {
     printCliError(error);
+    return null;
   }
 }
 

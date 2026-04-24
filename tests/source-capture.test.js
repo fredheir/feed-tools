@@ -100,6 +100,28 @@ describe("runSourceCapture", () => {
     expect(exported).toEqual(document);
   });
 
+  test("fails closed when a source extracts zero items", async () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-tools-test-"));
+    tempDirs.push(saveDir);
+
+    await expect(
+      runSourceCapture(
+        {
+          name: "demo",
+          async captureDocument() {
+            return {
+              schema_version: 1,
+              source: "demo",
+              captured_at: "2026-04-03T10:00:00Z",
+              items: [],
+            };
+          },
+        },
+        { saveDir },
+      ),
+    ).rejects.toThrow(/no items were extracted/);
+  });
+
   test("raises a capture access error when a protected feed resolves to login chrome", () => {
     expect(() =>
       assertAuthenticatedCapture(

@@ -75,9 +75,6 @@ function normalizeInstagramCandidate(item: FeedItem): FeedItem {
   );
 }
 
-const instagramIsPermalink = isInstagramPermalinkUrl;
-const instagramIsProfile = isInstagramProfileUrl;
-
 function instagramIsCountLike(value: unknown): boolean {
   return /^\d[\d,.KkMm]*$/.test(
     String(value || "")
@@ -113,7 +110,7 @@ function instagramIsNoiseLine(value: unknown): boolean {
   );
 }
 
-function buildExtractionScript(limit: number): string {
+export function buildExtractionScript(limit: number): string {
   return buildBrowserRuntimeScript(
     limit,
     `
@@ -121,7 +118,7 @@ function buildExtractionScript(limit: number): string {
       const links = Array.from(root.querySelectorAll("a[href]"));
       return links
         .map((link) => makeAbsoluteUrl(link.getAttribute("href"), "https://www.instagram.com"))
-        .find((href) => href && instagramIsPermalink(href)) || null;
+        .find((href) => href && isInstagramPermalinkUrl(href)) || null;
     }
 
     function getAuthorLink(root, permalinkUrl) {
@@ -131,7 +128,7 @@ function buildExtractionScript(limit: number): string {
           href: makeAbsoluteUrl(link.getAttribute("href"), "https://www.instagram.com"),
           text: textOf(link),
         }))
-        .find((link) => link.href && link.href !== permalinkUrl && instagramIsProfile(link.href) && link.text) || null;
+        .find((link) => link.href && link.href !== permalinkUrl && isInstagramProfileUrl(link.href) && link.text) || null;
     }
 
     function getProfileImageUrl(root, authorName) {
@@ -197,7 +194,7 @@ function buildExtractionScript(limit: number): string {
         .filter((link) => {
           if (!link.href || seen.has(link.href)) return false;
           if (link.href === permalinkUrl || link.href === authorHref) return false;
-          if (instagramIsPermalink(link.href)) return false;
+          if (isInstagramPermalinkUrl(link.href)) return false;
           seen.add(link.href);
           return true;
         })
@@ -286,8 +283,8 @@ function buildExtractionScript(limit: number): string {
     });
     `,
     [
-      instagramIsPermalink,
-      instagramIsProfile,
+      isInstagramPermalinkUrl,
+      isInstagramProfileUrl,
       instagramIsCountLike,
       instagramIsTimeLike,
       instagramIsNoiseLine,
@@ -407,6 +404,7 @@ const source = {
 const prepareFeed = prepareInstagramFeed;
 
 module.exports = {
+  buildExtractionScript,
   normalizeInstagramExtractionDocument,
   normalizeInstagramCandidate,
   source,

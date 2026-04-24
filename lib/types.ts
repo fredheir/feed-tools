@@ -325,6 +325,7 @@ export interface BrowserSession {
   ) => boolean;
   waitForSelector: (selector: string, timeoutMs?: number | null) => void;
   ensureTab: (urlPrefix: string | string[], openUrl: string) => string;
+  ensureUrl: (url: string) => string;
   evalJson: <T = unknown>(script: string) => T;
   evalText: (script: string) => string;
   snapshotText: (options?: string[], timeoutMs?: number) => string;

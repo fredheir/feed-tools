@@ -3,4 +3,7 @@
 
 const { runTsCli } = require("./_run-ts-cli.js");
 
-runTsCli("lib/doctor-cli.ts");
+const cli = runTsCli("lib/doctor-cli.ts");
+if (cli?.main) {
+  void cli.main();
+}
