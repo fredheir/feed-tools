@@ -63,6 +63,7 @@ check: doctor fmt-check lint typecheck test secrets deps-check gen-check
 ci: check
 
 hooks-install:
+    git hook run --ignore-missing --allow-unknown-hook-name __codex_probe__ >/dev/null 2>&1 || { echo "Git config-based hooks require git hook support; upgrade Git before installing repo hooks." >&2; exit 1; }
     config_tmp="$(mktemp)"; trap 'rm -f "$config_tmp"' EXIT; if git config --local --get-all core.hooksPath > "$config_tmp"; then git config --local --unset-all core.hooksPath; fi
     rm -f "$(git rev-parse --git-path hooks/pre-commit)" "$(git rev-parse --git-path hooks/commit-msg)" "$(git rev-parse --git-path hooks/prepare-commit-msg)" "$(git rev-parse --git-path hooks/pre-push)" "$(git rev-parse --git-path hooks/post-merge)" "$(git rev-parse --git-path hooks/post-checkout)"
     git config --local --replace-all hook.lefthook-pre-commit.event pre-commit
