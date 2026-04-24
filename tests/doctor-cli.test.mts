@@ -114,8 +114,11 @@ describe("feed-doctor config helpers", () => {
   test("accepts custom SSH private key filenames", () => {
     expect(isSshPrivateKeyFilename("id_ed25519")).toBe(true);
     expect(isSshPrivateKeyFilename("github_ed25519")).toBe(true);
+    expect(isSshPrivateKeyFilename("github-rsa-work")).toBe(true);
     expect(isSshPrivateKeyFilename("github_ed25519.pub")).toBe(false);
     expect(isSshPrivateKeyFilename("known_hosts")).toBe(false);
     expect(isSshPrivateKeyFilename("config")).toBe(false);
+    expect(isSshPrivateKeyFilename("allowed_signers")).toBe(false);
+    expect(isSshPrivateKeyFilename("helper")).toBe(false);
   });
 });

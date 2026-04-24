@@ -293,10 +293,13 @@ export function isSshRemote(remote: string): boolean {
 }
 
 const NON_PRIVATE_SSH_FILES = new Set([
+  "allowed_signers",
   "authorized_keys",
+  "authorized_principals",
   "config",
   "environment",
   "known_hosts",
+  "known_hosts2",
   "known_hosts.old",
   "rc",
 ]);
@@ -306,7 +309,9 @@ export function isSshPrivateKeyFilename(filename: string): boolean {
     !filename.startsWith(".") &&
     !filename.endsWith(".pub") &&
     !filename.endsWith("-cert.pub") &&
-    !NON_PRIVATE_SSH_FILES.has(filename)
+    !NON_PRIVATE_SSH_FILES.has(filename) &&
+    (/^id_/.test(filename) ||
+      /(^|[-_])(rsa|dsa|ecdsa|ed25519|ed448)($|[-_])/i.test(filename))
   );
 }
 
@@ -324,8 +329,15 @@ function hasSshPrivateKey(sshDir: string): boolean {
   }
 }
 
+function hasSshAgentKey(): boolean {
+  return (
+    Boolean(process.env.SSH_AUTH_SOCK) &&
+    commandResponds("ssh-add", ["-l"]) !== null
+  );
+}
+
 function hasSshCredentials(sshDir: string): boolean {
-  return Boolean(process.env.SSH_AUTH_SOCK) || hasSshPrivateKey(sshDir);
+  return hasSshAgentKey() || hasSshPrivateKey(sshDir);
 }
 
 function checkGitRemote(): CheckResult {
