@@ -323,7 +323,8 @@ function checkGitRemote(): CheckResult {
   }
   const sshDir = path.join(os.homedir(), ".ssh");
   const hasPrivateKey = hasSshPrivateKey(sshDir);
-  if (hasPrivateKey) return { name: "git-remote", ok: true, detail: remote };
+  if (hasPrivateKey)
+    return { name: "git-remote", ok: true, detail: redactedRemote };
   return {
     name: "git-remote",
     ok: false,
