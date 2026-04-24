@@ -278,7 +278,6 @@ function checkWorkspaceChrome(): CheckResult {
 }
 
 export function redactRemoteUrl(remote: string): string {
-  if (!/^https?:\/\//i.test(remote)) return remote;
   try {
     const parsed = new URL(remote);
     if (parsed.username) parsed.username = "redacted";

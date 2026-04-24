@@ -96,6 +96,9 @@ describe("feed-doctor config helpers", () => {
     expect(
       redactRemoteUrl("https://oauth2:ghp_secret@example.com/org/repo.git"),
     ).toBe("https://redacted:redacted@example.com/org/repo.git");
+    expect(redactRemoteUrl("ssh://git:secret@example.com/org/repo.git")).toBe(
+      "ssh://redacted:redacted@example.com/org/repo.git",
+    );
     expect(redactRemoteUrl("git@example.com:org/repo.git")).toBe(
       "git@example.com:org/repo.git",
     );
