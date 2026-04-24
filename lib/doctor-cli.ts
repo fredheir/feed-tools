@@ -186,6 +186,7 @@ export function detectSandboxSignals(env = process.env): SandboxSignal[] {
     "CODEX_ENV",
     "CLAUDECODE",
     "CLAUDE_CODE",
+    "CLAUDE_CODE_IS_COWORK",
     "COWORK",
     "CONTAINER",
   ]) {
@@ -214,6 +215,13 @@ export function detectSandboxSignals(env = process.env): SandboxSignal[] {
     }
   }
   return signals;
+}
+
+function isCoworkEnvironment(): boolean {
+  return (
+    Boolean(process.env.CLAUDE_CODE_IS_COWORK) ||
+    !process.env.DBUS_SESSION_BUS_ADDRESS
+  );
 }
 
 function checkSandbox(): CheckResult {
@@ -404,14 +412,14 @@ function checkCic(): CheckResult {
 export function recommendedBrowserConfig(
   results: CheckResult[],
 ): RecommendedBrowserConfig | null {
-  if (results.find((result) => result.name === "agent-browser")?.ok) {
-    return {};
-  }
   const cdp = results.find(
     (result) => result.name.startsWith("cdp:") && result.ok,
   );
-  if (!cdp) return null;
-  return { cdp: cdp.name.replace(/^cdp:/, "") };
+  if (cdp) return { cdp: cdp.name.replace(/^cdp:/, "") };
+  if (results.find((result) => result.name === "agent-browser")?.ok) {
+    return {};
+  }
+  return null;
 }
 
 export function applyBrowserConfigToPayload(
@@ -494,6 +502,12 @@ function printConfigResult(configResult: ConfigResult): void {
 }
 
 function printText(results: CheckResult[], configResult: ConfigResult): void {
+  if (isCoworkEnvironment()) {
+    console.log(
+      "INFO cowork: Chrome is reaped at turn end; sign in and capture in the same turn, while the workspace profile on disk persists.",
+    );
+    console.log("");
+  }
   for (const result of results) {
     const status = result.ok ? "OK" : "NO";
     console.log(`${status} ${result.name}: ${result.detail}`);

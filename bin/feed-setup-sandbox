@@ -7,8 +7,9 @@ const os = require("node:os");
 const path = require("node:path");
 
 const rootDir = path.resolve(__dirname, "..");
-const localPrefix = path.join(os.homedir(), ".local");
+const localPrefix = path.join(rootDir, ".local");
 const localBin = path.join(localPrefix, "bin");
+const sourceEnvPath = path.join(rootDir, "source-env.sh");
 const chromeDir = path.join(rootDir, "chrome-install");
 const chromeBin = path.join(
   chromeDir,
@@ -99,6 +100,13 @@ function ensurePnpm() {
   if (!installed)
     throw new Error(`pnpm install finished but ${localBin}/pnpm is missing`);
   return installed;
+}
+
+function writeSourceEnv() {
+  fs.writeFileSync(
+    sourceEnvPath,
+    `export PATH=${JSON.stringify(`${localBin}:$PATH`)}\n`,
+  );
 }
 
 function ensureUv() {
@@ -234,6 +242,7 @@ function launchWorkspaceChrome(cdpPort) {
 
 function main() {
   const { launchChrome, cdpPort } = parseArgs(process.argv);
+  writeSourceEnv();
   const pnpm = ensurePnpm();
   ensureUv();
   run(pnpm, ["install"]);
@@ -243,6 +252,8 @@ function main() {
   fs.mkdirSync(chromeProfile, { recursive: true });
   if (launchChrome) launchWorkspaceChrome(cdpPort);
   console.log("Sandbox setup complete.");
+  console.log(`Sandbox tools: ${localBin}`);
+  console.log(`Shell env: source ${sourceEnvPath}`);
   console.log(`Chrome binary: ${chromeBin}`);
   console.log(`Chrome profile: ${chromeProfile}`);
 }

@@ -10,22 +10,22 @@ import {
 } from "../lib/doctor-cli.js";
 
 describe("feed-doctor config helpers", () => {
-  test("prefers agent-browser by writing empty browser config", () => {
+  test("prefers verified CDP over agent-browser when both are available", () => {
     expect(
       recommendedBrowserConfig([
         { name: "agent-browser", ok: true, detail: "agent-browser 0.23.4" },
         { name: "cdp:9222", ok: true, detail: "Chrome" },
       ]),
-    ).toEqual({});
+    ).toEqual({ cdp: "9222" });
   });
 
-  test("falls back to verified CDP when agent-browser is unavailable", () => {
+  test("falls back to agent-browser when CDP is unavailable", () => {
     expect(
       recommendedBrowserConfig([
-        { name: "agent-browser", ok: false, detail: "missing" },
-        { name: "cdp:9223", ok: true, detail: "Chrome" },
+        { name: "agent-browser", ok: true, detail: "agent-browser 0.23.4" },
+        { name: "cdp:9223", ok: false, detail: "missing" },
       ]),
-    ).toEqual({ cdp: "9223" });
+    ).toEqual({});
   });
 
   test("updates every source browser block while preserving preferences", () => {
