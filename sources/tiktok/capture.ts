@@ -16,6 +16,7 @@ import type {
   FeedBrowserConfig,
   FeedDocument,
   FeedItem,
+  FeedMedia,
 } from "../../lib/types.js";
 
 const TIKTOK_BASE_URL = "https://www.tiktok.com";
@@ -218,6 +219,16 @@ function buildTikTokItemsFromDom(limit: number): FeedItem[] {
       text: textOf(button),
       aria: String(button.getAttribute("aria-label") || ""),
     }));
+    const media: FeedMedia[] = cover?.src
+      ? [
+          {
+            src: cover.src,
+            href: url,
+            alt: cover.alt || `TikTok video by @${handleText}`,
+            media_kind: "video",
+          },
+        ]
+      : [];
 
     const item: FeedItem = {
       source: "tiktok",
@@ -240,14 +251,7 @@ function buildTikTokItemsFromDom(limit: number): FeedItem[] {
         like: findTikTokButtonCount(buttons, /likes/i),
         view: null,
       },
-      media: [
-        {
-          src: cover?.src || null,
-          href: url,
-          alt: cover?.alt || `TikTok video by @${handleText}`,
-          media_kind: "video",
-        },
-      ].filter((media) => media.src),
+      media,
       cards: [],
       thread: {
         has_thread_line: false,
