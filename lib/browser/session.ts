@@ -93,6 +93,23 @@ function canonicalBrowserUrl(value: string): string | null {
   }
 }
 
+export function browserUrlMatchesTarget(
+  value: string,
+  target: string,
+): boolean {
+  try {
+    const current = new URL(value);
+    const expected = new URL(target);
+    current.hash = "";
+    expected.hash = "";
+    if (current.origin !== expected.origin) return false;
+    if (current.pathname !== expected.pathname) return false;
+    return expected.search ? current.search === expected.search : true;
+  } catch {
+    return false;
+  }
+}
+
 function parseFindmntPayload(payload: string): MountInfo | null {
   const parsed = JSON.parse(payload) as unknown;
   if (!isRecord(parsed)) return null;
@@ -348,9 +365,10 @@ function createBrowserSession(
     if (!targetUrl) {
       throw new Error(`Invalid browser URL: ${url}`);
     }
+    const expectedUrl = targetUrl;
 
     function isTargetUrl(value: string): boolean {
-      return canonicalBrowserUrl(value) === targetUrl;
+      return browserUrlMatchesTarget(value, expectedUrl);
     }
 
     function pollCurrentUrl(timeoutMs = 5000): string {
@@ -435,6 +453,7 @@ function createBrowserSession(
 }
 
 module.exports = {
+  browserUrlMatchesTarget,
   createBrowserSession,
   canonicalBrowserUrl,
   toBrowserTarget,

@@ -1,9 +1,11 @@
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { describe, expect, test } from "vitest";
 import {
   buildAgentBrowserArgs,
   getCdpVersionUrl,
   getRuntimeBrowserOptions,
+  readCdpVersionPayload,
   sanitizeAgentBrowserOutput,
 } from "../lib/browser.js";
 
@@ -131,6 +133,45 @@ describe("buildAgentBrowserArgs", () => {
     expect(getCdpVersionUrl("http://localhost:9224")).toBe(
       "http://localhost:9224/json/version",
     );
+  });
+
+  test("reads CDP version JSON through node runtime", async () => {
+    const server = spawn(process.execPath, [
+      "-e",
+      `
+const http = require("node:http");
+const server = http.createServer((_request, response) => {
+  response.setHeader("content-type", "application/json");
+  response.end('{"webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');
+});
+server.listen(0, "127.0.0.1", () => {
+  process.stdout.write(String(server.address().port) + "\\n");
+});
+process.on("SIGTERM", () => server.close(() => process.exit(0)));
+`,
+    ]);
+    const port = await new Promise((resolve, reject) => {
+      let payload = "";
+      server.stdout.on("data", (chunk) => {
+        payload += String(chunk);
+        const line = payload.split("\n")[0]?.trim();
+        if (line) resolve(line);
+      });
+      server.once("error", reject);
+      server.once("exit", (code) => {
+        if (code) reject(new Error(`probe server exited with ${code}`));
+      });
+    });
+    try {
+      const payload = readCdpVersionPayload(
+        `http://127.0.0.1:${port}/json/version`,
+      );
+      expect(JSON.parse(payload)).toMatchObject({
+        webSocketDebuggerUrl: "ws://127.0.0.1/devtools/browser",
+      });
+    } finally {
+      server.kill("SIGTERM");
+    }
   });
 
   test("strips repeated daemon args warnings from agent-browser output", () => {

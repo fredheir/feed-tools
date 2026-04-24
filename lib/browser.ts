@@ -200,14 +200,31 @@ export function getCdpVersionUrl(cdp: string): string {
   return value;
 }
 
+export function readCdpVersionPayload(url: string): string {
+  const script = `
+const url = process.argv[1];
+const timeoutMs = Number(process.argv[2]);
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), timeoutMs);
+fetch(url, { signal: controller.signal })
+  .then(async (response) => {
+    if (!response.ok) process.exit(1);
+    process.stdout.write(await response.text());
+  })
+  .catch(() => process.exit(1))
+  .finally(() => clearTimeout(timeout));
+`;
+  return execFileSync(process.execPath, ["-e", script, url, "2000"], {
+    encoding: "utf8",
+    timeout: CDP_PROBE_TIMEOUT_MS + 1000,
+  });
+}
+
 function assertCdpEndpoint(cdp: string): void {
   const url = getCdpVersionUrl(cdp);
   let output = "";
   try {
-    output = execFileSync("curl", ["-sf", "--max-time", "2", url], {
-      encoding: "utf8",
-      timeout: CDP_PROBE_TIMEOUT_MS + 500,
-    });
+    output = readCdpVersionPayload(url);
   } catch {
     throw new Error(
       `CDP endpoint ${cdp} did not respond at ${url}. If port ${cdp} is owned by Codex Desktop or another embedded browser, launch a dedicated Chrome profile on another port such as 9223 and set capture.browser.cdp to that port.`,
@@ -290,5 +307,6 @@ module.exports = {
   getRuntimeBrowserOptions,
   jitterTimeout,
   normalizeBrowserOptions,
+  readCdpVersionPayload,
   sanitizeAgentBrowserOutput,
 };
