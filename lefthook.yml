@@ -2,11 +2,11 @@ pre-commit:
   parallel: true
   commands:
     prettier:
-      glob: "*.{js,jsx,ts,tsx,json,jsonc,css,md,yml,yaml}"
+      glob: "**/*.{js,jsx,ts,tsx,json,jsonc,css,md,yml,yaml}"
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
     eslint:
-      glob: "*.{js,jsx,ts,tsx}"
+      glob: "**/*.{js,jsx,ts,tsx}"
       run: pnpm exec eslint {staged_files}
     gitleaks:
       run: just secrets-staged
