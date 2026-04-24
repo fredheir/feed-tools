@@ -2,6 +2,20 @@ import { describe, expect, test } from "vitest";
 import { renderDocument } from "../../lib/render/html.js";
 
 describe("renderDocument", () => {
+  test("renders app-style shell chrome around the feed", () => {
+    const html = renderDocument({
+      schema_version: 1,
+      source: "combined",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [],
+    });
+
+    expect(html).toContain('class="app-topbar"');
+    expect(html).toContain("Your Feed");
+    expect(html).toContain('class="feed-briefing"');
+    expect(html).toContain("0 sources");
+  });
+
   test("renders ads unchecked by default and platform filters checked", () => {
     const html = renderDocument({
       schema_version: 1,
@@ -51,6 +65,40 @@ describe("renderDocument", () => {
     expect(html).toContain('id="feed-platform-0" checked');
     expect(html).toContain('id="feed-platform-1" checked');
     expect(html).toContain('class="platform-filter-group"');
+  });
+
+  test("keeps an ads-only tab visible on first render", () => {
+    const html = renderDocument({
+      schema_version: 1,
+      source: "combined",
+      captured_at: "2026-04-01T00:00:00Z",
+      items: [
+        {
+          id: "linkedin:1",
+          source: "linkedin",
+          index: 1,
+          url: "https://www.linkedin.com/feed/update/1/",
+          author: { handle: "B" },
+          content: { text: "Ad post" },
+          stats: {},
+          media: [],
+          cards: [],
+          thread: {},
+        },
+      ],
+      mask: {
+        tabbed: true,
+        tabs: [
+          {
+            label: "Ads",
+            groups: [{ label: "Ads", item_ids: ["linkedin:1"] }],
+          },
+        ],
+      },
+    });
+
+    expect(html).toContain('id="feed-tab-0" checked');
+    expect(html).toContain("Ad post");
   });
 
   test("renders legacy tab masks that use tab-level item_ids", () => {
@@ -188,7 +236,7 @@ describe("renderDocument", () => {
     });
 
     expect(html).toContain("IntersectionObserver");
-    expect(html).toContain('document.querySelectorAll(".media-video")');
+    expect(html).toContain('document.querySelectorAll("video.media-video")');
     expect(html).toContain("video.play()");
   });
 });

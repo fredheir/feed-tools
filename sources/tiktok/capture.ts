@@ -16,9 +16,25 @@ import type {
   FeedBrowserConfig,
   FeedDocument,
   FeedItem,
+  FeedMedia,
 } from "../../lib/types.js";
 
 const TIKTOK_BASE_URL = "https://www.tiktok.com";
+interface BrowserElement {
+  currentSrc?: string;
+  src?: string;
+  textContent?: string | null;
+  getAttribute(name: string): string | null;
+  querySelector(selector: string): BrowserElement | null;
+  querySelectorAll(selector: string): BrowserElement[];
+}
+
+interface BrowserDocument {
+  querySelectorAll(selector: string): BrowserElement[];
+}
+
+declare const document: BrowserDocument;
+declare function textOf(node: BrowserElement | null | undefined): string;
 
 type TikTokUniversalItem = {
   id?: string | number | null;
@@ -122,7 +138,7 @@ function buildTikTokItemsFromUniversalData(
             video_src: item.video?.downloadAddr || item.video?.playAddr || null,
             href: postUrl,
             alt: String(item.desc || "").trim() || handle || "TikTok video",
-            media_kind: "video",
+            media_kind: "video" as const,
             width: item.video?.width || null,
             height: item.video?.height || null,
             duration: item.video?.duration || null,
@@ -143,14 +159,136 @@ function buildTikTokItemsFromUniversalData(
     });
 }
 
-function buildExtractionScript(limit: number): string {
+function parseTikTokDomCount(value: string | null | undefined): string | null {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text || null;
+}
+
+function findTikTokButtonCount(
+  buttons: Array<{ text: string; aria: string }>,
+  pattern: RegExp,
+): string | null {
+  return parseTikTokDomCount(
+    buttons.find((button) => pattern.test(button.aria))?.text || null,
+  );
+}
+
+function buildTikTokItemsFromDom(limit: number): FeedItem[] {
+  const articles = Array.from<BrowserElement>(
+    document.querySelectorAll(
+      'article[data-e2e="recommend-list-item-container"]',
+    ),
+  );
+  return articles.slice(0, limit).flatMap((article, idx): FeedItem[] => {
+    const authorLink = Array.from<BrowserElement>(
+      article.querySelectorAll("a[href]"),
+    ).find((link) => {
+      const href = String(link.getAttribute("href") || "");
+      return /^\/@[^/]+$/.test(href) && Boolean(textOf(link));
+    });
+    const handleText = textOf(authorLink).replace(/^@/, "").trim();
+    if (!handleText) return [];
+
+    const wrapperId =
+      article.querySelector('[id^="xgwrapper-"]')?.getAttribute("id") || "";
+    const sourceItemId = wrapperId.match(/(\d{12,})$/)?.[1] || null;
+    const url =
+      sourceItemId && handleText
+        ? `${TIKTOK_BASE_URL}/@${handleText}/video/${sourceItemId}`
+        : null;
+    const cover = Array.from<BrowserElement>(
+      article.querySelectorAll("img[src]"),
+    )
+      .map((img) => ({
+        src: img.currentSrc || img.src || null,
+        alt: String(img.getAttribute("alt") || "").trim(),
+      }))
+      .find((img) => img.src && !img.src.startsWith("data:"));
+    const embeddedLinks = Array.from<BrowserElement>(
+      article.querySelectorAll('a[href*="/tag/"], a[href*="/music/"]'),
+    ).map((link) => ({
+      href: makeAbsoluteUrl(link.getAttribute("href"), TIKTOK_BASE_URL),
+      text: textOf(link) || null,
+      kind: "entity",
+    }));
+    const buttons = Array.from<BrowserElement>(
+      article.querySelectorAll("button,[role='button']"),
+    ).map((button) => ({
+      text: textOf(button),
+      aria: String(button.getAttribute("aria-label") || ""),
+    }));
+    const media: FeedMedia[] = cover?.src
+      ? [
+          {
+            src: cover.src,
+            href: url,
+            alt: cover.alt || `TikTok video by @${handleText}`,
+            media_kind: "video",
+          },
+        ]
+      : [];
+
+    const item: FeedItem = {
+      source: "tiktok",
+      id: null,
+      source_item_id: sourceItemId,
+      index: idx + 1,
+      url,
+      author: {
+        handle: `@${handleText}`,
+        display_name: handleText,
+        profile_image_url: null,
+        profile_image_local: null,
+      },
+      content: {
+        text: cover?.alt || "",
+      },
+      stats: {
+        reply: findTikTokButtonCount(buttons, /comments/i),
+        share: findTikTokButtonCount(buttons, /shares/i),
+        like: findTikTokButtonCount(buttons, /likes/i),
+        view: null,
+      },
+      media,
+      cards: [],
+      thread: {
+        has_thread_line: false,
+        thread_line_height: null,
+        thread_line_x: null,
+        child_candidate_index: null,
+        child_candidate_handle: null,
+        child_candidate_url: null,
+        relationship_confidence: null,
+      },
+      embedded_links: embeddedLinks,
+    };
+    return item.url || item.content.text || item.media.length > 0 ? [item] : [];
+  });
+}
+
+export function buildExtractionScript(limit: number): string {
   return buildBrowserRuntimeScript(
     limit,
     `
     const TIKTOK_BASE_URL = ${JSON.stringify(TIKTOK_BASE_URL)};
     const buildTikTokItemsFromUniversalData = ${buildTikTokItemsFromUniversalData.toString()};
+    const parseTikTokDomCount = ${parseTikTokDomCount.toString()};
+    const findTikTokButtonCount = ${findTikTokButtonCount.toString()};
+    const buildTikTokItemsFromDom = ${buildTikTokItemsFromDom.toString()};
     const universalItems = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"] || [];
-    const items = buildTikTokItemsFromUniversalData(universalItems, limit);
+    const universalItemsOut = buildTikTokItemsFromUniversalData(universalItems, limit);
+    const domItems = universalItemsOut.length >= limit ? [] : buildTikTokItemsFromDom(limit);
+    const seen = new Set();
+    const items = [];
+    for (const item of [...universalItemsOut, ...domItems]) {
+      const key = item.source_item_id || item.url || item.content?.text;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      items.push(item);
+      if (items.length >= limit) break;
+    }
 
     return JSON.stringify({
       schema_version: 1,
@@ -159,6 +297,8 @@ function buildExtractionScript(limit: number): string {
       items,
       meta: {
         universal_count: universalItems.length,
+        universal_item_count: universalItemsOut.length,
+        dom_item_count: domItems.length,
         dom_count: document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length,
       },
     });
@@ -170,7 +310,7 @@ function prepareTikTokFeed(browser: BrowserSession): void {
   const shortWait = jitterTimeout(900, 300);
   const mediumWait = jitterTimeout(1800, 500);
   const longWait = jitterTimeout(3500, 900);
-  browser.ensureTab("https://www.tiktok.com/", "https://www.tiktok.com/");
+  browser.ensureUrl("https://www.tiktok.com/");
   browser.tryWaitForFunction("document.readyState === 'complete'", shortWait);
   browser.tryWaitForFunction(
     `(() => {
@@ -276,7 +416,9 @@ const source = {
 const prepareFeed = prepareTikTokFeed;
 
 module.exports = {
+  buildExtractionScript,
   buildTikTokItemsFromUniversalData,
+  buildTikTokItemsFromDom,
   source,
   prepareFeed,
 };

@@ -83,6 +83,33 @@ function normalizeUrlPrefixes(urlPrefix: string | string[]): string[] {
   return [String(urlPrefix)].filter(Boolean);
 }
 
+function canonicalBrowserUrl(value: string): string | null {
+  try {
+    const parsed = new URL(value);
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function browserUrlMatchesTarget(
+  value: string,
+  target: string,
+): boolean {
+  try {
+    const current = new URL(value);
+    const expected = new URL(target);
+    current.hash = "";
+    expected.hash = "";
+    if (current.origin !== expected.origin) return false;
+    if (current.pathname !== expected.pathname) return false;
+    return expected.search ? current.search === expected.search : true;
+  } catch {
+    return false;
+  }
+}
+
 function parseFindmntPayload(payload: string): MountInfo | null {
   const parsed = JSON.parse(payload) as unknown;
   if (!isRecord(parsed)) return null;
@@ -342,6 +369,50 @@ function createBrowserSession(
     return currentUrl;
   }
 
+  function ensureUrl(url: string): string {
+    const targetUrl = canonicalBrowserUrl(url);
+    if (!targetUrl) {
+      throw new Error(`Invalid browser URL: ${url}`);
+    }
+    const expectedUrl = targetUrl;
+
+    function isTargetUrl(value: string): boolean {
+      return browserUrlMatchesTarget(value, expectedUrl);
+    }
+
+    function pollCurrentUrl(timeoutMs = 5000): string {
+      const deadline = Date.now() + timeoutMs;
+      let currentUrl = "";
+      while (Date.now() <= deadline) {
+        currentUrl = getCurrentUrl();
+        if (isTargetUrl(currentUrl)) return currentUrl;
+        sleepMilliseconds(250);
+      }
+      return currentUrl;
+    }
+
+    let currentUrl = getCurrentUrl();
+    if (isTargetUrl(currentUrl)) return currentUrl;
+
+    const existingTab = listTabs().find(
+      (tab) => typeof tab.url === "string" && isTargetUrl(tab.url),
+    );
+    if (existingTab) {
+      switchToTab(existingTab.index);
+      currentUrl = pollCurrentUrl(5000);
+      if (isTargetUrl(currentUrl)) return currentUrl;
+    }
+
+    openNewTab(targetUrl);
+    currentUrl = pollCurrentUrl(10000);
+    if (!isTargetUrl(currentUrl)) {
+      throw new Error(
+        `Could not activate tab for ${targetUrl}. Current tab: ${currentUrl}`,
+      );
+    }
+    return currentUrl;
+  }
+
   function evalJson<T = unknown>(script: string): T {
     const parsed = JSON.parse(run(["eval", script])) as unknown;
     if (typeof parsed === "string") {
@@ -382,6 +453,7 @@ function createBrowserSession(
     tryWaitForFunction,
     waitForSelector,
     ensureTab,
+    ensureUrl,
     evalJson,
     evalText,
     snapshotText,
@@ -390,7 +462,9 @@ function createBrowserSession(
 }
 
 module.exports = {
+  browserUrlMatchesTarget,
   createBrowserSession,
+  canonicalBrowserUrl,
   toBrowserTarget,
   translateMountedPath,
 };

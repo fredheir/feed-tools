@@ -5,7 +5,24 @@ const {
   getPlatformIconDataUri,
   getPlatformIconMeta,
 } = require("./platform-icons.js");
-import type { FeedCard, FeedItem, FeedMedia } from "../types.js";
+import type {
+  FeedCard,
+  FeedItem,
+  FeedMedia,
+  FeedStatValue,
+  FeedStats,
+} from "../types.js";
+
+const ACTIONS: ReadonlyArray<{
+  key: keyof FeedStats;
+  icon: string;
+  label: string;
+}> = [
+  { key: "reply", icon: "↩", label: "Reply" },
+  { key: "share", icon: "⟲", label: "Repost" },
+  { key: "like", icon: "♡", label: "Like" },
+  { key: "view", icon: "▥", label: "Views" },
+];
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -16,8 +33,14 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-function renderStat(icon: string, value: unknown): string {
-  return `<span class="stat-pill"><span class="stat-icon">${icon}</span><span class="stat-value">${escapeHtml(value ?? "0")}</span></span>`;
+function renderAction(
+  icon: string,
+  label: string,
+  value: FeedStatValue,
+  extraClass = "",
+): string {
+  const className = extraClass ? `action-pill ${extraClass}` : "action-pill";
+  return `<span class="${className}"><span class="action-icon" aria-hidden="true">${icon}</span><span class="action-label">${escapeHtml(label)}</span><span class="action-value">${escapeHtml(value ?? "0")}</span></span>`;
 }
 
 function isProfileishImage(value: string | null | undefined): boolean {
@@ -43,6 +66,50 @@ function inferVideoType(value: string | null | undefined): string {
   return "video/mp4";
 }
 
+function extractYouTubeVideoId(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value, "https://www.youtube.com");
+    if (parsed.hostname === "youtu.be") {
+      return parsed.pathname.replace(/^\/+/, "").split("/")[0] || null;
+    }
+    const watchId = parsed.searchParams.get("v");
+    if (watchId) return watchId;
+    const shortsMatch = parsed.pathname.match(/^\/shorts\/([^/?#]+)/);
+    if (shortsMatch) return shortsMatch[1] || null;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function compactUrl(value: string | null | undefined): string {
+  if (!value) return "";
+  return String(value)
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+}
+
+function formatHandle(value: string | null | undefined): string {
+  if (!value) return "Unknown";
+  return value.startsWith("@") ? value : `@${value}`;
+}
+
+function getAuthorName(item: FeedItem): string {
+  if (item.author?.display_name) return item.author.display_name;
+  if (item.author?.handle) return formatHandle(item.author.handle);
+  return "Unknown";
+}
+
+function getAuthorSecondary(item: FeedItem): string | null {
+  const handle = item.author?.handle || null;
+  const displayName = item.author?.display_name || null;
+  if (!handle) return null;
+  return displayName && displayName !== handle ? formatHandle(handle) : null;
+}
+
 function renderMedia(items: FeedMedia[], sourceName = ""): string {
   if (!Array.isArray(items) || items.length === 0) return "";
   return items
@@ -50,7 +117,8 @@ function renderMedia(items: FeedMedia[], sourceName = ""): string {
       const platformLabel = getPlatformIconMeta(
         sourceName || item.source || "",
       ).label;
-      if (item.local_video_src) {
+      const videoSource = item.local_video_src || item.video_src || null;
+      if (videoSource) {
         const poster = item.local_src || item.src || "";
         const openLink = item.href
           ? `<a class="media-link" href="${escapeHtml(item.href)}" target="_blank" rel="noreferrer">Open on ${escapeHtml(platformLabel)}</a>`
@@ -58,16 +126,44 @@ function renderMedia(items: FeedMedia[], sourceName = ""): string {
         return `
           <div class="media-player">
             <video class="media-video" controls preload="metadata"${poster ? ` poster="${escapeHtml(poster)}"` : ""}>
-              <source src="${escapeHtml(item.local_video_src)}" type="${escapeHtml(inferVideoType(item.local_video_src))}" />
+              <source src="${escapeHtml(videoSource)}" type="${escapeHtml(inferVideoType(videoSource))}" />
             </video>
             ${openLink}
           </div>
         `;
       }
+      if (String(sourceName || item.source || "").toLowerCase() === "youtube") {
+        const youtubeId = extractYouTubeVideoId(item.href || item.src || null);
+        if (youtubeId) {
+          const embedUrl = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(youtubeId)}?rel=0&modestbranding=1&playsinline=1`;
+          const openLink = item.href
+            ? `<a class="media-link" href="${escapeHtml(item.href)}" target="_blank" rel="noreferrer">Open on ${escapeHtml(platformLabel)}</a>`
+            : "";
+          return `
+            <div class="media-player landscape media-player-embed">
+              <iframe
+                class="media-video media-embed"
+                src="${escapeHtml(embedUrl)}"
+                title="${escapeHtml(item.alt || "YouTube video")}"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+              ></iframe>
+              ${openLink}
+            </div>
+          `;
+        }
+      }
       const source = item.local_src || item.src;
+      if (!source) {
+        return item.href
+          ? `<a class="media-fallback" href="${escapeHtml(item.href)}" target="_blank" rel="noreferrer">Open on ${escapeHtml(platformLabel)}</a>`
+          : "";
+      }
       const img = `<img src="${escapeHtml(source)}" alt="${escapeHtml(item.alt || "")}" loading="lazy" />`;
       const action = item.href
-        ? `<span class="media-action">${escapeHtml(item.media_kind === "video" ? `View on ${platformLabel}` : "Open media")}</span>`
+        ? `<span class="media-action">${escapeHtml(item.media_kind === "video" ? `Watch on ${platformLabel}` : "Open media")}</span>`
         : "";
       const body = `${img}${action}`;
       return item.href
@@ -179,19 +275,19 @@ function selectInlineMedia(
   return { inlineMedia, inheritedMediaByIndex };
 }
 
-function renderItemCard(item: FeedItem, previousItem: FeedItem | null): string {
+function renderItemCard(
+  item: FeedItem,
+  previousItem: FeedItem | null = null,
+): string {
   const stats = {
     reply: item.stats?.reply ?? "0",
     share: item.stats?.share ?? "0",
     like: item.stats?.like ?? "0",
     view: item.stats?.view ?? "0",
   };
-  const counts = [
-    renderStat("↩", stats.reply),
-    renderStat("⟲", stats.share),
-    renderStat("♡", stats.like),
-    renderStat("▥", stats.view),
-  ].join("");
+  const counts = ACTIONS.map((action) =>
+    renderAction(action.icon, action.label, stats[action.key]),
+  ).join("");
   const thread = {
     hasThreadLine: item.thread?.has_thread_line ?? false,
     lineHeight: item.thread?.thread_line_height ?? null,
@@ -211,14 +307,15 @@ function renderItemCard(item: FeedItem, previousItem: FeedItem | null): string {
     : "";
   const avatarSource =
     item.author?.profile_image_local || item.author?.profile_image_url || "";
-  const handle = item.author?.handle || "";
+  const displayName = getAuthorName(item);
+  const handle = getAuthorSecondary(item);
   const platform = getPlatformIconMeta(item.source);
   const platformIcon = getPlatformIconDataUri(item.source);
   const avatar = avatarSource
-    ? `<img class="avatar-img" src="${escapeHtml(avatarSource)}" alt="${escapeHtml(handle)}" />`
-    : escapeHtml((handle || "?").replace("@", "").slice(0, 2).toUpperCase());
+    ? `<img class="avatar-img" src="${escapeHtml(avatarSource)}" alt="${escapeHtml(displayName)}" />`
+    : escapeHtml(displayName.replace(/^@/, "").slice(0, 2).toUpperCase());
   const threadNote = thread.childCandidateHandle
-    ? `<div class="thread-note">continues to ${escapeHtml(thread.childCandidateHandle)} (row ${escapeHtml(thread.childCandidateIndex)})</div>`
+    ? `<div class="thread-note">Thread continues to ${escapeHtml(thread.childCandidateHandle)}${thread.childCandidateIndex != null ? ` · row ${escapeHtml(thread.childCandidateIndex)}` : ""}</div>`
     : "";
   const itemCards = item.cards || [];
   const { inlineMedia, inheritedMediaByIndex } = selectInlineMedia(
@@ -235,33 +332,48 @@ function renderItemCard(item: FeedItem, previousItem: FeedItem | null): string {
     );
   const sourceClass = toSourceClass(item.source);
   const hasVideo = inlineMedia.some((media: FeedMedia) =>
-    Boolean(media?.local_video_src),
+    Boolean(media?.local_video_src || media?.video_src),
   );
   const cardClass = suppressTopBorder
     ? `feed-card ${sourceClass} suppress-thread-gap`
     : `feed-card ${sourceClass}`;
 
-  const statsLink = item.url
-    ? `<span class="stats-link"><a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">${escapeHtml(item.url)}</a></span>`
+  const sourceBadge = `
+    <span class="source-badge">
+      <img class="source-badge-icon" src="${escapeHtml(platformIcon)}" alt="${escapeHtml(platform.label)}" loading="lazy" />
+      <span>${escapeHtml(platform.label)}</span>
+    </span>
+  `;
+  const openOriginal = item.url
+    ? `<a class="action-pill action-link" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer"><span class="action-icon" aria-hidden="true">↗</span><span class="action-label">Open</span><span class="action-value">${escapeHtml(compactUrl(item.url))}</span></a>`
     : "";
 
   return `
     <article class="${cardClass}"${hasVideo ? ' data-has-video="true"' : ""}>
       <div class="rail">
         <div class="avatar">${avatar}</div>
-        <img class="platform-mark rail-platform-mark" src="${escapeHtml(platformIcon)}" alt="${escapeHtml(platform.label)}" loading="lazy" />
         ${threadLine}
       </div>
       <div class="body">
-        <div class="meta">
-          <span class="handle">${escapeHtml(handle)}</span>
-          <span class="index">#${escapeHtml(item.index)}</span>
+        <div class="post-header">
+          <div class="identity">
+            <div class="identity-primary">
+              <span class="display-name">${escapeHtml(displayName)}</span>
+              ${handle ? `<span class="handle">${escapeHtml(handle)}</span>` : ""}
+            </div>
+            <div class="identity-secondary">
+              ${sourceBadge}
+            </div>
+          </div>
         </div>
         <div class="text">${escapeHtml(item.content?.text || "")}</div>
         ${threadNote}
         ${renderPreviewCards(itemCards, inheritedMediaByIndex, item.source)}
         <div class="media">${renderMedia(inlineMedia, item.source)}</div>
-        <div class="stats">${counts}${statsLink}</div>
+        <div class="actions">
+          ${counts}
+          ${openOriginal}
+        </div>
       </div>
     </article>
   `;

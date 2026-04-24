@@ -8,6 +8,14 @@ export type FeedSourceName =
   | "x";
 
 export type FeedStatValue = string | number | null;
+export type FeedMediaKind = "image" | "video";
+export type FeedCardKind =
+  | "entity"
+  | "external_card"
+  | "link"
+  | "quoted_post"
+  | "short"
+  | "video";
 
 export interface FeedAuthor {
   handle: string | null;
@@ -44,7 +52,7 @@ export interface FeedMedia {
   local_video_src?: string | null;
   href?: string | null;
   alt?: string | null;
-  media_kind?: string | null;
+  media_kind?: FeedMediaKind | null;
   width?: number | string | null;
   height?: number | string | null;
   duration?: number | string | null;
@@ -52,7 +60,7 @@ export interface FeedMedia {
 }
 
 export interface FeedCard {
-  kind?: string | null;
+  kind?: FeedCardKind | null;
   href?: string | null;
   image_url?: string | null;
   image_local?: string | null;
@@ -325,6 +333,7 @@ export interface BrowserSession {
   ) => boolean;
   waitForSelector: (selector: string, timeoutMs?: number | null) => void;
   ensureTab: (urlPrefix: string | string[], openUrl: string) => string;
+  ensureUrl: (url: string) => string;
   evalJson: <T = unknown>(script: string) => T;
   evalText: (script: string) => string;
   snapshotText: (options?: string[], timeoutMs?: number) => string;

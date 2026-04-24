@@ -8,7 +8,7 @@ describe("renderItemCard", () => {
       source: "linkedin",
       index: 1,
       url: "https://www.linkedin.com/feed/update/1/",
-      author: { handle: "Jane Doe" },
+      author: { handle: "janedoe", display_name: "Jane Doe" },
       content: { text: "Shipping a new adapter." },
       stats: { reply: "12", share: "5", like: "44", view: "900" },
       media: [],
@@ -19,8 +19,11 @@ describe("renderItemCard", () => {
     expect(html).toContain('class="feed-card source-linkedin"');
     expect(html).toContain("LinkedIn");
     expect(html).toContain("Shipping a new adapter.");
+    expect(html).toContain("Jane Doe");
+    expect(html).toContain("@janedoe");
     expect(html).toContain("12");
     expect(html).toContain("900");
+    expect(html).toContain("Open");
   });
 
   test("renders a playable local video when media has a downloaded file", () => {
@@ -126,9 +129,57 @@ describe("renderItemCard", () => {
       thread: {},
     });
 
-    expect(html).toContain('class="media-thumb"');
-    expect(html).toContain("View on YouTube");
-    expect(html).not.toContain("<iframe");
+    expect(html).toContain("<iframe");
+    expect(html).toContain("youtube-nocookie.com/embed/aIvHf8vsWBM");
+    expect(html).toContain("Open on YouTube");
+  });
+
+  test("falls back to remote video sources so autoplay-capable players still render", () => {
+    const html = renderItemCard({
+      id: "x:2",
+      source: "x",
+      index: 2,
+      url: "https://x.com/a/status/2",
+      author: { handle: "@a" },
+      content: { text: "Remote video" },
+      stats: {},
+      media: [
+        {
+          media_kind: "video",
+          href: "https://x.com/a/status/2",
+          src: "https://example.com/poster.jpg",
+          video_src: "https://example.com/video.mp4",
+        },
+      ],
+      cards: [],
+      thread: {},
+    });
+
+    expect(html).toContain("<video");
+    expect(html).toContain('src="https://example.com/video.mp4"');
+  });
+
+  test("omits broken empty image tags when media has no usable source", () => {
+    const html = renderItemCard({
+      id: "linkedin:2",
+      source: "linkedin",
+      index: 2,
+      url: "https://www.linkedin.com/feed/update/2/",
+      author: { handle: "demo" },
+      content: { text: "Missing media" },
+      stats: {},
+      media: [
+        {
+          media_kind: "image",
+          href: "https://www.linkedin.com/feed/update/2/",
+        },
+      ],
+      cards: [],
+      thread: {},
+    });
+
+    expect(html).not.toContain('<img src=""');
+    expect(html).toContain('class="media-fallback"');
   });
 
   test("does not emit an empty stats link when item url is missing", () => {
@@ -145,7 +196,7 @@ describe("renderItemCard", () => {
       thread: {},
     });
 
-    expect(html).not.toContain('class="stats-link"');
+    expect(html).not.toContain('class="action-link"');
     expect(html).not.toContain('href=""');
   });
 });

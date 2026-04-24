@@ -1,17 +1,3 @@
-const RESERVED_PROFILE_SEGMENTS = new Set([
-  "",
-  "accounts",
-  "about",
-  "api",
-  "developer",
-  "direct",
-  "explore",
-  "legal",
-  "reels",
-  "stories",
-  "web",
-]);
-
 export function extractInstagramSourceItemId(
   url: string | null | undefined,
 ): string | null {
@@ -39,7 +25,19 @@ export function isInstagramProfileUrl(url: string | null | undefined): boolean {
     return false;
   const match = parsed.pathname.match(/^\/([^/?#]+)\/?$/);
   if (!match) return false;
-  return !RESERVED_PROFILE_SEGMENTS.has(match[1].toLowerCase());
+  return ![
+    "",
+    "accounts",
+    "about",
+    "api",
+    "developer",
+    "direct",
+    "explore",
+    "legal",
+    "reels",
+    "stories",
+    "web",
+  ].includes(match[1].toLowerCase());
 }
 
 export function isInstagramItemWorthKeeping(

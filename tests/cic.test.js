@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -175,7 +175,16 @@ describe("feed-capture-cic ingest", () => {
       }),
     );
 
-    expect(() => run(["ingest", "x", jsonFile, "--unexpected-flag"])).toThrow();
+    const result = spawnSync(
+      process.execPath,
+      [CLI, "ingest", "x", jsonFile, "--unexpected-flag"],
+      { encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Unknown argument: --unexpected-flag");
+    expect(result.stderr).not.toContain("at ");
+    expect(result.stderr).not.toContain("Node.js v");
   });
 
   test("rejects missing values for ingest flags", () => {

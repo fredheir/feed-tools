@@ -114,11 +114,7 @@ function shouldUseYtDlpForVideo(item: FeedItem, media: FeedMedia): boolean {
 }
 
 function shouldUseCookiesForVideo(item: FeedItem): boolean {
-  return (
-    item?.source === "x" ||
-    item?.source === "instagram" ||
-    item?.source === "youtube"
-  );
+  return item?.source === "x" || item?.source === "instagram";
 }
 
 type VideoProbeResult =

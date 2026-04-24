@@ -17,8 +17,10 @@ function createBrowserStub(existingState) {
   let activeText = existingState.text;
   return {
     calls,
-    ensureTab(...args) {
-      calls.push(["ensureTab", ...args]);
+    ensureUrl(url) {
+      calls.push(["ensureUrl", url]);
+      activeUrl = url;
+      return url;
     },
     listTabs() {
       calls.push(["listTabs"]);
@@ -74,11 +76,28 @@ describe("youtube support", () => {
 
     prepareFeed(browser);
 
-    expect(browser.calls.some(([name]) => name === "ensureTab")).toBe(true);
+    expect(browser.calls).toContainEqual([
+      "ensureUrl",
+      "https://www.youtube.com/",
+    ]);
     expect(browser.calls.some(([name]) => name === "evalText")).toBe(true);
     expect(
       browser.calls.filter(([name]) => name === "tryWaitForFunction").length,
     ).toBeGreaterThan(0);
+  });
+
+  test("requires the youtube home feed rather than any youtube page", () => {
+    const browser = createBrowserStub({
+      url: "https://www.youtube.com/watch?v=ZN4njIQcSR4",
+      text: "All Shorts 2.3m views 2 days ago",
+    });
+
+    prepareFeed(browser);
+
+    expect(browser.calls).toContainEqual([
+      "ensureUrl",
+      "https://www.youtube.com/",
+    ]);
   });
 
   test("switches away from a blocked youtube tab before continuing", () => {
@@ -156,6 +175,26 @@ describe("youtube support", () => {
       content: {
         text: "Why Vibe Coding Fails - Ilya Sutskever",
       },
+    });
+  });
+
+  test("parses word-based aria-label durations when badge text is missing", () => {
+    const items = normalizeYouTubeCardsToItems(
+      [
+        {
+          kind: "video",
+          url: "https://www.youtube.com/watch?v=ZN4njIQcSR4",
+          title: "Longform talk",
+          authorName: "TED",
+          durationText: "1 hour, 2 minutes",
+          thumbnailUrl: "https://i.ytimg.com/vi/ZN4njIQcSR4/hq720.jpg",
+        },
+      ],
+      1,
+    );
+
+    expect(items[0].media[0]).toMatchObject({
+      duration: 3720,
     });
   });
 

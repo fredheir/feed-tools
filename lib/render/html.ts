@@ -19,6 +19,7 @@ function renderDocument(document: FeedDocument): string {
   const tabs = normalizeMaskTabs(document.mask);
   const tabbed = document.mask?.tabbed === true || tabs.length > 0;
   const summary = document.mask?.summary || "";
+  const selectedTabCount = tabs.length || 1;
   const platforms = Array.from(
     new Map(
       rows.map((item) => {
@@ -69,6 +70,19 @@ function renderDocument(document: FeedDocument): string {
   }
 
   const cards = buildRows(rows);
+  const feedTitle =
+    sourceLabel === "COMBINED" ? "Your Feed" : `${sourceLabel} Feed`;
+  const feedSubtitle =
+    summary ||
+    `${rows.length} curated posts across ${selectedTabCount} ${selectedTabCount === 1 ? "view" : "views"}.`;
+  const firstNonAdsTabIndex = tabs.findIndex(
+    (tab) =>
+      String(tab.label || "")
+        .trim()
+        .toLowerCase() !== "ads",
+  );
+  const defaultTabIndex = firstNonAdsTabIndex >= 0 ? firstNonAdsTabIndex : 0;
+  const sourceCountLabel = `${platforms.length} ${platforms.length === 1 ? "source" : "sources"}`;
   const groupedMarkup =
     tabs.length === 0
       ? `<section class="feed">${cards}</section>`
@@ -82,7 +96,7 @@ function renderDocument(document: FeedDocument): string {
       ? ""
       : `
     <div class="tab-shell">
-      ${tabs.map((tab, index: number) => `<input class="tab-toggle" type="checkbox" name="feed-tabs" id="feed-tab-${index}" ${String(tab.label || "").toLowerCase() === "ads" ? "" : "checked"} />`).join("")}
+      ${tabs.map((_tab, index: number) => `<input class="tab-toggle" type="checkbox" name="feed-tabs" id="feed-tab-${index}" ${index === defaultTabIndex ? "checked" : ""} />`).join("")}
       ${platforms.map((platform, index: number) => `<input class="platform-toggle" type="checkbox" name="feed-platforms" id="feed-platform-${index}" checked />`).join("")}
       <div class="tab-bar">
         <div class="tab-label-group">
@@ -147,7 +161,7 @@ function renderDocument(document: FeedDocument): string {
         .join("\n");
   const autoplayScript = `
     (() => {
-      const videos = Array.from(document.querySelectorAll(".media-video"));
+      const videos = Array.from(document.querySelectorAll("video.media-video"));
       if (videos.length === 0) return;
 
       for (const video of videos) {
@@ -242,10 +256,20 @@ function renderDocument(document: FeedDocument): string {
   </style>
 </head>
 <body>
-  <main class="page">
-    <section class="header">
-      <h2>Summary</h2>
-      <p>${escapeHtml(summary || `Showing ${rows.length} curated items from ${sourceLabel}.`)}</p>
+  <main class="app-shell">
+    <header class="app-topbar">
+      <div class="app-brand">
+        <div class="app-kicker">Hand-Rolled Social</div>
+        <h1>${escapeHtml(feedTitle)}</h1>
+      </div>
+      <div class="app-status">
+        <span class="status-chip">${escapeHtml(String(rows.length))} posts</span>
+        <span class="status-chip">${escapeHtml(sourceCountLabel)}</span>
+      </div>
+    </header>
+    <section class="feed-briefing">
+      <div class="briefing-label">For you</div>
+      <p>${escapeHtml(feedSubtitle)}</p>
     </section>
     ${tabMarkup || groupedMarkup}
   </main>
