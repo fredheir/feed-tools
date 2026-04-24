@@ -5,12 +5,10 @@
   "type": "commonjs",
   "packageManager": "pnpm@10.14.0",
   "scripts": {
-    "prepare": "husky",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
     "lint": "pnpm run typecheck && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "precommit": "prek run --all-files --stage pre-commit",
     "test": "vitest run",
     "doctor": "./bin/feed-doctor",
     "setup:sandbox": "./bin/feed-setup-sandbox",
@@ -43,7 +41,8 @@
     ],
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
-      "agent-browser"
+      "agent-browser",
+      "@commitlint/cli"
     ],
     "ignoreBinaries": [
       "uv"
@@ -56,12 +55,10 @@
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^9.39.1",
-    "@j178/prek": "0.3.10",
     "@types/node": "^24.10.1",
     "agent-browser": "^0.23.4",
     "eslint": "^9.39.1",
     "globals": "^16.4.0",
-    "husky": "^9.1.7",
     "knip": "^6.1.1",
     "prettier": "^3.6.2",
     "slop-scan": "~0.3.0",

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+test -f package.json
+test -f pnpm-lock.yaml
+test -f pnpm-workspace.yaml
+
+if [ ! -d node_modules ]; then
+  echo "node_modules is missing; run: just sync"
+  exit 1
+fi
+
+jq -e '.packageManager | test("^pnpm@10\\.")' package.json >/dev/null
+yq -e '.minimumReleaseAge == 10080' pnpm-workspace.yaml >/dev/null

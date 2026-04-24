@@ -76,6 +76,7 @@ DISPLAY=:0 <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
 - Confirm CDP is up with `curl -sf http://127.0.0.1:9222/json/version`.
 - In Cowork VMs, Chrome is reaped at turn end even if launched with `setsid nohup`. Do sign-in and capture in the same turn; the profile on disk persists, but the browser process does not.
 - Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet. Prefer `./bin/feed-signin <source>...`; it keeps the turn open, prints per-source auth-cookie status, and closes Chrome once auth cookies are detected.
+- After `feed-signin` succeeds, relaunch Chrome on the same profile and CDP port before running `feed-capture`. `capture.browser: {}` / agent-browser auto-connect expects a running CDP endpoint; it will not cold-launch the signed-in profile after `feed-signin` closes Chrome.
 - Then set `"cdp": "9222"` in each source's `capture.browser` block.
 - When `capture.browser.cdp` is set, omit `headed` and `auto_connect`.
 
@@ -101,6 +102,8 @@ curl -sf http://127.0.0.1:9222/json/version
 
 ## Git / PRs
 
+- Use `just fix` during edits, `just check-changed` before handoff, and `just check` before commit/CI handoff.
+- Run `just hooks-install` after clone or after hook migration changes.
 - Commit hooks require Conventional Commits. Use messages like `feat: add feed doctor` or `fix: handle missing render input`.
 
 ## Supported platforms

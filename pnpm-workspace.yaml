@@ -1,0 +1,8 @@
+packages:
+  - .
+
+minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - "@markolo-research/*"
+  - "@markolo/*"
+blockExoticSubdeps: true
