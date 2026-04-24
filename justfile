@@ -75,3 +75,4 @@ hooks-install:
     git config --local --replace-all hook.lefthook-post-merge.command "pnpm exec lefthook run post-merge --no-auto-install"
     git config --local --replace-all hook.lefthook-post-checkout.event post-checkout
     git config --local --replace-all hook.lefthook-post-checkout.command "pnpm exec lefthook run post-checkout --no-auto-install"
+    git hook list pre-commit >/dev/null 2>&1 || { echo "Git config-based hooks were not activated; upgrade Git before installing repo hooks." >&2; exit 1; }
