@@ -236,4 +236,22 @@ describe("createBrowserSession", () => {
       "CDP connection closed",
     );
   });
+
+  test("tryWaitForFunction does not treat the timeout flag as a timeout error", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error(
+            "Command failed: agent-browser wait --fn window.ready --timeout 100\nCDP connection closed",
+          );
+        },
+      },
+      {},
+    );
+
+    expect(() => session.tryWaitForFunction("window.ready", 100)).toThrow(
+      "CDP connection closed",
+    );
+  });
 });

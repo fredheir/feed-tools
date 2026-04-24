@@ -395,9 +395,11 @@ export async function main(): Promise<void> {
       await sleep(args.intervalMs);
     }
 
-    if (!interrupted) {
-      throw new Error("Timed out waiting for sign-in auth cookies");
-    }
+    throw new Error(
+      interrupted
+        ? "Sign-in interrupted before auth cookies were detected"
+        : "Timed out waiting for sign-in auth cookies",
+    );
   } finally {
     closeChrome(child);
   }

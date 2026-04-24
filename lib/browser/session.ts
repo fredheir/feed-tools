@@ -146,10 +146,16 @@ function errorText(error: unknown): string {
   return details.join("\n");
 }
 
-function isWaitTimeoutError(error: unknown): boolean {
-  return /\b(timeout|timed out|TimeoutError|ETIMEDOUT)\b/i.test(
-    errorText(error),
+function isWaitTimeoutText(text: string): boolean {
+  return (
+    /\b(TimeoutError|ETIMEDOUT|timed out)\b/i.test(text) ||
+    /\btimeout(?:\s+\d+(?:ms|s)?)?\s+exceeded\b/i.test(text)
   );
+}
+
+function isWaitTimeoutError(error: unknown): boolean {
+  if (isRecord(error) && error.code === "ETIMEDOUT") return true;
+  return isWaitTimeoutText(errorText(error));
 }
 
 function getMountInfo(targetPath: string): MountInfo | null {
