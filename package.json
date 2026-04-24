@@ -41,7 +41,8 @@
     ],
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
-      "agent-browser"
+      "agent-browser",
+      "@commitlint/cli"
     ],
     "ignoreBinaries": [
       "uv"
@@ -67,9 +68,6 @@
     "vitest": "^4.1.5"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "lefthook"
-    ],
     "overrides": {
       "vite": "^8.0.9",
       "axios": ">=1.12.0",
