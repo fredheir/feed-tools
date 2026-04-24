@@ -147,7 +147,9 @@ function errorText(error: unknown): string {
 }
 
 function isWaitTimeoutError(error: unknown): boolean {
-  return /\b(timeout|timed out|TimeoutError)\b/i.test(errorText(error));
+  return /\b(timeout|timed out|TimeoutError|ETIMEDOUT)\b/i.test(
+    errorText(error),
+  );
 }
 
 function getMountInfo(targetPath: string): MountInfo | null {

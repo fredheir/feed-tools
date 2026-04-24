@@ -143,6 +143,22 @@ function ensureChrome() {
   }
 }
 
+function ensureAgentBrowserBuild() {
+  const postinstallScript = path.join(
+    rootDir,
+    "node_modules",
+    "agent-browser",
+    "scripts",
+    "postinstall.js",
+  );
+  if (!fs.existsSync(postinstallScript)) {
+    throw new Error(
+      `agent-browser postinstall script missing: ${postinstallScript}`,
+    );
+  }
+  run(process.execPath, [postinstallScript]);
+}
+
 function cdpVersionUrl(cdpPort) {
   return `http://127.0.0.1:${cdpPort}/json/version`;
 }
@@ -221,6 +237,7 @@ function main() {
   const pnpm = ensurePnpm();
   ensureUv();
   run(pnpm, ["install"]);
+  ensureAgentBrowserBuild();
   run(pnpm, ["setup:yt-dlp"]);
   ensureChrome();
   fs.mkdirSync(chromeProfile, { recursive: true });

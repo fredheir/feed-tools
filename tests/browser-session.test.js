@@ -207,6 +207,20 @@ describe("createBrowserSession", () => {
     expect(session.tryWaitForFunction("window.ready", 100)).toBe(false);
   });
 
+  test("tryWaitForFunction returns false for child process ETIMEDOUT", () => {
+    const session = createBrowserSession(
+      {
+        normalizeBrowserOptions: (options = {}) => options,
+        runAgentBrowser: () => {
+          throw new Error("spawnSync agent-browser ETIMEDOUT");
+        },
+      },
+      {},
+    );
+
+    expect(session.tryWaitForFunction("window.ready", 100)).toBe(false);
+  });
+
   test("tryWaitForFunction rethrows unexpected browser failures", () => {
     const session = createBrowserSession(
       {
