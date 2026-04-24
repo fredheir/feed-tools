@@ -63,7 +63,6 @@ check: doctor fmt-check lint typecheck test secrets deps-check gen-check
 ci: check
 
 hooks-install:
-    hook_probe="$(mktemp)"; if ! git hook list pre-commit >"$hook_probe" 2>&1; then if ! grep -q "no hooks found" "$hook_probe"; then cat "$hook_probe" >&2; rm -f "$hook_probe"; exit 1; fi; fi; rm -f "$hook_probe"
     config_tmp="$(mktemp)"; trap 'rm -f "$config_tmp"' EXIT; if git config --local --get-all core.hooksPath > "$config_tmp"; then git config --local --unset-all core.hooksPath; fi
     rm -f "$(git rev-parse --git-path hooks/pre-commit)" "$(git rev-parse --git-path hooks/commit-msg)" "$(git rev-parse --git-path hooks/prepare-commit-msg)" "$(git rev-parse --git-path hooks/pre-push)" "$(git rev-parse --git-path hooks/post-merge)" "$(git rev-parse --git-path hooks/post-checkout)"
     git config --local --replace-all hook.lefthook-pre-commit.event pre-commit
@@ -76,3 +75,4 @@ hooks-install:
     git config --local --replace-all hook.lefthook-post-merge.command "pnpm exec lefthook run post-merge --no-auto-install"
     git config --local --replace-all hook.lefthook-post-checkout.event post-checkout
     git config --local --replace-all hook.lefthook-post-checkout.command "pnpm exec lefthook run post-checkout --no-auto-install"
+    git hook list pre-commit >/dev/null 2>&1 || { echo "Git config-based hooks were not activated; upgrade Git before installing repo hooks." >&2; exit 1; }
