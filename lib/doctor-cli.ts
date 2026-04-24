@@ -2,9 +2,10 @@
 "use strict";
 
 import fs from "node:fs";
-import net from "node:net";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+
+import { getCdpVersionUrl, readCdpVersionPayload } from "./browser.js";
 
 const { listCicSources } = require("./cic/source-config.js");
 
@@ -120,12 +121,9 @@ function checkAgentBrowser(): CheckResult {
 }
 
 function getCdpVersion(port: number): CheckResult {
-  const url = `http://127.0.0.1:${port}/json/version`;
+  const url = getCdpVersionUrl(String(port));
   try {
-    const output = execFileSync("curl", ["-sf", "--max-time", "2", url], {
-      encoding: "utf8",
-      timeout: 2500,
-    });
+    const output = readCdpVersionPayload(url);
     const parsed = JSON.parse(output) as {
       Browser?: unknown;
       webSocketDebuggerUrl?: unknown;
@@ -154,41 +152,8 @@ function getCdpVersion(port: number): CheckResult {
   }
 }
 
-async function canConnect(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = net.createConnection({
-      host: "127.0.0.1",
-      port,
-      timeout: 1000,
-    });
-    socket.once("connect", () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once("timeout", () => {
-      socket.destroy();
-      resolve(false);
-    });
-    socket.once("error", () => {
-      resolve(false);
-    });
-  });
-}
-
-async function checkCdpPorts(ports: number[]): Promise<CheckResult[]> {
-  const results: CheckResult[] = [];
-  for (const port of ports) {
-    if (await canConnect(port)) {
-      results.push(getCdpVersion(port));
-    } else {
-      results.push({
-        name: `cdp:${port}`,
-        ok: false,
-        detail: `127.0.0.1:${port} is not listening`,
-      });
-    }
-  }
-  return results;
+function checkCdpPorts(ports: number[]): CheckResult[] {
+  return ports.map((port) => getCdpVersion(port));
 }
 
 function checkCic(): CheckResult {
@@ -323,11 +288,7 @@ function printText(results: CheckResult[], configResult: ConfigResult): void {
 
 export async function main(): Promise<void> {
   const { json, cdpPorts, configure, forceConfig } = parseArgs(process.argv);
-  const results = [
-    checkAgentBrowser(),
-    ...(await checkCdpPorts(cdpPorts)),
-    checkCic(),
-  ];
+  const results = [checkAgentBrowser(), ...checkCdpPorts(cdpPorts), checkCic()];
   const configResult = configure
     ? maybeWriteConfig(results, forceConfig)
     : {
