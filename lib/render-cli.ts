@@ -118,6 +118,12 @@ if (!outputPath) {
   throw new Error("Unable to resolve output path");
 }
 
+if (!fs.existsSync(inputPath)) {
+  throw new Error(
+    `Input document not found: ${inputPath}. Run ./bin/feed-curate first or pass an input JSON path.`,
+  );
+}
+
 const rawDocument = JSON.parse(fs.readFileSync(inputPath, "utf8")) as unknown;
 assertFeedDocument(rawDocument, "feed-render");
 let document: FeedDocument = rawDocument;

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, describe, expect, test } from "vitest";
 
 import {
@@ -19,6 +19,28 @@ afterEach(() => {
 });
 
 describe("feed-render", () => {
+  test("prints a friendly error when the input document is missing", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-render-cli-"));
+    tempDirs.push(dir);
+    const configPath = writeTestConfig(repoRoot);
+    const inputPath = path.join(dir, "missing.json");
+
+    const result = spawnSync(
+      process.execPath,
+      ["./bin/feed-render", inputPath, "--no-open"],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: withConfigEnv(configPath),
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Input document not found");
+    expect(result.stderr).toContain("Run ./bin/feed-curate first");
+    expect(result.stderr).not.toContain("ENOENT");
+  });
+
   test("ignores an adjacent mask file when rendering", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-render-cli-"));
     tempDirs.push(dir);

@@ -15,6 +15,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_COMMAND_TIMEOUT_MS = 45000;
 const AGENT_BROWSER_IGNORED_WARNING_PATTERN =
   /^⚠ --args ignored: daemon already running\..*$/gm;
+const CDP_PROBE_TIMEOUT_MS = 2000;
 
 function agentBrowserCommand(): string {
   const localBinary = path.resolve(
@@ -185,16 +186,60 @@ export function sanitizeAgentBrowserOutput(output: unknown): string {
     .trim();
 }
 
+export function getCdpVersionUrl(cdp: string): string {
+  const value = String(cdp || "").trim();
+  if (/^\d+$/.test(value)) {
+    return `http://127.0.0.1:${value}/json/version`;
+  }
+  if (/^https?:\/\//i.test(value)) {
+    return new URL("/json/version", value).toString();
+  }
+  if (/^[^/]+:\d+$/.test(value)) {
+    return `http://${value}/json/version`;
+  }
+  return value;
+}
+
+function assertCdpEndpoint(cdp: string): void {
+  const url = getCdpVersionUrl(cdp);
+  let output = "";
+  try {
+    output = execFileSync("curl", ["-sf", "--max-time", "2", url], {
+      encoding: "utf8",
+      timeout: CDP_PROBE_TIMEOUT_MS + 500,
+    });
+  } catch {
+    throw new Error(
+      `CDP endpoint ${cdp} did not respond at ${url}. If port ${cdp} is owned by Codex Desktop or another embedded browser, launch a dedicated Chrome profile on another port such as 9223 and set capture.browser.cdp to that port.`,
+    );
+  }
+
+  try {
+    const parsed = JSON.parse(output) as { webSocketDebuggerUrl?: unknown };
+    if (typeof parsed.webSocketDebuggerUrl === "string") return;
+  } catch {
+    // Fall through to the targeted error below.
+  }
+
+  throw new Error(
+    `CDP endpoint ${cdp} responded at ${url}, but it did not look like Chrome DevTools Protocol JSON. Use a dedicated Chrome debugging port for feed capture.`,
+  );
+}
+
 function runAgentBrowser(
   commandArgs: string[],
   options: FeedBrowserConfig & { commandTimeoutMs?: number } = {},
 ): string {
   const { commandTimeoutMs = DEFAULT_COMMAND_TIMEOUT_MS, ...browserOptions } =
     options;
+  const normalized = normalizeBrowserOptions(browserOptions);
+  if (normalized.cdp) {
+    assertCdpEndpoint(normalized.cdp);
+  }
   return sanitizeAgentBrowserOutput(
     execFileSync(
       agentBrowserCommand(),
-      buildAgentBrowserArgs(browserOptions, commandArgs),
+      buildAgentBrowserArgs(normalized, commandArgs),
       {
         encoding: "utf8",
         timeout: commandTimeoutMs,
@@ -241,6 +286,7 @@ module.exports = {
   buildAgentBrowserArgs,
   closeBrowserSession,
   createBrowserSession,
+  getCdpVersionUrl,
   getRuntimeBrowserOptions,
   jitterTimeout,
   normalizeBrowserOptions,

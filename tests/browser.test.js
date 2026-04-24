@@ -2,6 +2,7 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 import {
   buildAgentBrowserArgs,
+  getCdpVersionUrl,
   getRuntimeBrowserOptions,
   sanitizeAgentBrowserOutput,
 } from "../lib/browser.js";
@@ -120,6 +121,16 @@ describe("buildAgentBrowserArgs", () => {
       autoConnect: false,
       headed: false,
     });
+  });
+
+  test("builds CDP probe URLs from port and host forms", () => {
+    expect(getCdpVersionUrl("9222")).toBe("http://127.0.0.1:9222/json/version");
+    expect(getCdpVersionUrl("127.0.0.1:9223")).toBe(
+      "http://127.0.0.1:9223/json/version",
+    );
+    expect(getCdpVersionUrl("http://localhost:9224")).toBe(
+      "http://localhost:9224/json/version",
+    );
   });
 
   test("strips repeated daemon args warnings from agent-browser output", () => {
