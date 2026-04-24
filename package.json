@@ -42,7 +42,7 @@
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
       "agent-browser",
-      "@commitlint/cli"
+      "lefthook"
     ],
     "ignoreBinaries": [
       "uv"
