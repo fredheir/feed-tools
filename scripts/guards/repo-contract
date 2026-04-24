@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+mode="full"
+if [ "${1:-}" = "--staged" ]; then
+  mode="staged"
+fi
+
+failures=()
+
+fail() {
+  failures+=("$1")
+}
+
+require_file() {
+  [ -f "$1" ] || fail "missing required file: $1"
+}
+
+require_symlink_target() {
+  local path="$1"
+  local target="$2"
+
+  if [ ! -L "$path" ]; then
+    fail "missing required symlink: $path -> $target"
+    return
+  fi
+
+  local actual
+  actual="$(readlink "$path")"
+  [ "$actual" = "$target" ] || fail "wrong symlink target: $path -> $actual, expected $target"
+}
+
+require_file AGENTS.md
+require_symlink_target CLAUDE.md AGENTS.md
+require_file justfile
+require_file lefthook.yml
+require_file package.json
+require_file pnpm-lock.yaml
+require_file pnpm-workspace.yaml
+require_file .env.example
+
+if fdfind '^lefthook\.yml$' . | grep -v '^./lefthook.yml$' >/dev/null; then
+  fail "nested lefthook.yml files are forbidden"
+fi
+
+if [ -d .husky ]; then
+  fail ".husky is legacy; use root lefthook.yml"
+fi
+
+if [ -f .pre-commit-config.yaml ]; then
+  fail ".pre-commit-config.yaml is legacy; use root lefthook.yml"
+fi
+
+mapfile -t npm_lockfiles < <(fdfind '^(package-lock\.json|yarn\.lock)$' . -t f)
+for path in "${npm_lockfiles[@]}"; do
+  fail "npm/yarn lockfiles are forbidden in pnpm-managed repos: $path"
+done
+
+if ! jq -e '.packageManager | test("^pnpm@10\\.")' package.json >/dev/null; then
+  fail "package.json must pin packageManager to pnpm@10.x"
+fi
+
+if ! yq -e '.minimumReleaseAge == 10080' pnpm-workspace.yaml >/dev/null; then
+  fail "pnpm-workspace.yaml must set minimumReleaseAge: 10080"
+fi
+
+if jq -e '.scripts.prepare? // "" | test("husky|prek")' package.json >/dev/null; then
+  fail "package.json prepare script must not install legacy hooks"
+fi
+
+if jq -e '(.devDependencies // {}) | has("husky") or has("@j178/prek")' package.json >/dev/null; then
+  fail "husky and prek are legacy hook dependencies; use lefthook.yml"
+fi
+
+if [ "$mode" = "full" ]; then
+  if [ ! -d node_modules ]; then
+    fail "node_modules is missing; run: just sync"
+  fi
+fi
+
+if [ "${#failures[@]}" -gt 0 ]; then
+  printf 'Repo contract failed:\n' >&2
+  printf '  - %s\n' "${failures[@]}" >&2
+  exit 1
+fi
+
+echo "Repo contract OK."

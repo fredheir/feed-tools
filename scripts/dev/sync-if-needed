@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+base_ref="${1:-HEAD@{1}}"
+
+if [ ! -d node_modules ]; then
+  echo "node_modules is missing; running dependency sync."
+  exec just sync
+fi
+
+if ! git rev-parse --verify "$base_ref" >/dev/null; then
+  echo "No previous checkout/merge ref found; sync skipped."
+  exit 0
+fi
+
+mapfile -t changed < <(git diff --name-only "$base_ref" HEAD -- package.json pnpm-lock.yaml pnpm-workspace.yaml)
+
+if [ "${#changed[@]}" -eq 0 ]; then
+  echo "Dependency inputs unchanged; sync skipped."
+  exit 0
+fi
+
+printf 'Dependency inputs changed:\n'
+printf '  %s\n' "${changed[@]}"
+exec just sync

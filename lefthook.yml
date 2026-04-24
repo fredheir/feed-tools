@@ -1,0 +1,44 @@
+pre-commit:
+  parallel: true
+  commands:
+    prettier:
+      glob: "*.{js,jsx,ts,tsx,json,jsonc,css,md,yml,yaml}"
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+    eslint:
+      glob: "*.{js,jsx,ts,tsx}"
+      run: pnpm exec eslint {staged_files}
+    gitleaks:
+      run: just secrets-staged
+    actionlint:
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: actionlint {staged_files}
+    repo-guards:
+      run: just doctor-staged
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --config commitlint.config.cjs --edit {1}
+
+post-merge:
+  commands:
+    sync-if-needed:
+      run: just sync-if-needed
+
+post-checkout:
+  commands:
+    sync-if-needed:
+      run: just sync-if-needed
+
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: just typecheck
+    tests:
+      run: just test-fast
+    dependency-shape:
+      run: just deps-check-fast
+    deadcode:
+      run: pnpm run deadcode
