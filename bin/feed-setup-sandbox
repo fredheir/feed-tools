@@ -9,6 +9,8 @@ const path = require("node:path");
 const rootDir = path.resolve(__dirname, "..");
 const localPrefix = path.join(rootDir, ".local");
 const localBin = path.join(localPrefix, "bin");
+const localUvTools = path.join(localPrefix, "uv-tools");
+const localUvCache = path.join(localPrefix, "uv-cache");
 const sourceEnvPath = path.join(rootDir, "source-env.sh");
 const chromeDir = path.join(rootDir, "chrome-install");
 const chromeBin = path.join(
@@ -82,6 +84,9 @@ function run(command, args, options = {}) {
     env: {
       ...process.env,
       PATH: `${localBin}${path.delimiter}${process.env.PATH || ""}`,
+      UV_CACHE_DIR: localUvCache,
+      UV_TOOL_BIN_DIR: localBin,
+      UV_TOOL_DIR: localUvTools,
     },
     ...options,
   });
@@ -130,8 +135,21 @@ function ensureUv() {
   return installed;
 }
 
+function chromeIsRunnable() {
+  try {
+    fs.accessSync(chromeBin, fs.constants.X_OK);
+    execFileSync(chromeBin, ["--version"], {
+      stdio: "ignore",
+      timeout: 5000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function ensureChrome() {
-  if (fs.existsSync(chromeBin)) return;
+  if (chromeIsRunnable()) return;
   const debPath = path.join(
     os.tmpdir(),
     "google-chrome-stable_current_amd64.deb",
@@ -146,8 +164,10 @@ function ensureChrome() {
   fs.mkdirSync(chromeDir, { recursive: true });
   run("dpkg", ["-x", debPath, chromeDir]);
   fs.rmSync(debPath, { force: true });
-  if (!fs.existsSync(chromeBin)) {
-    throw new Error(`Chrome extraction finished but ${chromeBin} is missing`);
+  if (!chromeIsRunnable()) {
+    throw new Error(
+      `Chrome extraction finished but ${chromeBin} is not runnable`,
+    );
   }
 }
 
@@ -211,6 +231,7 @@ function launchWorkspaceChrome(cdpPort) {
       `--user-data-dir=${chromeProfile}`,
       "--no-first-run",
       "--no-default-browser-check",
+      "--disable-features=LockProfileCookieDatabase",
       "--no-sandbox",
     ],
     {

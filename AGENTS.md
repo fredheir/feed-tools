@@ -46,6 +46,7 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 - After `pnpm install`, run `pnpm approve-builds` and approve `agent-browser` if builds are blocked (its interactive).
 - If `pnpm approve-builds` blocks in a non-TTY environment, run `node node_modules/agent-browser/scripts/postinstall.js` directly.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
+- In Cowork sandboxes, run `./bin/feed-signin <source>...` before capture when auth is uncertain; it relaunches workspace Chrome, opens the platform pages, and waits until profile cookies for those sources are visible on disk.
 - Keep `assets_dir`, `save_dir`, and rendered HTML under the repo, not `/tmp`.
 - Open `./var/feed.html` directly in a browser so relative `feed-assets/` paths resolve; do not rely on a file viewer that fails to serve sibling directories.
 - For problems with collection, consult agent-browser directly, and use the ./skills/agent-browser/SKILL.md for reference.
@@ -74,7 +75,7 @@ DISPLAY=:0 <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
 - `DISPLAY=:0` should work without Xvfb in the sandbox environments this project targets.
 - Confirm CDP is up with `curl -sf http://127.0.0.1:9222/json/version`.
 - In Cowork VMs, Chrome is reaped at turn end even if launched with `setsid nohup`. Do sign-in and capture in the same turn; the profile on disk persists, but the browser process does not.
-- Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet. Keep the turn open until sign-in has visibly completed, then capture before ending the turn.
+- Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet. Prefer `./bin/feed-signin <source>...`; it keeps the turn open, prints per-source cookie status, and closes Chrome once cookies are detected.
 - Then set `"cdp": "9222"` in each source's `capture.browser` block.
 - When `capture.browser.cdp` is set, omit `headed` and `auto_connect`.
 
@@ -119,6 +120,8 @@ feed-capture <source>... [limit] [--assets-dir DIR] [--save-dir DIR]
              [--session NAME] [--state FILE] [--profile DIR]
              [--browser-arg ARG] [--headed]
              [--auto-connect|--no-auto-connect]
+
+feed-signin  <source>... [--cdp PORT] [--interval SECONDS] [--timeout MINUTES]
 
 feed-curate  [output-json] [--sources name1,name2,...] [--save-dir DIR]
              [--limit N] [--exclude-seen] [--exclude-completed]

@@ -523,10 +523,10 @@ function printText(results: CheckResult[], configResult: ConfigResult): void {
     (result) => result.name.startsWith("cdp:") && result.ok,
   );
   console.log("");
-  if (agentBrowser?.ok) {
-    console.log("Recommended capture path: agent-browser auto-connect.");
-  } else if (cdp) {
+  if (cdp) {
     console.log(`Recommended capture path: Chrome CDP via ${cdp.name}.`);
+  } else if (agentBrowser?.ok) {
+    console.log("Recommended capture path: agent-browser auto-connect.");
   } else if (isSandbox(results)) {
     console.log(
       "Recommended capture path: workspace Chrome via CDP after sandbox setup.",
