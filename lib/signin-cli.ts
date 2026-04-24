@@ -25,7 +25,7 @@ const DEFAULT_TIMEOUT_MS = 20 * 60_000;
 
 interface SourceSigninTarget {
   url: string;
-  cookieDomains: string[];
+  authCookies: Array<{ domains: string[]; names: string[] }>;
 }
 
 interface ParsedArgs {
@@ -38,31 +38,40 @@ interface ParsedArgs {
 const SOURCE_TARGETS: Record<FeedSourceName, SourceSigninTarget> = {
   x: {
     url: "https://x.com/home",
-    cookieDomains: ["x.com", "twitter.com"],
+    authCookies: [{ domains: ["x.com", "twitter.com"], names: ["auth_token"] }],
   },
   bluesky: {
     url: "https://bsky.app/",
-    cookieDomains: ["bsky.app"],
+    authCookies: [
+      { domains: ["bsky.app", "bsky.social"], names: ["sid", "session"] },
+    ],
   },
   facebook: {
     url: "https://www.facebook.com/",
-    cookieDomains: ["facebook.com"],
+    authCookies: [{ domains: ["facebook.com"], names: ["c_user"] }],
   },
   instagram: {
     url: "https://www.instagram.com/",
-    cookieDomains: ["instagram.com"],
+    authCookies: [{ domains: ["instagram.com"], names: ["sessionid"] }],
   },
   linkedin: {
     url: "https://www.linkedin.com/feed/",
-    cookieDomains: ["linkedin.com"],
+    authCookies: [{ domains: ["linkedin.com"], names: ["li_at"] }],
   },
   tiktok: {
     url: "https://www.tiktok.com/",
-    cookieDomains: ["tiktok.com"],
+    authCookies: [
+      { domains: ["tiktok.com"], names: ["sessionid", "sessionid_ss"] },
+    ],
   },
   youtube: {
     url: "https://www.youtube.com/",
-    cookieDomains: ["youtube.com", "google.com"],
+    authCookies: [
+      {
+        domains: ["youtube.com", "google.com"],
+        names: ["SID", "HSID", "SSID", "APISID", "SAPISID"],
+      },
+    ],
   },
 };
 
@@ -72,7 +81,7 @@ function usage(): never {
       "Usage: feed-signin <source>... [--cdp PORT] [--interval SECONDS] [--timeout MINUTES]",
       "",
       "Launches workspace Chrome, opens source login/feed pages, and waits until",
-      "the persistent chrome-profile cookie DB contains cookies for each source.",
+      "the persistent chrome-profile cookie DB contains auth cookies for each source.",
     ].join("\n"),
   );
   process.exit(0);
@@ -231,9 +240,9 @@ function quotePythonJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export function hasCookieForDomains(
+export function hasAuthCookie(
   cookieStores: string[],
-  domains: string[],
+  authCookies: SourceSigninTarget["authCookies"],
 ): boolean {
   const python = findPythonCommand();
   if (!python || cookieStores.length === 0) return false;
@@ -244,30 +253,40 @@ import sqlite3
 import sys
 
 stores = json.loads(sys.argv[1])
-domains = json.loads(sys.argv[2])
+auth_cookies = json.loads(sys.argv[2])
 
 for store in stores:
     try:
         connection = sqlite3.connect(f"file:{store}?mode=ro", uri=True, timeout=1)
         try:
-            rows = connection.execute("select host_key from cookies").fetchall()
+            rows = connection.execute("select host_key, name from cookies").fetchall()
         finally:
             connection.close()
     except Exception:
         continue
-    for (host_key,) in rows:
+    for (host_key, cookie_name) in rows:
         host = str(host_key or "").lstrip(".").lower()
-        for domain in domains:
-            expected = str(domain).lower()
-            if host == expected or host.endswith("." + expected):
-                sys.exit(0)
+        name = str(cookie_name or "")
+        for check in auth_cookies:
+            names = set(str(candidate) for candidate in check["names"])
+            if name not in names:
+                continue
+            for domain in check["domains"]:
+                expected = str(domain).lower()
+                if host == expected or host.endswith("." + expected):
+                    sys.exit(0)
 sys.exit(1)
-`;
+	`;
 
   try {
     execFileSync(
       python,
-      ["-c", script, quotePythonJson(cookieStores), quotePythonJson(domains)],
+      [
+        "-c",
+        script,
+        quotePythonJson(cookieStores),
+        quotePythonJson(authCookies),
+      ],
       { stdio: "ignore", timeout: 5000 },
     );
     return true;
@@ -282,10 +301,7 @@ function getSigninStatus(
   const stores = findCookieStores(CHROME_PROFILE);
   const status = {} as Record<FeedSourceName, boolean>;
   for (const source of sources) {
-    status[source] = hasCookieForDomains(
-      stores,
-      SOURCE_TARGETS[source].cookieDomains,
-    );
+    status[source] = hasAuthCookie(stores, SOURCE_TARGETS[source].authCookies);
   }
   return status;
 }
@@ -356,29 +372,33 @@ export async function main(): Promise<void> {
     `Chrome launched on CDP port ${args.cdpPort}; log: ${CHROME_LOG}`,
   );
   console.log(`Profile: ${CHROME_PROFILE}`);
-  await waitForCdp(args.cdpPort, child);
-  console.log("Sign in in the opened browser window. Waiting for cookies...");
+  try {
+    await waitForCdp(args.cdpPort, child);
+    console.log(
+      "Sign in in the opened browser window. Waiting for auth cookies...",
+    );
 
-  while (!interrupted && Date.now() < deadline) {
-    const status = getSigninStatus(args.sources);
-    console.log(`${new Date().toISOString()} ${formatStatus(status)}`);
-    if (Object.values(status).every(Boolean)) {
-      console.log(
-        "Sign-in cookies detected. Closing Chrome to flush profile state.",
-      );
-      closeChrome(child);
-      return;
+    while (!interrupted && Date.now() < deadline) {
+      const status = getSigninStatus(args.sources);
+      console.log(`${new Date().toISOString()} ${formatStatus(status)}`);
+      if (Object.values(status).every(Boolean)) {
+        console.log(
+          "Sign-in auth cookies detected. Closing Chrome to flush profile state.",
+        );
+        return;
+      }
+      if (child.exitCode !== null) {
+        throw new Error(
+          `Chrome exited before sign-in completed; see ${CHROME_LOG}`,
+        );
+      }
+      await sleep(args.intervalMs);
     }
-    if (child.exitCode !== null) {
-      throw new Error(
-        `Chrome exited before sign-in completed; see ${CHROME_LOG}`,
-      );
-    }
-    await sleep(args.intervalMs);
-  }
 
-  closeChrome(child);
-  if (!interrupted) {
-    throw new Error("Timed out waiting for sign-in cookies");
+    if (!interrupted) {
+      throw new Error("Timed out waiting for sign-in auth cookies");
+    }
+  } finally {
+    closeChrome(child);
   }
 }
