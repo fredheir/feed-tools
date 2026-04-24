@@ -4,6 +4,7 @@ import {
   applyBrowserConfigToPayload,
   detectSandboxSignals,
   recommendedBrowserConfig,
+  redactRemoteUrl,
 } from "../lib/doctor-cli.js";
 
 describe("feed-doctor config helpers", () => {
@@ -88,5 +89,14 @@ describe("feed-doctor config helpers", () => {
         HOME: process.env.HOME,
       }).some((signal) => signal.name === "CODEX_SANDBOX"),
     ).toBe(true);
+  });
+
+  test("redacts credentialed HTTPS remotes before reporting them", () => {
+    expect(
+      redactRemoteUrl("https://oauth2:ghp_secret@example.com/org/repo.git"),
+    ).toBe("https://redacted:redacted@example.com/org/repo.git");
+    expect(redactRemoteUrl("git@example.com:org/repo.git")).toBe(
+      "git@example.com:org/repo.git",
+    );
   });
 });

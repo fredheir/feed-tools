@@ -172,6 +172,11 @@ fetch(process.argv[1], { signal: controller.signal })
 }
 
 function launchWorkspaceChrome(cdpPort) {
+  if (canReadCdpVersion(cdpPort)) {
+    throw new Error(
+      `CDP port ${cdpPort} is already in use; choose another port with --cdp`,
+    );
+  }
   fs.mkdirSync(chromeProfile, { recursive: true });
   const logFd = fs.openSync(chromeLog, "a");
   const child = spawn(

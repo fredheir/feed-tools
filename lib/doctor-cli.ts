@@ -277,6 +277,18 @@ function checkWorkspaceChrome(): CheckResult {
   };
 }
 
+export function redactRemoteUrl(remote: string): string {
+  if (!/^https?:\/\//i.test(remote)) return remote;
+  try {
+    const parsed = new URL(remote);
+    if (parsed.username) parsed.username = "redacted";
+    if (parsed.password) parsed.password = "redacted";
+    return parsed.toString();
+  } catch {
+    return remote;
+  }
+}
+
 function checkGitRemote(): CheckResult {
   const remote = commandResponds("git", [
     "-C",
@@ -292,8 +304,9 @@ function checkGitRemote(): CheckResult {
       detail: "origin remote unavailable; skipped",
     };
   }
+  const redactedRemote = redactRemoteUrl(remote);
   if (!remote.startsWith("git@")) {
-    return { name: "git-remote", ok: true, detail: remote };
+    return { name: "git-remote", ok: true, detail: redactedRemote };
   }
   const sshDir = path.join(os.homedir(), ".ssh");
   const hasPrivateKey =
@@ -305,7 +318,7 @@ function checkGitRemote(): CheckResult {
   return {
     name: "git-remote",
     ok: false,
-    detail: `${remote}; no private key found in ${sshDir}`,
+    detail: `${redactedRemote}; no private key found in ${sshDir}`,
     recommendation:
       "Use gh auth plus an HTTPS remote in keyless sandboxes, or add an SSH key.",
   };
