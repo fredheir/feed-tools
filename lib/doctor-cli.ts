@@ -289,6 +289,20 @@ export function redactRemoteUrl(remote: string): string {
   }
 }
 
+export function isSshRemote(remote: string): boolean {
+  return remote.startsWith("git@") || /^ssh:\/\//i.test(remote);
+}
+
+function hasSshPrivateKey(sshDir: string): boolean {
+  try {
+    return fs
+      .readdirSync(sshDir)
+      .some((entry) => entry.startsWith("id_") && !entry.endsWith(".pub"));
+  } catch {
+    return false;
+  }
+}
+
 function checkGitRemote(): CheckResult {
   const remote = commandResponds("git", [
     "-C",
@@ -305,15 +319,11 @@ function checkGitRemote(): CheckResult {
     };
   }
   const redactedRemote = redactRemoteUrl(remote);
-  if (!remote.startsWith("git@")) {
+  if (!isSshRemote(remote)) {
     return { name: "git-remote", ok: true, detail: redactedRemote };
   }
   const sshDir = path.join(os.homedir(), ".ssh");
-  const hasPrivateKey =
-    fs.existsSync(sshDir) &&
-    fs
-      .readdirSync(sshDir)
-      .some((entry) => entry.startsWith("id_") && !entry.endsWith(".pub"));
+  const hasPrivateKey = hasSshPrivateKey(sshDir);
   if (hasPrivateKey) return { name: "git-remote", ok: true, detail: remote };
   return {
     name: "git-remote",

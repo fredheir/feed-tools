@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   applyBrowserConfigToPayload,
   detectSandboxSignals,
+  isSshRemote,
   recommendedBrowserConfig,
   redactRemoteUrl,
 } from "../lib/doctor-cli.js";
@@ -98,5 +99,11 @@ describe("feed-doctor config helpers", () => {
     expect(redactRemoteUrl("git@example.com:org/repo.git")).toBe(
       "git@example.com:org/repo.git",
     );
+  });
+
+  test("recognizes both scp-like and URL SSH remotes", () => {
+    expect(isSshRemote("git@github.com:org/repo.git")).toBe(true);
+    expect(isSshRemote("ssh://git@github.com/org/repo.git")).toBe(true);
+    expect(isSshRemote("https://github.com/org/repo.git")).toBe(false);
   });
 });
