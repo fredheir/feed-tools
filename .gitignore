@@ -9,4 +9,6 @@ scorecard.png
 .changelog-audit-cursor
 chrome-install/
 chrome-profile/
+chrome-profile-feed*/
 chrome.log
+chrome-feed.log
