@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   applyBrowserConfigToPayload,
   detectSandboxSignals,
+  isSshPrivateKeyFilename,
   isSshRemote,
   recommendedBrowserConfig,
   redactRemoteUrl,
@@ -108,5 +109,13 @@ describe("feed-doctor config helpers", () => {
     expect(isSshRemote("git@github.com:org/repo.git")).toBe(true);
     expect(isSshRemote("ssh://git@github.com/org/repo.git")).toBe(true);
     expect(isSshRemote("https://github.com/org/repo.git")).toBe(false);
+  });
+
+  test("accepts custom SSH private key filenames", () => {
+    expect(isSshPrivateKeyFilename("id_ed25519")).toBe(true);
+    expect(isSshPrivateKeyFilename("github_ed25519")).toBe(true);
+    expect(isSshPrivateKeyFilename("github_ed25519.pub")).toBe(false);
+    expect(isSshPrivateKeyFilename("known_hosts")).toBe(false);
+    expect(isSshPrivateKeyFilename("config")).toBe(false);
   });
 });

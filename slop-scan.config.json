@@ -5,7 +5,7 @@
     "**/.next/**",
     "**/var/**",
     "**/chrome-profile*/**",
-    "**/chrome-feed.log",
+    "**/chrome.log",
     "**/*.d.ts",
     "**/*.d.mts"
   ]

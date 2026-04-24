@@ -292,14 +292,40 @@ export function isSshRemote(remote: string): boolean {
   return remote.startsWith("git@") || /^ssh:\/\//i.test(remote);
 }
 
+const NON_PRIVATE_SSH_FILES = new Set([
+  "authorized_keys",
+  "config",
+  "environment",
+  "known_hosts",
+  "known_hosts.old",
+  "rc",
+]);
+
+export function isSshPrivateKeyFilename(filename: string): boolean {
+  return (
+    !filename.startsWith(".") &&
+    !filename.endsWith(".pub") &&
+    !filename.endsWith("-cert.pub") &&
+    !NON_PRIVATE_SSH_FILES.has(filename)
+  );
+}
+
 function hasSshPrivateKey(sshDir: string): boolean {
   try {
     return fs
-      .readdirSync(sshDir)
-      .some((entry) => entry.startsWith("id_") && !entry.endsWith(".pub"));
+      .readdirSync(sshDir, { withFileTypes: true })
+      .some(
+        (entry) =>
+          (entry.isFile() || entry.isSymbolicLink()) &&
+          isSshPrivateKeyFilename(entry.name),
+      );
   } catch {
     return false;
   }
+}
+
+function hasSshCredentials(sshDir: string): boolean {
+  return Boolean(process.env.SSH_AUTH_SOCK) || hasSshPrivateKey(sshDir);
 }
 
 function checkGitRemote(): CheckResult {
@@ -322,8 +348,7 @@ function checkGitRemote(): CheckResult {
     return { name: "git-remote", ok: true, detail: redactedRemote };
   }
   const sshDir = path.join(os.homedir(), ".ssh");
-  const hasPrivateKey = hasSshPrivateKey(sshDir);
-  if (hasPrivateKey)
+  if (hasSshCredentials(sshDir))
     return { name: "git-remote", ok: true, detail: redactedRemote };
   return {
     name: "git-remote",
