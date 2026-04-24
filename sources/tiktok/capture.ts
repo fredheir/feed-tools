@@ -122,7 +122,7 @@ function buildTikTokItemsFromUniversalData(
             video_src: item.video?.downloadAddr || item.video?.playAddr || null,
             href: postUrl,
             alt: String(item.desc || "").trim() || handle || "TikTok video",
-            media_kind: "video",
+            media_kind: "video" as const,
             width: item.video?.width || null,
             height: item.video?.height || null,
             duration: item.video?.duration || null,

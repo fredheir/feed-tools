@@ -55,12 +55,39 @@ function extractYouTubeVideoId(url: string | null | undefined): string | null {
 function parseDurationSeconds(value: string | null | undefined): number | null {
   const text = String(value || "").trim();
   if (!text || /live/i.test(text)) return null;
-  const parts = text
-    .split(":")
-    .map((part) => Number.parseInt(part, 10))
-    .filter((part) => Number.isFinite(part));
-  if (parts.length === 0) return null;
-  return parts.reduce((total, part) => total * 60 + part, 0);
+  if (text.includes(":")) {
+    const parts = text
+      .split(":")
+      .map((part) => Number.parseInt(part, 10))
+      .filter((part) => Number.isFinite(part));
+    if (parts.length === 0) return null;
+    return parts.reduce((total, part) => total * 60 + part, 0);
+  }
+
+  const unitMatches = Array.from(
+    text.matchAll(
+      /(\d+)\s*(hour|hours|hr|hrs|minute|minutes|min|mins|second|seconds|sec|secs)\b/gi,
+    ),
+  );
+  if (unitMatches.length === 0) return null;
+
+  let totalSeconds = 0;
+  for (const match of unitMatches) {
+    const amount = Number.parseInt(match[1] || "", 10);
+    const unit = String(match[2] || "").toLowerCase();
+    if (!Number.isFinite(amount)) continue;
+    if (unit.startsWith("hour") || unit === "hr" || unit === "hrs") {
+      totalSeconds += amount * 3600;
+      continue;
+    }
+    if (unit.startsWith("min")) {
+      totalSeconds += amount * 60;
+      continue;
+    }
+    totalSeconds += amount;
+  }
+
+  return totalSeconds > 0 ? totalSeconds : null;
 }
 
 function cleanText(value: string | null | undefined): string {
@@ -103,7 +130,7 @@ function normalizeYouTubeCardsToItems(
               src: cleanText(card.thumbnailUrl) || null,
               href: cleanText(card.url) || null,
               alt: cleanText(card.title) || null,
-              media_kind: "video",
+              media_kind: "video" as const,
               duration: parseDurationSeconds(card.durationText),
               source: "youtube",
             },
