@@ -176,11 +176,15 @@ function usesRunnerGroup(runsOn) {
 
 function validateRunsOn(runsOn, context) {
   const labels = new Set(collectRunnerLabels(runsOn).map((label) => label.toLowerCase()));
-  if (!usesRunnerGroup(runsOn) && !labels.has("self-hosted")) {
+  const standardRunnerLabels = ["self-hosted", "linux", "x64", "markolo-hetzner"];
+  const targetsStandardRunner =
+    usesRunnerGroup(runsOn) || standardRunnerLabels.some((label) => labels.has(label));
+
+  if (!targetsStandardRunner) {
     return;
   }
 
-  for (const requiredLabel of ["self-hosted", "linux", "x64", "markolo-hetzner"]) {
+  for (const requiredLabel of standardRunnerLabels) {
     if (!labels.has(requiredLabel)) {
       console.log(`${context} self-hosted workflows must use standard runner labels`);
       return;
