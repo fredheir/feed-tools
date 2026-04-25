@@ -17,16 +17,5 @@ run_local() {
   exec node "$cli" "$@" --root "$ROOT_DIR" --config repo-standards.config.json
 }
 
-if [[ -n "${REPO_STANDARDS_LOCAL:-}" ]]; then
-  run_local "$REPO_STANDARDS_LOCAL" "$@"
-fi
-
-if [[ -f "$ROOT_DIR/../markolo-shared/packages/repo-standards/dist/cli.js" ]]; then
-  run_local "$ROOT_DIR/../markolo-shared" "$@"
-fi
-
-if pnpm exec -- which repo-standards >/dev/null 2>&1; then
-  exec pnpm exec repo-standards "$@" --config repo-standards.config.json
-fi
-
-exec pnpm dlx @markolo-research/repo-standards "$@" --config repo-standards.config.json
+standards_root="${REPO_STANDARDS_LOCAL:-$ROOT_DIR/../markolo-shared}"
+run_local "$standards_root" "$@"
