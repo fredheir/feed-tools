@@ -171,13 +171,13 @@ function collectRunnerLabels(runsOn) {
 }
 
 function validateRunsOn(runsOn, context) {
-  const labels = collectRunnerLabels(runsOn);
-  if (!labels.includes("self-hosted")) {
+  const labels = new Set(collectRunnerLabels(runsOn).map((label) => label.toLowerCase()));
+  if (!labels.has("self-hosted")) {
     return;
   }
 
-  for (const requiredLabel of ["Linux", "X64", "markolo-hetzner"]) {
-    if (!labels.includes(requiredLabel)) {
+  for (const requiredLabel of ["linux", "x64", "markolo-hetzner"]) {
+    if (!labels.has(requiredLabel)) {
       console.log(`${context} self-hosted workflows must use standard runner labels`);
       return;
     }
