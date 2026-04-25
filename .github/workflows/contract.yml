@@ -28,6 +28,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - run: |
+          rm -rf /tmp/markolo-shared
+          git clone --depth 1 --branch codex/runner-label-contract git@github.com:Markolo-Research/markolo-shared.git /tmp/markolo-shared
       - run: just doctor
         env:
-          REPO_STANDARDS_LOCAL: /home/rolf/Projects/markolo-shared
+          REPO_STANDARDS_LOCAL: /tmp/markolo-shared
