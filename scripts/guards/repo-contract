@@ -154,6 +154,36 @@ function validatePermissionMap(permissions, context) {
   }
 }
 
+function collectRunnerLabels(runsOn) {
+  if (typeof runsOn === "string") {
+    return [runsOn];
+  }
+
+  if (Array.isArray(runsOn)) {
+    return runsOn.filter((label) => typeof label === "string");
+  }
+
+  if (runsOn && typeof runsOn === "object") {
+    return asArray(runsOn.labels).filter((label) => typeof label === "string");
+  }
+
+  return [];
+}
+
+function validateRunsOn(runsOn, context) {
+  const labels = collectRunnerLabels(runsOn);
+  if (!labels.includes("self-hosted")) {
+    return;
+  }
+
+  for (const requiredLabel of ["Linux", "X64", "markolo-hetzner"]) {
+    if (!labels.includes(requiredLabel)) {
+      console.log(`${context} self-hosted workflows must use standard runner labels`);
+      return;
+    }
+  }
+}
+
 for (const workflowPath of workflowPaths) {
   const workflow = YAML.parse(fs.readFileSync(workflowPath, "utf8"));
 
@@ -168,6 +198,7 @@ for (const workflowPath of workflowPaths) {
 
   for (const [jobName, job] of Object.entries(workflow?.jobs ?? {})) {
     validatePermissionMap(job?.permissions, `${workflowPath} job ${jobName}`);
+    validateRunsOn(job?.["runs-on"], `${workflowPath} job ${jobName}`);
 
     for (const ref of asArray(job?.uses)) {
       if (typeof ref === "string" && !isPinnedActionRef(ref)) {
