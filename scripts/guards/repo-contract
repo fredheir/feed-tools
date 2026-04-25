@@ -41,6 +41,8 @@ require_file package.json
 require_file pnpm-lock.yaml
 require_file pnpm-workspace.yaml
 require_file .env.example
+require_file .github/workflows/actions-hygiene.yml
+require_file .github/actionlint.yaml
 
 if fdfind '^lefthook\.yml$' . | grep -v '^./lefthook.yml$' >/dev/null; then
   fail "nested lefthook.yml files are forbidden"
@@ -73,6 +75,50 @@ fi
 
 if jq -e '(.devDependencies // {}) | has("husky") or has("@j178/prek")' package.json >/dev/null; then
   fail "husky and prek are legacy hook dependencies; use lefthook.yml"
+fi
+
+mapfile -t workflows < <(fdfind -e yml -e yaml . .github/workflows -t f | sort)
+if [ "${#workflows[@]}" -eq 0 ]; then
+  fail "missing GitHub Actions workflows under .github/workflows"
+fi
+
+for workflow in "${workflows[@]}"; do
+  if yq -e 'has("pull_request_target")' "$workflow" >/dev/null; then
+    fail "$workflow must not use pull_request_target"
+  fi
+
+  permissions_contents="$(yq -r '.permissions.contents // ""' "$workflow")"
+  if [ "$permissions_contents" != "read" ]; then
+    fail "$workflow must declare top-level permissions.contents: read"
+  fi
+
+  mapfile -t checkout_credentials < <(
+    yq -r '.jobs[]?.steps[]? | select((.uses? // "") | test("^actions/checkout@")) | (.["with"]["persist-credentials"] | tostring)' "$workflow"
+  )
+  for persist_credentials in "${checkout_credentials[@]}"; do
+    if [ "$persist_credentials" != "false" ]; then
+      fail "$workflow checkout steps must set persist-credentials: false"
+    fi
+  done
+
+  mapfile -t action_refs < <(yq -r '.jobs[]?.steps[]?.uses? // empty' "$workflow")
+  for action_ref in "${action_refs[@]}"; do
+    if [[ ! "$action_ref" =~ @[0-9a-f]{40}$ ]]; then
+      fail "$workflow action ref must be pinned to a full commit SHA: $action_ref"
+    fi
+  done
+done
+
+if ! yq -e '.jobs[]?.steps[]? | select(.run? == "actionlint")' .github/workflows/actions-hygiene.yml >/dev/null; then
+  fail ".github/workflows/actions-hygiene.yml must run actionlint"
+fi
+
+if ! yq -e '.jobs[]?.steps[]? | select((.run? // "") | test("(^| )zizmor( |$)"))' .github/workflows/actions-hygiene.yml >/dev/null; then
+  fail ".github/workflows/actions-hygiene.yml must run zizmor"
+fi
+
+if fdfind '^typecheck\.ya?ml$' .github/workflows -t f | grep -q .; then
+  fail "feed_tools is tracked as a JavaScript repo; do not add a dedicated TypeScript workflow without updating the standards contract"
 fi
 
 if [ "$mode" = "full" ]; then

@@ -12,6 +12,9 @@ fmt-check:
 lint:
     scripts/dev/lint
 
+actions-hygiene:
+    scripts/guards/actions-hygiene
+
 typecheck:
     scripts/dev/typecheck
 
@@ -58,7 +61,7 @@ check-changed:
     just typecheck
     just test-fast
 
-check: doctor fmt-check lint typecheck test secrets deps-check gen-check
+check: doctor fmt-check lint actions-hygiene typecheck test secrets deps-check gen-check
 
 ci: check
 
