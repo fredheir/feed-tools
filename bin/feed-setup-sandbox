@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 // @ts-check
 
-const { execFileSync, spawn } = require("node:child_process");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
+import { execFileSync, spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const rootDir = path.resolve(__dirname, "..");
+const rootDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
 const localPrefix = path.join(rootDir, ".local");
 const localBin = path.join(localPrefix, "bin");
 const localUvTools = path.join(localPrefix, "uv-tools");

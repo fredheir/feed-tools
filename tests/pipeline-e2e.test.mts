@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { persistSourceDocument } from "../lib/sqlite-store.js";
-import type { FeedDocument } from "../lib/types.js";
+import { persistSourceDocument } from "../lib/sqlite-store.ts";
+import type { FeedDocument } from "../lib/types.ts";
 import {
   repoRoot,
   runCli,

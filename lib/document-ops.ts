@@ -1,5 +1,5 @@
-import { assertFeedDocument, getPreferredItemKey } from "./item-shape.js";
-import type { FeedDocument, FeedItem } from "./types.js";
+import { assertFeedDocument, getPreferredItemKey } from "./item-shape.ts";
+import type { FeedDocument, FeedItem } from "./types.ts";
 
 interface PruneOptions {
   keep?: string | string[];

@@ -1,4 +1,4 @@
-import type { FeedSourceName } from "./types.js";
+import type { FeedSourceName } from "./types.ts";
 
 export const SUPPORTED_SOURCES = Object.freeze([
   "bluesky",

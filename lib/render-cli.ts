@@ -1,25 +1,23 @@
 #!/usr/bin/env node
-"use strict";
-
-const fs = require("node:fs");
-const path = require("node:path");
-import { requireArgValue } from "./cli-args.js";
-const {
+import fs from "node:fs";
+import path from "node:path";
+import { requireArgValue } from "./cli-args.ts";
+import {
   getDefaultDocumentPath,
   getDefaultHtmlPath,
-} = require("./document-paths.js");
-const {
+} from "./document-paths.ts";
+import {
   groupPickedRowsByCategory,
   loadAllocationFromDocument,
-} = require("./allocation.js");
-const { loadConfig, getCurationPreferences } = require("./config.js");
-const { applyMask } = require("./mask.js");
-const { renderDocument } = require("./render/html.js");
-const { resolveSelectionList } = require("./selection.js");
-import { createBrowserSession } from "./browser.js";
-import { assertFeedDocument } from "./item-shape.js";
-import type { FeedDocument } from "./types.js";
-const REPO_ROOT = path.resolve(__dirname, "..");
+} from "./allocation.ts";
+import { loadConfig, getCurationPreferences } from "./config.ts";
+import { applyMask } from "./mask.ts";
+import { renderDocument } from "./render/html.ts";
+import { resolveSelectionList } from "./selection.ts";
+import { createBrowserSession } from "./browser.ts";
+import { assertFeedDocument } from "./item-shape.ts";
+import type { FeedDocument } from "./types.ts";
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
 function relativizeAssetPaths(
   document: FeedDocument,

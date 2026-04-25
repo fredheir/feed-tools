@@ -19,11 +19,7 @@ describe("toBrowserTarget mount lookup fallback", () => {
       throw new Error("spawn findmnt ENOENT");
     });
 
-    const { default: sessionModule } =
-      (await import("../lib/browser/session.js")) as unknown as {
-        default: { toBrowserTarget: (target: string) => string };
-      };
-    const { toBrowserTarget } = sessionModule;
+    const { toBrowserTarget } = await import("../lib/browser/session.ts");
 
     expect(toBrowserTarget("./var/feed.html")).toBe(
       pathToFileURL(path.resolve("./var/feed.html")).href,

@@ -1,26 +1,25 @@
 #!/usr/bin/env node
-"use strict";
-
-const { buildBrowserRuntimeScript } = require("../browser-runtime/core.js");
-const {
+import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
+import {
   assertAuthenticatedCapture,
   assertFeedUrlAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture.js");
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
-import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.js";
-const {
+} from "../../lib/source-capture.ts";
+import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
+import {
   extractInstagramSourceItemId,
   isInstagramPermalinkUrl,
   isInstagramProfileUrl,
   isInstagramItemWorthKeeping,
-} = require("./parse.js");
+} from "./parse.ts";
 import type {
   BrowserSession,
+  CaptureAdapter,
   FeedBrowserConfig,
   FeedDocument,
   FeedItem,
-} from "../../lib/types.js";
+} from "../../lib/types.ts";
 
 type RawInstagramExtractionItem = Parameters<typeof normalizeItemShape>[0];
 
@@ -61,16 +60,24 @@ function normalizeInstagramExtractionDocument(payload: unknown): FeedDocument {
   };
 }
 
-function normalizeInstagramCandidate(item: FeedItem): FeedItem {
+function normalizeInstagramCandidate(item: unknown): FeedItem | null {
+  if (!isPlainObject(item)) return null;
+  const source = typeof item.source === "string" ? item.source : "instagram";
+  const index = typeof item.index === "number" ? item.index : null;
   return normalizeItemShape(
     {
       ...item,
+      source,
+      index,
       source_item_id:
-        extractInstagramSourceItemId(item?.url) || item?.source_item_id,
+        extractInstagramSourceItemId(
+          typeof item.url === "string" ? item.url : null,
+        ) ||
+        (typeof item.source_item_id === "string" ? item.source_item_id : null),
     },
     {
-      source: item.source,
-      index: item.index,
+      source,
+      index,
     },
   );
 }
@@ -379,7 +386,7 @@ async function captureDocument({
     schema_version: 1,
     source: "instagram",
     captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit).map(normalizeInstagramCandidate),
+    items: collectedItems.slice(0, limit),
   };
 
   assertAuthenticatedCapture(
@@ -400,11 +407,10 @@ async function captureDocument({
 const source = {
   name: "instagram",
   captureDocument,
-};
+} as unknown as CaptureAdapter;
 const prepareFeed = prepareInstagramFeed;
 
-module.exports = {
-  buildExtractionScript,
+export {
   normalizeInstagramExtractionDocument,
   normalizeInstagramCandidate,
   source,

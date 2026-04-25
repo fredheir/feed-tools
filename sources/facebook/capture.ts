@@ -1,15 +1,13 @@
 #!/usr/bin/env node
-"use strict";
-
-const { canonicalizeItemUrl } = require("../../lib/item-shape.js");
-const {
+import { canonicalizeItemUrl } from "../../lib/item-shape.ts";
+import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture.js");
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
-import type { FacebookSnapshotLine } from "./parse.js";
-const {
+} from "../../lib/source-capture.ts";
+import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import type { FacebookSnapshotLine } from "./parse.ts";
+import {
   cleanAuthorHeading,
   cleanBodyText,
   extractCardFromLabel,
@@ -23,13 +21,15 @@ const {
   isNoiseStaticText,
   parseSnapshotLine,
   scoreFacebookItemQuality,
-} = require("./parse.js");
+} from "./parse.ts";
 import type {
   BrowserSession,
+  CaptureAdapter,
+  FeedBrowserConfig,
   FeedDocument,
   FeedItem,
   FeedMedia,
-} from "../../lib/types.js";
+} from "../../lib/types.ts";
 
 type FacebookEnrichmentRef = {
   ref: string;
@@ -237,7 +237,7 @@ function parseSnapshotDocument(snapshot: string, limit: number): FeedDocument {
   const lines = String(snapshot || "")
     .split("\n")
     .map((line) => parseSnapshotLine(line))
-    .filter(Boolean);
+    .filter((line): line is FacebookSnapshotLine => Boolean(line));
 
   const feedStart = lines.findIndex(
     (line) =>
@@ -414,7 +414,7 @@ async function captureDocument({
   browserOptions = {},
 }: {
   limit?: number;
-  browserOptions?: Record<string, unknown>;
+  browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
   const browser = createBrowserSession(browserOptions);
   prepareFacebookFeed(browser);
@@ -492,10 +492,10 @@ async function captureDocument({
 const source = {
   name: "facebook",
   captureDocument,
-};
+} as unknown as CaptureAdapter;
 const prepareFeed = prepareFacebookFeed;
 
-module.exports = {
+export {
   source,
   prepareFeed,
   extractFacebookSourceItemId,

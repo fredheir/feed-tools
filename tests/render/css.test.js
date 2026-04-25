@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { getRenderCss } from "../../lib/render/css.js";
+import { getRenderCss } from "../../lib/render/css.ts";
 
 describe("render css", () => {
   test("contains the core feed and filter styles", () => {

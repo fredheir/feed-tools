@@ -2,7 +2,10 @@
   "name": "@markolo/feed-tools",
   "private": true,
   "version": "0.2.0",
-  "type": "commonjs",
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "packageManager": "pnpm@10.14.0",
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
@@ -36,9 +39,6 @@
       "sources/**/*.ts",
       "tests/**/*.{js,mts}"
     ],
-    "ignore": [
-      "bin/_run-ts-cli.js"
-    ],
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
       "agent-browser",
@@ -47,9 +47,6 @@
     "ignoreBinaries": [
       "uv"
     ]
-  },
-  "dependencies": {
-    "tsx": "^4.20.6"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",

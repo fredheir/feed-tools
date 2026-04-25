@@ -1,17 +1,12 @@
-"use strict";
-
-const { getRenderCss } = require("./css.js");
-const { escapeHtml, renderItemCard, toSourceClass } = require("./item.js");
-const { getItemMaskKeys } = require("../item.js");
-const { normalizeMaskTabs, orderItemsByThread } = require("../mask.js") as {
-  normalizeMaskTabs: (mask: FeedDocument["mask"]) => FeedTab[];
-  orderItemsByThread: (document: FeedDocument) => FeedItem[];
-};
-const {
+import { getRenderCss } from "./css.ts";
+import { escapeHtml, renderItemCard, toSourceClass } from "./item.ts";
+import { getItemMaskKeys } from "../item.ts";
+import { normalizeMaskTabs, orderItemsByThread } from "../mask.ts";
+import {
   getPlatformIconDataUri,
   getPlatformIconMeta,
-} = require("./platform-icons.js");
-import type { FeedDocument, FeedItem, FeedTab } from "../types.js";
+} from "./platform-icons.ts";
+import type { FeedDocument, FeedItem, FeedTab } from "../types.ts";
 
 function renderDocument(document: FeedDocument): string {
   const rows: FeedItem[] = orderItemsByThread(document);
@@ -280,6 +275,4 @@ function renderDocument(document: FeedDocument): string {
 </html>`;
 }
 
-module.exports = {
-  renderDocument,
-};
+export { renderDocument };

@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 import {
   loadAllocationFromDb,
   persistSourceDocument,
-} from "../lib/sqlite-store.js";
+} from "../lib/sqlite-store.ts";
 import {
   repoRoot,
   withConfigEnv,

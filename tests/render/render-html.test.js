@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderDocument } from "../../lib/render/html.js";
+import { renderDocument } from "../../lib/render/html.ts";
 
 describe("renderDocument", () => {
   test("renders app-style shell chrome around the feed", () => {

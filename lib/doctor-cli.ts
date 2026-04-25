@@ -1,16 +1,14 @@
 #!/usr/bin/env node
-"use strict";
-
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-import { getCdpVersionUrl, readCdpVersionPayload } from "./browser.js";
+import { getCdpVersionUrl, readCdpVersionPayload } from "./browser.ts";
 
-const { listCicSources } = require("./cic/source-config.js");
+import { listCicSources } from "./cic/source-config.ts";
 
-const REPO_ROOT = path.resolve(__dirname, "..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 const DEFAULT_CDP_PORTS = [9222, 9223, 9333];
 const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");

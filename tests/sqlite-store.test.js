@@ -9,7 +9,7 @@ import {
   loadAllocationFromDb,
   persistSourceDocument,
   saveAllocationToDb,
-} from "../lib/sqlite-store.js";
+} from "../lib/sqlite-store.ts";
 import { DatabaseSync } from "node:sqlite";
 
 const tempDirs = [];

@@ -4,7 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import childProcess from "node:child_process";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { downloadDocumentAssets } from "../../lib/assets.js";
+import { downloadDocumentAssets } from "../../lib/assets.ts";
 
 const tempDirs = [];
 const originalFetch = global.fetch;

@@ -1,23 +1,22 @@
 #!/usr/bin/env node
-"use strict";
-
-const {
+import {
   buildBrowserRuntimeScript,
   normalizeCount,
   makeAbsoluteUrl,
-} = require("../browser-runtime/core.js");
-const {
+} from "../browser-runtime/core.ts";
+import {
   assertFeedUrlAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture.js");
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
+} from "../../lib/source-capture.ts";
+import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
 import type {
   BrowserSession,
+  CaptureAdapter,
   FeedBrowserConfig,
   FeedDocument,
   FeedItem,
   FeedMedia,
-} from "../../lib/types.js";
+} from "../../lib/types.ts";
 
 const TIKTOK_BASE_URL = "https://www.tiktok.com";
 interface BrowserElement {
@@ -412,11 +411,10 @@ async function captureDocument({
 const source = {
   name: "tiktok",
   captureDocument,
-};
+} as unknown as CaptureAdapter;
 const prepareFeed = prepareTikTokFeed;
 
-module.exports = {
-  buildExtractionScript,
+export {
   buildTikTokItemsFromUniversalData,
   buildTikTokItemsFromDom,
   source,

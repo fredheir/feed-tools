@@ -1,13 +1,11 @@
-"use strict";
-
-const fs = require("node:fs");
-const path = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
-const { combineDocuments } = require("./document-ops.js");
-const { normalizePersistedDocument } = require("./feed-document-normalize.js");
-import { getPreferredItemKey } from "./item-shape.js";
-import { hasPositiveLimit } from "./selection.js";
-import type { FeedAllocation, FeedDocument, FeedItem } from "./types.js";
+import fs from "node:fs";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { combineDocuments } from "./document-ops.ts";
+import { normalizePersistedDocument } from "./feed-document-normalize.ts";
+import { getPreferredItemKey } from "./item-shape.ts";
+import { hasPositiveLimit } from "./selection.ts";
+import type { FeedAllocation, FeedDocument, FeedItem } from "./types.ts";
 
 type SqliteDatabase = InstanceType<typeof DatabaseSync>;
 
@@ -139,9 +137,11 @@ function initializeSchema(db: SqliteDatabase): void {
 
 function ensureItemsColumns(db: SqliteDatabase): void {
   const columns = new Set(
-    (db.prepare(`PRAGMA table_info('items')`).all() as ItemTableInfoRow[]).map(
-      (row) => row.name,
-    ),
+    (
+      db
+        .prepare(`PRAGMA table_info('items')`)
+        .all() as unknown as ItemTableInfoRow[]
+    ).map((row) => row.name),
   );
 
   if (!columns.has("category")) {
@@ -168,7 +168,7 @@ function listStoredSourceRows(db: SqliteDatabase): SourceDocumentRow[] {
        FROM source_documents
        ORDER BY source ASC`,
     )
-    .all() as SourceDocumentRow[];
+    .all() as unknown as SourceDocumentRow[];
 }
 
 function loadCurrentDocumentFromDb(
@@ -286,6 +286,9 @@ function persistSourceDocument(
         source: item.source || sourceName,
         index: item.index ?? index + 1,
       });
+      if (!itemKey) {
+        throw new Error(`Missing item key for ${sourceName} item ${index + 1}`);
+      }
       itemUpsert.run(
         itemKey,
         item.source || sourceName,
@@ -295,7 +298,7 @@ function persistSourceDocument(
         JSON.stringify(item),
         item.first_seen_at || normalizedDocument.captured_at,
         item.last_seen_at || normalizedDocument.captured_at,
-        Number.isInteger(item.capture_count) ? item.capture_count : 1,
+        typeof item.capture_count === "number" ? item.capture_count : 1,
         0,
         null,
         0,
@@ -358,7 +361,7 @@ function loadItemStateMap(
        FROM items
        WHERE source IN (${placeholders})`,
     )
-    .all(...sources) as ItemStateRow[];
+    .all(...sources) as unknown as ItemStateRow[];
   return new Map(
     rows.map((row) => [
       row.item_key,
@@ -383,7 +386,7 @@ function loadItemCategoryMap(
          AND item_id IS NOT NULL
          AND category IS NOT NULL`,
     )
-    .all(...sources) as ItemCategoryRow[];
+    .all(...sources) as unknown as ItemCategoryRow[];
   return new Map(
     rows.map((row) => [
       row.item_key,
@@ -429,7 +432,7 @@ function exportDocumentsFromDb(
          FROM source_documents
          WHERE source IN (${placeholders})`,
       )
-      .all(...selectedSources) as SourceDocumentRow[];
+      .all(...selectedSources) as unknown as SourceDocumentRow[];
     const docsBySource = new Map(
       rows.map((row) => [
         row.source,
@@ -539,16 +542,6 @@ function saveAllocationToDb(
 }
 
 export {
-  exportDocumentsFromDb,
-  getDatabasePath,
-  listStoredSources,
-  loadCurrentDocumentFromDb,
-  loadAllocationFromDb,
-  persistSourceDocument,
-  saveAllocationToDb,
-};
-
-module.exports = {
   exportDocumentsFromDb,
   getDatabasePath,
   listStoredSources,

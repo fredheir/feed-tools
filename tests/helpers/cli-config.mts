@@ -8,7 +8,7 @@ import {
 } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import type { RawFeedConfig } from "../../lib/types.js";
+import type { RawFeedConfig } from "../../lib/types.ts";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = path.resolve(dirname, "../..");

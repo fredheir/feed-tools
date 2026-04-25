@@ -1,12 +1,12 @@
 import * as fs from "node:fs";
 
-const { normalizePersistedDocument } = require("./feed-document-normalize.js");
+import { normalizePersistedDocument } from "./feed-document-normalize.ts";
 import type {
   CurationPreferences,
   FeedAllocation,
   FeedDocument,
   FeedItem,
-} from "./types.js";
+} from "./types.ts";
 
 interface SelectionRow {
   row: number;

@@ -1,24 +1,22 @@
 #!/usr/bin/env node
-"use strict";
-
-const {
+import {
   loadConfig,
   getCaptureDefaults,
   getCaptureBrowserOptions,
   resolveCanonicalSaveDir,
   DEFAULT_ASSETS_DIR,
-} = require("./config.js");
-const { requireArgValue } = require("./cli-args.js");
-const { combineDocuments } = require("./document-ops.js");
-const { hasNewUnclassifiedItems } = require("./source-capture.js");
-const { getCaptureHandler } = require("./source-registry.js");
-import { isSupportedSource } from "./source-catalog.js";
+} from "./config.ts";
+import { requireArgValue } from "./cli-args.ts";
+import { combineDocuments } from "./document-ops.ts";
+import { hasNewUnclassifiedItems } from "./source-capture.ts";
+import { getCaptureHandler } from "./source-registry.ts";
+import { isSupportedSource } from "./source-catalog.ts";
 import type {
   FeedBrowserConfig,
   FeedConfig,
   FeedDocument,
   FeedSourceName,
-} from "./types.js";
+} from "./types.ts";
 
 function parseSourceNames(argv: string[]): {
   sourceNames: FeedSourceName[];
@@ -190,7 +188,11 @@ const { sourceNames, limit, assetsDir, saveDir, browserOptions } =
       ...getCaptureBrowserOptions(config, sourceName),
       ...browserOptions,
     };
-    const document = await getCaptureHandler(sourceName)({
+    const captureHandler = getCaptureHandler(sourceName);
+    if (!captureHandler) {
+      throw new Error(`Unsupported source: ${sourceName}`);
+    }
+    const document = await captureHandler({
       limit,
       assetsDir: assetsDir || sourceDefaults.assets_dir || DEFAULT_ASSETS_DIR,
       saveDir: sourceSaveDir,

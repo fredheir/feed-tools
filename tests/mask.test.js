@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { applyMask } from "../lib/mask.js";
+import { applyMask } from "../lib/mask.ts";
 
 describe("applyMask", () => {
   test("rejects documents without an items array", () => {

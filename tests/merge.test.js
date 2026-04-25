@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { mergeDocuments } from "../lib/merge.js";
-import { resolveSelectionList } from "../lib/selection.js";
-import { getSyntheticItemId } from "../lib/item-shape.js";
+import { mergeDocuments } from "../lib/merge.ts";
+import { resolveSelectionList } from "../lib/selection.ts";
+import { getSyntheticItemId } from "../lib/item-shape.ts";
 
 describe("mergeDocuments", () => {
   test("deduplicates by stable id and increments capture metadata", () => {

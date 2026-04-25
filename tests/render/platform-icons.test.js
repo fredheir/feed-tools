@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   getPlatformIconDataUri,
   getPlatformIconMeta,
-} from "../../lib/render/platform-icons.js";
+} from "../../lib/render/platform-icons.ts";
 
 describe("platform icons", () => {
   test("normalizes aliases and returns data uris for icons", () => {

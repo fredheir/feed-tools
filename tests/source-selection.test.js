@@ -2,13 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { persistSourceDocument } from "../lib/sqlite-store.js";
-import { buildRows, loadDocument } from "../lib/selection.js";
+import { persistSourceDocument } from "../lib/sqlite-store.ts";
+import { buildRows, loadDocument } from "../lib/selection.ts";
 import {
   appendCommaList,
   resolveSelectedSources,
   validateExplicitSources,
-} from "../lib/source-selection.js";
+} from "../lib/source-selection.ts";
 
 const tempDirs = [];
 
