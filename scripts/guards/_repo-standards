@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+run_local() {
+  local package_root="$1"
+  shift
+  local cli="$package_root/packages/repo-standards/dist/cli.js"
+
+  if [[ ! -f "$cli" ]]; then
+    echo "repo-standards CLI not found at $cli" >&2
+    exit 1
+  fi
+
+  exec node "$cli" "$@" --root "$ROOT_DIR" --config repo-standards.config.json
+}
+
+if [[ -n "${REPO_STANDARDS_LOCAL:-}" ]]; then
+  run_local "$REPO_STANDARDS_LOCAL" "$@"
+fi
+
+if [[ -f "$ROOT_DIR/../markolo-shared/packages/repo-standards/dist/cli.js" ]]; then
+  run_local "$ROOT_DIR/../markolo-shared" "$@"
+fi
+
+if pnpm exec -- which repo-standards >/dev/null 2>&1; then
+  exec pnpm exec repo-standards "$@" --config repo-standards.config.json
+fi
+
+exec pnpm dlx @markolo-research/repo-standards "$@" --config repo-standards.config.json

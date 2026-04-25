@@ -42,8 +42,7 @@
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
       "agent-browser",
-      "lefthook",
-      "@markolo-research/repo-standards"
+      "lefthook"
     ],
     "ignoreBinaries": [
       "uv"
@@ -63,7 +62,6 @@
     "knip": "^6.1.1",
     "lefthook": "^2.1.6",
     "prettier": "^3.6.2",
-    "@markolo-research/repo-standards": "github:Markolo-Research/markolo-shared#d76e2fddc6b2615032572bf293aca0ad4fdb6a5b&path:/packages/repo-standards",
     "slop-scan": "~0.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
