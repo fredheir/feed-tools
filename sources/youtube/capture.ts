@@ -1,20 +1,18 @@
 #!/usr/bin/env node
-"use strict";
-
-const { buildBrowserRuntimeScript } = require("../browser-runtime/core.js");
-const {
+import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
+import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture.js");
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
-import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.js";
+} from "../../lib/source-capture.ts";
+import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
 import type {
   BrowserSession,
   FeedBrowserConfig,
   FeedDocument,
   FeedItem,
-} from "../../lib/types.js";
+} from "../../lib/types.ts";
 
 type RawYouTubeCard = {
   kind?: "video" | "short";
@@ -496,7 +494,7 @@ const source = {
 
 const prepareFeed = prepareYouTubeFeed;
 
-module.exports = {
+export {
   buildExtractionScript,
   captureDocument,
   extractYouTubeVideoId,

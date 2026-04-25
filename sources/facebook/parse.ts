@@ -1,6 +1,4 @@
-"use strict";
-
-import type { FeedCard } from "../../lib/types.js";
+import type { FeedCard } from "../../lib/types.ts";
 
 export type FacebookSnapshotLine = {
   indent: number;
@@ -260,7 +258,7 @@ function extractImageSrcFromHtml(html: string): string | null {
   return src ? src.replace(/&amp;/g, "&") : null;
 }
 
-module.exports = {
+export {
   cleanAuthorHeading,
   cleanBodyText,
   extractCardFromLabel,

@@ -6,7 +6,7 @@ import {
   createBrowserSession,
   toBrowserTarget,
   translateMountedPath,
-} from "../lib/browser/session.js";
+} from "../lib/browser/session.ts";
 
 describe("translateMountedPath", () => {
   test("returns the original resolved path when the mount source is not host-backed", () => {

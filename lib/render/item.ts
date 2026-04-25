@@ -1,17 +1,15 @@
-"use strict";
-
-const { getItemMaskKeys } = require("../item.js");
-const {
+import { getItemMaskKeys } from "../item.ts";
+import {
   getPlatformIconDataUri,
   getPlatformIconMeta,
-} = require("./platform-icons.js");
+} from "./platform-icons.ts";
 import type {
   FeedCard,
   FeedItem,
   FeedMedia,
   FeedStatValue,
   FeedStats,
-} from "../types.js";
+} from "../types.ts";
 
 const ACTIONS: ReadonlyArray<{
   key: keyof FeedStats;
@@ -379,8 +377,4 @@ function renderItemCard(
   `;
 }
 
-module.exports = {
-  escapeHtml,
-  renderItemCard,
-  toSourceClass,
-};
+export { escapeHtml, renderItemCard, toSourceClass };

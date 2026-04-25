@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   getDocumentSource,
   getDocumentSources,
-} from "../../lib/document-sources.js";
+} from "../../lib/document-sources.ts";
 
 describe("document source helpers", () => {
   test("returns the direct source for non-combined documents", () => {

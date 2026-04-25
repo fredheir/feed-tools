@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-"use strict";
-
-const { buildBrowserRuntimeScript } = require("../browser-runtime/core.js");
-const {
+import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
+import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
   collectUniqueItems,
-} = require("../../lib/source-capture.js");
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.js";
+} from "../../lib/source-capture.ts";
+import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
 import type {
   BrowserSession,
+  CaptureAdapter,
+  FeedBrowserConfig,
   FeedDocument,
   FeedItem,
-} from "../../lib/types.js";
+} from "../../lib/types.ts";
 
 type LinkedInScoredCandidate = {
   source_item_id?: string | null;
@@ -522,7 +522,7 @@ async function captureDocument({
   browserOptions = {},
 }: {
   limit?: number;
-  browserOptions?: Record<string, unknown>;
+  browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
   const browser = createBrowserSession(browserOptions);
   prepareLinkedInFeed(browser);
@@ -599,10 +599,10 @@ async function captureDocument({
 const source = {
   name: "linkedin",
   captureDocument,
-};
+} as unknown as CaptureAdapter;
 const prepareFeed = prepareLinkedInFeed;
 
-module.exports = {
+export {
   buildExtractionScript,
   source,
   prepareFeed,

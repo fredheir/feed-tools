@@ -7,7 +7,7 @@ import {
   isSshRemote,
   recommendedBrowserConfig,
   redactRemoteUrl,
-} from "../lib/doctor-cli.js";
+} from "../lib/doctor-cli.ts";
 
 describe("feed-doctor config helpers", () => {
   test("prefers verified CDP over agent-browser when both are available", () => {

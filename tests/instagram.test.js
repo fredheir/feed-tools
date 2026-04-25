@@ -2,17 +2,17 @@ import { describe, expect, test } from "vitest";
 import {
   buildExtractionScript,
   prepareFeed,
-} from "../sources/instagram/capture.js";
+} from "../sources/instagram/capture.ts";
 import {
   normalizeInstagramCandidate,
   normalizeInstagramExtractionDocument,
-} from "../sources/instagram/capture.js";
+} from "../sources/instagram/capture.ts";
 import {
   extractInstagramSourceItemId,
   isInstagramItemWorthKeeping,
   isInstagramPermalinkUrl,
   isInstagramProfileUrl,
-} from "../sources/instagram/parse.js";
+} from "../sources/instagram/parse.ts";
 import { readFixture } from "./helpers/cli-config.mts";
 
 function createBrowserStub(existingState) {

@@ -1,6 +1,7 @@
 {
   "repoType": ["node"],
   "packageManager": "pnpm",
+  "nodeMajor": 24,
   "requiresGeneratedCheck": false,
   "selfHostedRunnerLabels": ["self-hosted", "linux", "x64", "markolo-hetzner"],
   "requiredFiles": [

@@ -1,13 +1,11 @@
-"use strict";
+import childProcess from "node:child_process";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import fsPromises from "node:fs/promises";
+import path from "node:path";
+import type { FeedDocument, FeedItem, FeedMedia } from "./types.ts";
 
-const childProcess = require("node:child_process");
-const crypto = require("node:crypto");
-const fs = require("node:fs");
-const fsPromises = require("node:fs/promises");
-const path = require("node:path");
-import type { FeedDocument, FeedItem, FeedMedia } from "./types.js";
-
-const REPO_ROOT = path.resolve(__dirname, "..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
 function extFromUrl(url: string): string {
   try {
@@ -482,6 +480,4 @@ async function downloadDocumentAssets(
   return clonedDocument;
 }
 
-module.exports = {
-  downloadDocumentAssets,
-};
+export { downloadDocumentAssets };

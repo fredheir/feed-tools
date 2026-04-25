@@ -13,9 +13,9 @@ import {
   parseConfigPayload,
   getSaveDir,
   resolveCanonicalSaveDir,
-} from "../../lib/config.js";
-import { normalizeBrowserOptions } from "../../lib/browser.js";
-import type { FeedConfig } from "../../lib/types.js";
+} from "../../lib/config.ts";
+import { normalizeBrowserOptions } from "../../lib/browser.ts";
+import type { FeedConfig } from "../../lib/types.ts";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

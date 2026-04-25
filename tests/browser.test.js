@@ -7,7 +7,7 @@ import {
   getRuntimeBrowserOptions,
   readCdpVersionPayload,
   sanitizeAgentBrowserOutput,
-} from "../lib/browser.js";
+} from "../lib/browser.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
@@ -139,7 +139,7 @@ describe("buildAgentBrowserArgs", () => {
     const server = spawn(process.execPath, [
       "-e",
       `
-const http = require("node:http");
+import http from "node:http";
 const server = http.createServer((_request, response) => {
   response.setHeader("content-type", "application/json");
   response.end('{"webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');

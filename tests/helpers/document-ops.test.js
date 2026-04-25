@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { combineDocuments, pruneDocument } from "../../lib/document-ops.js";
+import { combineDocuments, pruneDocument } from "../../lib/document-ops.ts";
 
 describe("document ops", () => {
   test("combines documents using the latest capture time and unique item keys", () => {

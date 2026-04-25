@@ -3,8 +3,8 @@ import {
   normalizeItemShape,
   sanitizeItemId,
   sanitizeSourceItemId,
-} from "./item-shape.js";
-import type { FeedDocument, FeedItem } from "./types.js";
+} from "./item-shape.ts";
+import type { FeedDocument, FeedItem } from "./types.ts";
 
 type MergeableFeedItem = FeedItem & {
   first_seen_at?: string | null;

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   normalizeXExtractionDocument,
   prepareFeed,
-} from "../sources/x/capture.js";
+} from "../sources/x/capture.ts";
 import { readFixture } from "./helpers/cli-config.mts";
 
 function createBrowserStub(existingFeedState) {

@@ -2,17 +2,14 @@
 
 import * as path from "node:path";
 
-import { requireArgValue } from "./cli-args.js";
-import { loadConfig, resolveCanonicalSaveDir } from "./config.js";
-import { getDefaultDocumentPath } from "./document-paths.js";
-import { loadDocument } from "./selection.js";
-import type { CategoryAssignment, FeedConfig } from "./types.js";
+import { requireArgValue } from "./cli-args.ts";
+import { loadConfig, resolveCanonicalSaveDir } from "./config.ts";
+import { getDefaultDocumentPath } from "./document-paths.ts";
+import { loadDocument } from "./selection.ts";
+import type { CategoryAssignment, FeedConfig } from "./types.ts";
 
-const { assignCategories } = require("./allocation.js");
-const {
-  loadAllocationFromDb,
-  saveAllocationToDb,
-} = require("./sqlite-store.js");
+import { assignCategories } from "./allocation.ts";
+import { loadAllocationFromDb, saveAllocationToDb } from "./sqlite-store.ts";
 
 const HELP_FLAGS = new Set(["-h", "--help"]);
 

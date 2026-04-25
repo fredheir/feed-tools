@@ -10,8 +10,8 @@ import {
   normalizeDocument,
   persistCapturedDocument,
   runSourceCapture,
-} from "../lib/source-capture.js";
-import { exportDocumentsFromDb, getDatabasePath } from "../lib/sqlite-store.js";
+} from "../lib/source-capture.ts";
+import { exportDocumentsFromDb, getDatabasePath } from "../lib/sqlite-store.ts";
 import { readFixture, repoRoot } from "./helpers/cli-config.mts";
 
 const tempDirs = [];

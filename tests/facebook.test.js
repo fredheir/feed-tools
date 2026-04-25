@@ -3,8 +3,8 @@ import {
   extractFacebookSourceItemId,
   isFacebookItemWorthKeeping,
   scoreFacebookItemQuality,
-} from "../sources/facebook/capture.js";
-import { canonicalizeItemUrl } from "../lib/item-shape.js";
+} from "../sources/facebook/capture.ts";
+import { canonicalizeItemUrl } from "../lib/item-shape.ts";
 import { readFixture } from "./helpers/cli-config.mts";
 
 describe("extractFacebookSourceItemId", () => {

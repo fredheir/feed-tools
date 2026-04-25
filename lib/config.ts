@@ -14,16 +14,16 @@ import type {
   SourceCaptureConfig,
   SourcePreference,
   UserPreferences,
-} from "./types.js";
+} from "./types.ts";
 import {
   isRecord,
   toOptionalBoolean,
   toOptionalString,
   toStringArray,
-} from "./coerce.js";
-import { isSupportedSource } from "./source-catalog.js";
+} from "./coerce.ts";
+import { isSupportedSource } from "./source-catalog.ts";
 
-const REPO_ROOT = path.resolve(__dirname, "..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
 export const DEFAULT_ASSETS_DIR = path.join(REPO_ROOT, "var", "feed-assets");
 const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");

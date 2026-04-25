@@ -3,7 +3,7 @@ import {
   isSupportedSource,
   listSupportedSources,
   SUPPORTED_SOURCES,
-} from "../lib/source-catalog.js";
+} from "../lib/source-catalog.ts";
 
 describe("source catalog", () => {
   test("exposes the canonical supported source list", () => {

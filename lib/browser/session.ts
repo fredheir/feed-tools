@@ -1,15 +1,13 @@
-"use strict";
-
-const { execFileSync } = require("node:child_process");
-const fs = require("node:fs");
-const path = require("node:path");
-const { pathToFileURL } = require("node:url");
-import { isRecord, toOptionalString } from "../coerce.js";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { isRecord, toOptionalString } from "../coerce.ts";
 import type {
   BrowserSession,
   FeedBrowserConfig,
   NormalizedBrowserOptions,
-} from "../types.js";
+} from "../types.ts";
 
 interface MountInfo {
   target: string | null;
@@ -469,8 +467,7 @@ function createBrowserSession(
   };
 }
 
-module.exports = {
-  browserUrlMatchesTarget,
+export {
   createBrowserSession,
   canonicalBrowserUrl,
   toBrowserTarget,

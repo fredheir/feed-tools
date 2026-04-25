@@ -1,7 +1,5 @@
-"use strict";
-
-const { getItemMaskKeys } = require("./item.js");
-import { assertFeedDocument } from "./item-shape.js";
+import { getItemMaskKeys } from "./item.ts";
+import { assertFeedDocument } from "./item-shape.ts";
 import type {
   FeedDocument,
   FeedItem,
@@ -10,7 +8,7 @@ import type {
   FeedTabGroup,
   RawFeedMask,
   RawFeedTab,
-} from "./types.js";
+} from "./types.ts";
 
 function hasMaskTabs(
   mask: FeedMask | RawFeedMask,
@@ -385,8 +383,4 @@ function applyMask(
   };
 }
 
-module.exports = {
-  applyMask,
-  normalizeMaskTabs,
-  orderItemsByThread,
-};
+export { applyMask, normalizeMaskTabs, orderItemsByThread };
