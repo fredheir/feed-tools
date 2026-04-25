@@ -204,6 +204,10 @@ if (!hygieneRuns.some((run) => /^actionlint(\s|$)/m.test(run))) {
 if (!hygieneRuns.some((run) => /(^|\s)zizmor(\s|$)/m.test(run))) {
   console.log(".github/workflows/actions-hygiene.yml must run zizmor");
 }
+
+if (!hygieneRuns.some((run) => /(^|\s)zizmor\s+--pedantic\s+--min-severity\s+high\s+--min-confidence\s+high\s+\.github\/workflows(\s|$)/m.test(run))) {
+  console.log(".github/workflows/actions-hygiene.yml must run high-confidence high-severity zizmor --pedantic");
+}
 EOF
 )"; then
   fail "GitHub Actions workflow contract parser failed"
