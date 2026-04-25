@@ -48,12 +48,6 @@ sync:
 sync-if-needed:
     scripts/dev/sync-if-needed
 
-gen:
-    @echo "No tracked generated artefact generator configured for feed_tools."
-
-gen-check:
-    @echo "No tracked generated artefact check configured for feed_tools."
-
 check-changed:
     just fix
     just doctor-staged
@@ -61,7 +55,7 @@ check-changed:
     just typecheck
     just test-fast
 
-check: doctor fmt-check lint actions-hygiene typecheck test secrets deps-check gen-check
+check: doctor fmt-check lint actions-hygiene typecheck test secrets deps-check
 
 ci: check
 

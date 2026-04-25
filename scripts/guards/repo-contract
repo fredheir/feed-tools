@@ -42,6 +42,11 @@ require_file pnpm-lock.yaml
 require_file pnpm-workspace.yaml
 require_file .env.example
 require_file .github/workflows/actions-hygiene.yml
+require_file .github/workflows/contract.yml
+require_file .github/workflows/dependency.yml
+require_file .github/workflows/format.yml
+require_file .github/workflows/secrets.yml
+require_file .github/workflows/typecheck.yml
 require_file .github/actionlint.yaml
 
 if fdfind '^lefthook\.yml$' . | grep -v '^./lefthook.yml$' >/dev/null; then
@@ -115,10 +120,6 @@ fi
 
 if ! yq -e '.jobs[]?.steps[]? | select((.run? // "") | test("(^| )zizmor( |$)"))' .github/workflows/actions-hygiene.yml >/dev/null; then
   fail ".github/workflows/actions-hygiene.yml must run zizmor"
-fi
-
-if fdfind '^typecheck\.ya?ml$' .github/workflows -t f | grep -q .; then
-  fail "feed_tools is tracked as a JavaScript repo; do not add a dedicated TypeScript workflow without updating the standards contract"
 fi
 
 if [ "$mode" = "full" ]; then
