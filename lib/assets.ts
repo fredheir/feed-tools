@@ -473,7 +473,11 @@ async function downloadDocumentAssets(
       }
     }
   }
-  await Promise.all(jobs);
+  const results = await Promise.allSettled(jobs);
+  const failed = results.find((result) => result.status === "rejected");
+  if (failed) {
+    throw failed.reason;
+  }
 
   return clonedDocument;
 }
