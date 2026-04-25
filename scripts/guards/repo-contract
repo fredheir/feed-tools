@@ -70,9 +70,19 @@ if ! jq -e '.packageManager | test("^pnpm@10\\.")' package.json >/dev/null; then
   fail "package.json must pin packageManager to pnpm@10.x"
 fi
 
-if ! yq -e '.minimumReleaseAge == 10080' pnpm-workspace.yaml >/dev/null; then
-  fail "pnpm-workspace.yaml must set minimumReleaseAge: 10080"
-fi
+while IFS= read -r message; do
+  fail "$message"
+done < <(
+  node <<'EOF'
+const fs = require("node:fs");
+const YAML = require("yaml");
+
+const workspace = YAML.parse(fs.readFileSync("pnpm-workspace.yaml", "utf8"));
+if (workspace?.minimumReleaseAge !== 10080) {
+  console.log("pnpm-workspace.yaml must set minimumReleaseAge: 10080");
+}
+EOF
+)
 
 if jq -e '.scripts.prepare? // "" | test("husky|prek")' package.json >/dev/null; then
   fail "package.json prepare script must not install legacy hooks"
@@ -87,40 +97,85 @@ if [ "${#workflows[@]}" -eq 0 ]; then
   fail "missing GitHub Actions workflows under .github/workflows"
 fi
 
-for workflow in "${workflows[@]}"; do
-  if yq -e 'has("pull_request_target")' "$workflow" >/dev/null; then
-    fail "$workflow must not use pull_request_target"
-  fi
+while IFS= read -r message; do
+  fail "$message"
+done < <(
+  node - "${workflows[@]}" <<'EOF'
+const fs = require("node:fs");
+const YAML = require("yaml");
 
-  permissions_contents="$(yq -r '.permissions.contents // ""' "$workflow")"
-  if [ "$permissions_contents" != "read" ]; then
-    fail "$workflow must declare top-level permissions.contents: read"
-  fi
+const workflowPaths = process.argv.slice(2);
 
-  mapfile -t checkout_credentials < <(
-    yq -r '.jobs[]?.steps[]? | select((.uses? // "") | test("^actions/checkout@")) | (.["with"]["persist-credentials"] | tostring)' "$workflow"
-  )
-  for persist_credentials in "${checkout_credentials[@]}"; do
-    if [ "$persist_credentials" != "false" ]; then
-      fail "$workflow checkout steps must set persist-credentials: false"
-    fi
-  done
+function asArray(value) {
+  return Array.isArray(value) ? value : value == null ? [] : [value];
+}
 
-  mapfile -t action_refs < <(yq -r '.jobs[]?.steps[]?.uses? // empty' "$workflow")
-  for action_ref in "${action_refs[@]}"; do
-    if [[ ! "$action_ref" =~ @[0-9a-f]{40}$ ]]; then
-      fail "$workflow action ref must be pinned to a full commit SHA: $action_ref"
-    fi
-  done
-done
+function hasPullRequestTarget(onValue) {
+  if (typeof onValue === "string") {
+    return onValue === "pull_request_target";
+  }
+  if (Array.isArray(onValue)) {
+    return onValue.includes("pull_request_target");
+  }
+  return Boolean(onValue && Object.hasOwn(onValue, "pull_request_target"));
+}
 
-if ! yq -e '.jobs[]?.steps[]? | select(.run? == "actionlint")' .github/workflows/actions-hygiene.yml >/dev/null; then
-  fail ".github/workflows/actions-hygiene.yml must run actionlint"
-fi
+function isPinnedActionRef(ref) {
+  if (ref.startsWith("./")) {
+    return true;
+  }
+  return /@[0-9a-f]{40}$/.test(ref);
+}
 
-if ! yq -e '.jobs[]?.steps[]? | select((.run? // "") | test("(^| )zizmor( |$)"))' .github/workflows/actions-hygiene.yml >/dev/null; then
-  fail ".github/workflows/actions-hygiene.yml must run zizmor"
-fi
+for (const workflowPath of workflowPaths) {
+  const workflow = YAML.parse(fs.readFileSync(workflowPath, "utf8"));
+
+  if (hasPullRequestTarget(workflow?.on)) {
+    console.log(`${workflowPath} must not use pull_request_target`);
+  }
+
+  if (workflow?.permissions?.contents !== "read") {
+    console.log(`${workflowPath} must declare top-level permissions.contents: read`);
+  }
+
+  for (const job of Object.values(workflow?.jobs ?? {})) {
+    for (const ref of asArray(job?.uses)) {
+      if (typeof ref === "string" && !isPinnedActionRef(ref)) {
+        console.log(`${workflowPath} reusable workflow ref must be pinned to a full commit SHA: ${ref}`);
+      }
+    }
+
+    for (const step of asArray(job?.steps)) {
+      const ref = step?.uses;
+      if (typeof ref === "string" && !isPinnedActionRef(ref)) {
+        console.log(`${workflowPath} action ref must be pinned to a full commit SHA: ${ref}`);
+      }
+
+      if (typeof ref === "string" && ref.startsWith("actions/checkout@")) {
+        const persistCredentials = step?.with?.["persist-credentials"];
+        if (persistCredentials !== false) {
+          console.log(`${workflowPath} checkout steps must set persist-credentials: false`);
+        }
+      }
+    }
+  }
+}
+
+const hygiene = YAML.parse(fs.readFileSync(".github/workflows/actions-hygiene.yml", "utf8"));
+const hygieneRuns = Object.values(hygiene?.jobs ?? {})
+  .flatMap((job) => asArray(job?.steps))
+  .map((step) => step?.run ?? "")
+  .filter(Boolean);
+
+if (!hygieneRuns.some((run) => /^actionlint(\s|$)/m.test(run))) {
+  console.log(".github/workflows/actions-hygiene.yml must run actionlint");
+}
+
+if (!hygieneRuns.some((run) => /(^|\s)zizmor(\s|$)/m.test(run))) {
+  console.log(".github/workflows/actions-hygiene.yml must run zizmor");
+}
+EOF
+)
 
 if [ "$mode" = "full" ]; then
   if [ ! -d node_modules ]; then
