@@ -15,6 +15,17 @@ fail() {
   failures+=("$1")
 }
 
+append_failures() {
+  local messages="$1"
+  local message
+
+  while IFS= read -r message; do
+    [ -n "$message" ] && fail "$message"
+  done <<<"$messages"
+
+  return 0
+}
+
 require_file() {
   [ -f "$1" ] || fail "missing required file: $1"
 }
@@ -70,10 +81,8 @@ if ! jq -e '.packageManager | test("^pnpm@10\\.")' package.json >/dev/null; then
   fail "package.json must pin packageManager to pnpm@10.x"
 fi
 
-while IFS= read -r message; do
-  fail "$message"
-done < <(
-  node <<'EOF'
+workspace_messages=""
+if ! workspace_messages="$(node <<'EOF'
 const fs = require("node:fs");
 const YAML = require("yaml");
 
@@ -82,7 +91,10 @@ if (workspace?.minimumReleaseAge !== 10080) {
   console.log("pnpm-workspace.yaml must set minimumReleaseAge: 10080");
 }
 EOF
-)
+)"; then
+  fail "pnpm-workspace.yaml contract parser failed"
+fi
+append_failures "$workspace_messages"
 
 if jq -e '.scripts.prepare? // "" | test("husky|prek")' package.json >/dev/null; then
   fail "package.json prepare script must not install legacy hooks"
@@ -97,10 +109,8 @@ if [ "${#workflows[@]}" -eq 0 ]; then
   fail "missing GitHub Actions workflows under .github/workflows"
 fi
 
-while IFS= read -r message; do
-  fail "$message"
-done < <(
-  node - "${workflows[@]}" <<'EOF'
+workflow_messages=""
+if ! workflow_messages="$(node - "${workflows[@]}" <<'EOF'
 const fs = require("node:fs");
 const YAML = require("yaml");
 
@@ -175,7 +185,10 @@ if (!hygieneRuns.some((run) => /(^|\s)zizmor(\s|$)/m.test(run))) {
   console.log(".github/workflows/actions-hygiene.yml must run zizmor");
 }
 EOF
-)
+)"; then
+  fail "GitHub Actions workflow contract parser failed"
+fi
+append_failures "$workflow_messages"
 
 if [ "$mode" = "full" ]; then
   if [ ! -d node_modules ]; then
