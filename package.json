@@ -43,7 +43,7 @@
     "ignoreDependencies": [
       "agent-browser",
       "lefthook",
-      "yaml"
+      "@markolo-research/repo-standards"
     ],
     "ignoreBinaries": [
       "uv"
@@ -63,12 +63,12 @@
     "knip": "^6.1.1",
     "lefthook": "^2.1.6",
     "prettier": "^3.6.2",
+    "@markolo-research/repo-standards": "github:Markolo-Research/markolo-shared#ecba8966b02a6f3e0d9397cd11ecd5caabe5b5eb&path:/packages/repo-standards",
     "slop-scan": "~0.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vite": "^8.0.9",
-    "vitest": "^4.1.5",
-    "yaml": "^2.8.3"
+    "vitest": "^4.1.5"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [

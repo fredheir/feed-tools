@@ -25,6 +25,9 @@ importers:
       "@eslint/js":
         specifier: ^9.39.1
         version: 9.39.4
+      "@markolo-research/repo-standards":
+        specifier: github:Markolo-Research/markolo-shared#ecba8966b02a6f3e0d9397cd11ecd5caabe5b5eb&path:/packages/repo-standards
+        version: git+https://git@github.com:Markolo-Research/markolo-shared.git#ecba8966b02a6f3e0d9397cd11ecd5caabe5b5eb&path:/packages/repo-standards
       "@types/node":
         specifier: ^24.10.1
         version: 24.12.2
@@ -61,9 +64,6 @@ importers:
       vitest:
         specifier: ^4.1.5
         version: 4.1.5(@types/node@24.12.2)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
-      yaml:
-        specifier: ^2.8.3
-        version: 2.8.3
 
 packages:
   "@babel/code-frame@7.29.0":
@@ -565,6 +565,17 @@ packages:
       {
         integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==,
       }
+
+  "@markolo-research/repo-standards@git+https://git@github.com:Markolo-Research/markolo-shared.git#ecba8966b02a6f3e0d9397cd11ecd5caabe5b5eb&path:/packages/repo-standards":
+    resolution:
+      {
+        commit: ecba8966b02a6f3e0d9397cd11ecd5caabe5b5eb,
+        path: /packages/repo-standards,
+        repo: git@github.com:Markolo-Research/markolo-shared.git,
+        type: git,
+      }
+    version: 0.1.0
+    hasBin: true
 
   "@napi-rs/wasm-runtime@1.1.2":
     resolution:
@@ -3188,6 +3199,10 @@ snapshots:
   "@humanwhocodes/retry@0.4.3": {}
 
   "@jridgewell/sourcemap-codec@1.5.5": {}
+
+  "@markolo-research/repo-standards@git+https://git@github.com:Markolo-Research/markolo-shared.git#ecba8966b02a6f3e0d9397cd11ecd5caabe5b5eb&path:/packages/repo-standards":
+    dependencies:
+      yaml: 2.8.3
 
   "@napi-rs/wasm-runtime@1.1.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)":
     dependencies:
