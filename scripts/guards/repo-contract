@@ -137,6 +137,23 @@ function isPinnedActionRef(ref) {
   return /@[0-9a-f]{40}$/.test(ref);
 }
 
+function validatePermissionMap(permissions, context) {
+  if (permissions == null) {
+    return;
+  }
+
+  if (typeof permissions !== "object" || Array.isArray(permissions)) {
+    console.log(`${context} permissions must be an explicit map`);
+    return;
+  }
+
+  for (const [name, value] of Object.entries(permissions)) {
+    if (value !== "read" && value !== "none") {
+      console.log(`${context} permissions.${name} must be read or none`);
+    }
+  }
+}
+
 for (const workflowPath of workflowPaths) {
   const workflow = YAML.parse(fs.readFileSync(workflowPath, "utf8"));
 
@@ -144,11 +161,14 @@ for (const workflowPath of workflowPaths) {
     console.log(`${workflowPath} must not use pull_request_target`);
   }
 
+  validatePermissionMap(workflow?.permissions, `${workflowPath} top-level`);
   if (workflow?.permissions?.contents !== "read") {
     console.log(`${workflowPath} must declare top-level permissions.contents: read`);
   }
 
-  for (const job of Object.values(workflow?.jobs ?? {})) {
+  for (const [jobName, job] of Object.entries(workflow?.jobs ?? {})) {
+    validatePermissionMap(job?.permissions, `${workflowPath} job ${jobName}`);
+
     for (const ref of asArray(job?.uses)) {
       if (typeof ref === "string" && !isPinnedActionRef(ref)) {
         console.log(`${workflowPath} reusable workflow ref must be pinned to a full commit SHA: ${ref}`);
