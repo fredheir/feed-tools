@@ -4,8 +4,8 @@
 const path = require("node:path");
 
 // tsx/cjs has no type declarations; registering the loader lets require() resolve .ts files.
-// @ts-expect-error - tsx/cjs registers a loader side-effect; no exported types.
-require("tsx/cjs");
+const registerTsxLoader = require;
+registerTsxLoader("tsx/cjs");
 
 let exitingForError = false;
 
