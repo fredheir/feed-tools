@@ -1,4 +1,4 @@
-name: tests
+name: dependency
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  dependency:
     runs-on:
       - self-hosted
       - Linux
@@ -27,5 +27,4 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run test
+      - run: just deps-check

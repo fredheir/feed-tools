@@ -1,4 +1,4 @@
-name: tests
+name: contract
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  contract:
     runs-on:
       - self-hosted
       - Linux
@@ -28,4 +28,4 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run test
+      - run: just doctor

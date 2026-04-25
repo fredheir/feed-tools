@@ -42,7 +42,8 @@
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
       "agent-browser",
-      "lefthook"
+      "lefthook",
+      "yaml"
     ],
     "ignoreBinaries": [
       "uv"
@@ -66,7 +67,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vite": "^8.0.9",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "yaml": "^2.8.3"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [

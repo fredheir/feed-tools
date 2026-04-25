@@ -15,6 +15,17 @@ fail() {
   failures+=("$1")
 }
 
+append_failures() {
+  local messages="$1"
+  local message
+
+  while IFS= read -r message; do
+    [ -n "$message" ] && fail "$message"
+  done <<<"$messages"
+
+  return 0
+}
+
 require_file() {
   [ -f "$1" ] || fail "missing required file: $1"
 }
@@ -41,6 +52,13 @@ require_file package.json
 require_file pnpm-lock.yaml
 require_file pnpm-workspace.yaml
 require_file .env.example
+require_file .github/workflows/actions-hygiene.yml
+require_file .github/workflows/contract.yml
+require_file .github/workflows/dependency.yml
+require_file .github/workflows/format.yml
+require_file .github/workflows/secrets.yml
+require_file .github/workflows/typecheck.yml
+require_file .github/actionlint.yaml
 
 if fdfind '^lefthook\.yml$' . | grep -v '^./lefthook.yml$' >/dev/null; then
   fail "nested lefthook.yml files are forbidden"
@@ -63,9 +81,20 @@ if ! jq -e '.packageManager | test("^pnpm@10\\.")' package.json >/dev/null; then
   fail "package.json must pin packageManager to pnpm@10.x"
 fi
 
-if ! yq -e '.minimumReleaseAge == 10080' pnpm-workspace.yaml >/dev/null; then
-  fail "pnpm-workspace.yaml must set minimumReleaseAge: 10080"
+workspace_messages=""
+if ! workspace_messages="$(node <<'EOF'
+const fs = require("node:fs");
+const YAML = require("yaml");
+
+const workspace = YAML.parse(fs.readFileSync("pnpm-workspace.yaml", "utf8"));
+if (workspace?.minimumReleaseAge !== 10080) {
+  console.log("pnpm-workspace.yaml must set minimumReleaseAge: 10080");
+}
+EOF
+)"; then
+  fail "pnpm-workspace.yaml contract parser failed"
 fi
+append_failures "$workspace_messages"
 
 if jq -e '.scripts.prepare? // "" | test("husky|prek")' package.json >/dev/null; then
   fail "package.json prepare script must not install legacy hooks"
@@ -74,6 +103,116 @@ fi
 if jq -e '(.devDependencies // {}) | has("husky") or has("@j178/prek")' package.json >/dev/null; then
   fail "husky and prek are legacy hook dependencies; use lefthook.yml"
 fi
+
+mapfile -t workflows < <(fdfind -e yml -e yaml . .github/workflows -t f | sort)
+if [ "${#workflows[@]}" -eq 0 ]; then
+  fail "missing GitHub Actions workflows under .github/workflows"
+fi
+
+workflow_messages=""
+if ! workflow_messages="$(node - "${workflows[@]}" <<'EOF'
+const fs = require("node:fs");
+const YAML = require("yaml");
+
+const workflowPaths = process.argv.slice(2);
+
+function asArray(value) {
+  return Array.isArray(value) ? value : value == null ? [] : [value];
+}
+
+function hasPullRequestTarget(onValue) {
+  if (typeof onValue === "string") {
+    return onValue === "pull_request_target";
+  }
+  if (Array.isArray(onValue)) {
+    return onValue.includes("pull_request_target");
+  }
+  return Boolean(onValue && Object.hasOwn(onValue, "pull_request_target"));
+}
+
+function isPinnedActionRef(ref) {
+  if (ref.startsWith("./")) {
+    return true;
+  }
+  return /@[0-9a-f]{40}$/.test(ref);
+}
+
+function validatePermissionMap(permissions, context) {
+  if (permissions == null) {
+    return;
+  }
+
+  if (typeof permissions !== "object" || Array.isArray(permissions)) {
+    console.log(`${context} permissions must be an explicit map`);
+    return;
+  }
+
+  for (const [name, value] of Object.entries(permissions)) {
+    if (value !== "read" && value !== "none") {
+      console.log(`${context} permissions.${name} must be read or none`);
+    }
+  }
+}
+
+for (const workflowPath of workflowPaths) {
+  const workflow = YAML.parse(fs.readFileSync(workflowPath, "utf8"));
+
+  if (hasPullRequestTarget(workflow?.on)) {
+    console.log(`${workflowPath} must not use pull_request_target`);
+  }
+
+  validatePermissionMap(workflow?.permissions, `${workflowPath} top-level`);
+  if (workflow?.permissions?.contents !== "read") {
+    console.log(`${workflowPath} must declare top-level permissions.contents: read`);
+  }
+
+  for (const [jobName, job] of Object.entries(workflow?.jobs ?? {})) {
+    validatePermissionMap(job?.permissions, `${workflowPath} job ${jobName}`);
+
+    for (const ref of asArray(job?.uses)) {
+      if (typeof ref === "string" && !isPinnedActionRef(ref)) {
+        console.log(`${workflowPath} reusable workflow ref must be pinned to a full commit SHA: ${ref}`);
+      }
+    }
+
+    for (const step of asArray(job?.steps)) {
+      const ref = step?.uses;
+      if (typeof ref === "string" && !isPinnedActionRef(ref)) {
+        console.log(`${workflowPath} action ref must be pinned to a full commit SHA: ${ref}`);
+      }
+
+      if (typeof ref === "string" && ref.startsWith("actions/checkout@")) {
+        const persistCredentials = step?.with?.["persist-credentials"];
+        if (persistCredentials !== false) {
+          console.log(`${workflowPath} checkout steps must set persist-credentials: false`);
+        }
+      }
+    }
+  }
+}
+
+const hygiene = YAML.parse(fs.readFileSync(".github/workflows/actions-hygiene.yml", "utf8"));
+const hygieneRuns = Object.values(hygiene?.jobs ?? {})
+  .flatMap((job) => asArray(job?.steps))
+  .map((step) => step?.run ?? "")
+  .filter(Boolean);
+
+if (!hygieneRuns.some((run) => /^actionlint(\s|$)/m.test(run))) {
+  console.log(".github/workflows/actions-hygiene.yml must run actionlint");
+}
+
+if (!hygieneRuns.some((run) => /(^|\s)zizmor(\s|$)/m.test(run))) {
+  console.log(".github/workflows/actions-hygiene.yml must run zizmor");
+}
+
+if (!hygieneRuns.some((run) => /(^|\s)zizmor\s+--pedantic\s+--min-severity\s+high\s+--min-confidence\s+high\s+\.github\/workflows(\s|$)/m.test(run))) {
+  console.log(".github/workflows/actions-hygiene.yml must run high-confidence high-severity zizmor --pedantic");
+}
+EOF
+)"; then
+  fail "GitHub Actions workflow contract parser failed"
+fi
+append_failures "$workflow_messages"
 
 if [ "$mode" = "full" ]; then
   if [ ! -d node_modules ]; then
