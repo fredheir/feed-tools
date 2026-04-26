@@ -169,7 +169,7 @@ if (subcommand === "prep") {
       process.exit(1);
     }
   }
-  cmdIngest(sourceName, jsonFile, flags);
+  await cmdIngest(sourceName, jsonFile, flags);
 } else {
   console.error(`Unknown subcommand: ${subcommand}`);
   usage();
