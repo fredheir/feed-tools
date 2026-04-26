@@ -20,7 +20,12 @@
     ".github/workflows/typecheck.yml",
     ".github/actionlint.yaml"
   ],
-  "requiredSymlinks": [{ "path": "CLAUDE.md", "target": "AGENTS.md" }],
+  "requiredSymlinks": [
+    {
+      "path": "CLAUDE.md",
+      "target": "AGENTS.md"
+    }
+  ],
   "requiredWorkflows": [
     "actions-hygiene.yml",
     "contract.yml",
@@ -49,5 +54,8 @@
     "check-changed",
     "check"
   ],
-  "allowBarePythonIn": []
+  "allowBarePythonIn": [],
+  "suppressionBudget": {
+    "total": 0
+  }
 }
