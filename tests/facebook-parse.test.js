@@ -8,7 +8,7 @@ import {
   isFacebookStopHeading,
   isNoiseStaticText,
   parseSnapshotLine,
-} from "../sources/facebook/parse.js";
+} from "../sources/facebook/parse.ts";
 
 describe("facebook parse helpers", () => {
   test("parses snapshot lines with refs and heading metadata", () => {

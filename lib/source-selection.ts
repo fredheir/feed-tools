@@ -1,8 +1,8 @@
-import { getEnabledSourceNames } from "./config.js";
-import { listSupportedSources } from "./source-catalog.js";
-import type { FeedConfig, FeedSourceName } from "./types.js";
+import { getEnabledSourceNames } from "./config.ts";
+import { listSupportedSources } from "./source-catalog.ts";
+import type { FeedConfig, FeedSourceName } from "./types.ts";
 
-const { listStoredSources } = require("./sqlite-store.js");
+import { listStoredSources } from "./sqlite-store.ts";
 
 function parseCommaList(spec: string): string[] {
   return String(spec || "")

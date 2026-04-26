@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderItemCard } from "../../lib/render/item.js";
+import { renderItemCard } from "../../lib/render/item.ts";
 
 describe("renderItemCard", () => {
   test("renders generic feed card markup from normalized stats", () => {

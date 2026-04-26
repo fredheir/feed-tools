@@ -1,6 +1,6 @@
-const js = require("@eslint/js");
-const globals = require("globals");
-const tseslint = require("typescript-eslint");
+import js from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
 const TS_FILES = [
   "bin/**/*.{ts,tsx,mts}",
@@ -9,23 +9,19 @@ const TS_FILES = [
   "tests/**/*.{ts,tsx,mts}",
 ];
 
-module.exports = [
+export default [
   {
     ignores: ["node_modules/**", "dist/**"],
   },
   {
     ...js.configs.recommended,
-    files: ["bin/*", "*.{js,cjs}", "tests/**/*.{js,cjs}"],
+    files: ["bin/*", "*.{js,mjs}", "tests/**/*.{js,mjs}"],
     languageOptions: {
       ecmaVersion: 2024,
-      sourceType: "commonjs",
+      sourceType: "module",
       globals: { ...globals.node },
     },
     rules: { "no-console": "off" },
-  },
-  {
-    files: ["tests/**/*.js"],
-    languageOptions: { sourceType: "module" },
   },
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
@@ -40,7 +36,6 @@ module.exports = [
     rules: {
       "no-console": "off",
       "@typescript-eslint/no-confusing-void-expression": "off",
-      "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/require-await": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",

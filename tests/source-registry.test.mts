@@ -4,11 +4,11 @@ import {
   SUPPORTED_SOURCES,
   isSupportedSource,
   listSupportedSources,
-} from "../lib/source-catalog.js";
+} from "../lib/source-catalog.ts";
 import {
   getBootstrapHandler,
   getCaptureHandler,
-} from "../lib/source-registry.js";
+} from "../lib/source-registry.ts";
 
 describe("source registry", () => {
   test("lists the supported capture sources from the canonical registry", () => {

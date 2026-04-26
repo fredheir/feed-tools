@@ -7,8 +7,8 @@ import type {
   FeedItem,
   FeedMedia,
   FeedThread,
-} from "./types.js";
-export type { FeedDocument, FeedItem } from "./types.js";
+} from "./types.ts";
+export type { FeedDocument, FeedItem } from "./types.ts";
 
 type LooseFeedItem = Partial<FeedItem> & {
   text?: string | null;

@@ -1,24 +1,22 @@
 #!/usr/bin/env node
-"use strict";
-
-const {
+import {
   loadConfig,
   getCaptureDefaults,
   getCaptureBrowserOptions,
   resolveCanonicalSaveDir,
   DEFAULT_ASSETS_DIR,
-} = require("./config.js");
-const { requireArgValue } = require("./cli-args.js");
-const { combineDocuments } = require("./document-ops.js");
-const { hasNewUnclassifiedItems } = require("./source-capture.js");
-const { getCaptureHandler } = require("./source-registry.js");
-import { isSupportedSource } from "./source-catalog.js";
+} from "./config.ts";
+import { requireArgValue } from "./cli-args.ts";
+import { combineDocuments } from "./document-ops.ts";
+import { hasNewUnclassifiedItems } from "./source-capture.ts";
+import { getCaptureHandler } from "./source-registry.ts";
+import { isSupportedSource } from "./source-catalog.ts";
 import type {
   FeedBrowserConfig,
   FeedConfig,
   FeedDocument,
   FeedSourceName,
-} from "./types.js";
+} from "./types.ts";
 
 function parseSourceNames(argv: string[]): {
   sourceNames: FeedSourceName[];
@@ -177,31 +175,33 @@ const config = loadConfig();
 const { sourceNames, limit, assetsDir, saveDir, browserOptions } =
   parseCaptureCliArgs(process.argv, config);
 
-(async () => {
-  const documents: FeedDocument[] = [];
-  for (const sourceName of sourceNames) {
-    const sourceDefaults = getCaptureDefaults(config, sourceName);
-    const sourceSaveDir = resolveCanonicalSaveDir(
-      config,
-      saveDir || sourceDefaults.save_dir,
-      sourceName,
-    );
-    const sourceBrowserOptions = {
-      ...getCaptureBrowserOptions(config, sourceName),
-      ...browserOptions,
-    };
-    const document = await getCaptureHandler(sourceName)({
-      limit,
-      assetsDir: assetsDir || sourceDefaults.assets_dir || DEFAULT_ASSETS_DIR,
-      saveDir: sourceSaveDir,
-      browserOptions: sourceBrowserOptions,
-    });
-    if (hasNewUnclassifiedItems(document, sourceSaveDir)) {
-      printCategorizationHint(sourceName);
-    }
-    documents.push(document);
+const documents: FeedDocument[] = [];
+for (const sourceName of sourceNames) {
+  const sourceDefaults = getCaptureDefaults(config, sourceName);
+  const sourceSaveDir = resolveCanonicalSaveDir(
+    config,
+    saveDir || sourceDefaults.save_dir,
+    sourceName,
+  );
+  const sourceBrowserOptions = {
+    ...getCaptureBrowserOptions(config, sourceName),
+    ...browserOptions,
+  };
+  const captureHandler = getCaptureHandler(sourceName);
+  if (!captureHandler) {
+    throw new Error(`Unsupported source: ${sourceName}`);
   }
-  const document =
-    documents.length === 1 ? documents[0] : combineDocuments(documents);
-  process.stdout.write(`${JSON.stringify(document, null, 2)}\n`);
-})();
+  const document = await captureHandler({
+    limit,
+    assetsDir: assetsDir || sourceDefaults.assets_dir || DEFAULT_ASSETS_DIR,
+    saveDir: sourceSaveDir,
+    browserOptions: sourceBrowserOptions,
+  });
+  if (hasNewUnclassifiedItems(document, sourceSaveDir)) {
+    printCategorizationHint(sourceName);
+  }
+  documents.push(document);
+}
+const document =
+  documents.length === 1 ? documents[0] : combineDocuments(documents);
+process.stdout.write(`${JSON.stringify(document, null, 2)}\n`);

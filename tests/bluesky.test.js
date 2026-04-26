@@ -2,10 +2,10 @@ import { describe, expect, test } from "vitest";
 import {
   extractBlueskySourceItemId,
   normalizeBlueskyExtractionDocument,
-} from "../sources/bluesky/capture.js";
-import { renderItemCard } from "../lib/render/item.js";
-import { getCaptureHandler } from "../lib/source-registry.js";
-import { isSupportedSource } from "../lib/source-catalog.js";
+} from "../sources/bluesky/capture.ts";
+import { renderItemCard } from "../lib/render/item.ts";
+import { getCaptureHandler } from "../lib/source-registry.ts";
+import { isSupportedSource } from "../lib/source-catalog.ts";
 import { readFixture } from "./helpers/cli-config.mts";
 
 describe("bluesky support", () => {

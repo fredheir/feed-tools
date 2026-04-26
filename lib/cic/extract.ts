@@ -1,12 +1,6 @@
-const {
-  buildExtractionScript: buildBlueskyScript,
-} = require("../../sources/bluesky/capture.js");
-const {
-  buildExtractionScript: buildLinkedInScript,
-} = require("../../sources/linkedin/capture.js");
-const {
-  buildExtractionScript: buildXScript,
-} = require("../../sources/x/capture.js");
+import { buildExtractionScript as buildBlueskyScript } from "../../sources/bluesky/capture.ts";
+import { buildExtractionScript as buildLinkedInScript } from "../../sources/linkedin/capture.ts";
+import { buildExtractionScript as buildXScript } from "../../sources/x/capture.ts";
 
 const EXTRACTION_SCRIPTS = {
   x: buildXScript,

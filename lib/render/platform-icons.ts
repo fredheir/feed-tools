@@ -46,7 +46,7 @@ export function getPlatformIconDataUri(
   if (cached) return cached;
 
   const iconPath = path.resolve(
-    __dirname,
+    import.meta.dirname,
     "..",
     "..",
     "assets",

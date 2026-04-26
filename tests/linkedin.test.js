@@ -3,8 +3,8 @@ import {
   extractLinkedInSourceItemId,
   isLinkedInItemWorthKeeping,
   scoreLinkedInItemQuality,
-} from "../sources/linkedin/capture.js";
-import { normalizeItemShape } from "../lib/item-shape.js";
+} from "../sources/linkedin/capture.ts";
+import { normalizeItemShape } from "../lib/item-shape.ts";
 import { readFixture } from "./helpers/cli-config.mts";
 
 describe("extractLinkedInSourceItemId", () => {

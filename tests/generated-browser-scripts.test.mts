@@ -1,25 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url);
-const {
-  buildExtractionScript: buildBlueskyScript,
-} = require("../sources/bluesky/capture.js");
-const {
-  buildExtractionScript: buildInstagramScript,
-} = require("../sources/instagram/capture.js");
-const {
-  buildExtractionScript: buildLinkedInScript,
-} = require("../sources/linkedin/capture.js");
-const {
-  buildExtractionScript: buildTikTokScript,
-} = require("../sources/tiktok/capture.js");
-const {
-  buildExtractionScript: buildXScript,
-} = require("../sources/x/capture.js");
-const {
-  buildExtractionScript: buildYouTubeScript,
-} = require("../sources/youtube/capture.js");
+import { buildExtractionScript as buildBlueskyScript } from "../sources/bluesky/capture.ts";
+import { buildExtractionScript as buildInstagramScript } from "../sources/instagram/capture.ts";
+import { buildExtractionScript as buildLinkedInScript } from "../sources/linkedin/capture.ts";
+import { buildExtractionScript as buildTikTokScript } from "../sources/tiktok/capture.ts";
+import { buildExtractionScript as buildXScript } from "../sources/x/capture.ts";
+import { buildExtractionScript as buildYouTubeScript } from "../sources/youtube/capture.ts";
 
 const scripts = {
   bluesky: buildBlueskyScript,

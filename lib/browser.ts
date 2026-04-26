@@ -1,17 +1,15 @@
-"use strict";
-
-const { execFileSync } = require("node:child_process");
-const fs = require("node:fs");
-const path = require("node:path");
-const { createBrowserSession: createSession } = require("./browser/session.js");
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { createBrowserSession as createSession } from "./browser/session.ts";
 import type {
   BrowserSession,
   FeedBrowserConfig,
   NormalizedBrowserOptions,
   RawFeedBrowserConfig,
-} from "./types.js";
+} from "./types.ts";
 
-const REPO_ROOT = path.resolve(__dirname, "..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 const DEFAULT_COMMAND_TIMEOUT_MS = 45000;
 const AGENT_BROWSER_IGNORED_WARNING_PATTERN =
   /^⚠ --args ignored: daemon already running\..*$/gm;
@@ -19,7 +17,7 @@ const CDP_PROBE_TIMEOUT_MS = 2000;
 
 function agentBrowserCommand(): string {
   const localBinary = path.resolve(
-    __dirname,
+    import.meta.dirname,
     "..",
     "node_modules",
     ".bin",
@@ -299,15 +297,3 @@ export function createBrowserSession(
     options,
   );
 }
-
-module.exports = {
-  buildAgentBrowserArgs,
-  closeBrowserSession,
-  createBrowserSession,
-  getCdpVersionUrl,
-  getRuntimeBrowserOptions,
-  jitterTimeout,
-  normalizeBrowserOptions,
-  readCdpVersionPayload,
-  sanitizeAgentBrowserOutput,
-};

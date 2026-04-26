@@ -10,7 +10,7 @@ import {
   mergeAllocations,
   saveAllocationToDocument,
   saveAllocationToPath,
-} from "../../lib/allocation.js";
+} from "../../lib/allocation.ts";
 
 const tempDirs = [];
 

@@ -1,11 +1,11 @@
-import { DEFAULT_SAVE_DIR } from "../config.js";
-import type { FeedDocument } from "../types.js";
+import { DEFAULT_SAVE_DIR } from "../config.ts";
+import type { FeedDocument } from "../types.ts";
 
-const {
+import {
   collectUniqueItems,
   normalizeDocument,
   persistCapturedDocument,
-} = require("../source-capture.js");
+} from "../source-capture.ts";
 
 export async function ingestDocument(
   rawDocument: unknown,
@@ -16,10 +16,13 @@ export async function ingestDocument(
   }: { sourceName: string; assetsDir: string; saveDir: string },
 ): Promise<FeedDocument> {
   const normalized = normalizeDocument(rawDocument, sourceName);
-  const dedupedItems = collectUniqueItems(normalized.items, {
-    seen: new Set(),
-    sourceName,
-  });
+  const dedupedItems = collectUniqueItems<FeedDocument["items"][number]>(
+    normalized.items,
+    {
+      seen: new Set(),
+      sourceName,
+    },
+  );
   return persistCapturedDocument(
     { ...normalized, items: dedupedItems },
     {

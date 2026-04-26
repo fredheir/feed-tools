@@ -1,22 +1,18 @@
-"use strict";
-
-const fs = require("node:fs");
-const path = require("node:path");
-const { loadConfig, getSaveDir } = require("./config.js");
-const { getDocumentSources } = require("./document-sources.js");
-const {
-  loadAllocationFromDb,
-  saveAllocationToDb,
-} = require("./sqlite-store.js");
-const { resolveSelectionList } = require("./selection.js");
-const { assertFeedDocument, isPlainObject } = require("./item-shape.js");
+import fs from "node:fs";
+import path from "node:path";
+import { loadConfig, getSaveDir } from "./config.ts";
+import { getDocumentSources } from "./document-sources.ts";
+import { loadAllocationFromDb, saveAllocationToDb } from "./sqlite-store.ts";
+import { resolveSelectionList } from "./selection.ts";
+import { assertFeedDocument, isPlainObject } from "./item-shape.ts";
 import type {
   CategoryAssignment,
   FeedAllocation,
+  FeedConfig,
   FeedDocument,
   FeedItem,
   FeedTab,
-} from "./types.js";
+} from "./types.ts";
 
 function createEmptyAllocation(source: string | null = null): FeedAllocation {
   return { version: 1, source, items: {} };
@@ -38,17 +34,16 @@ function loadAllocationFromPath(allocationPath: string): FeedAllocation {
     if (!isPlainObject(parsed)) {
       throw new Error(`Invalid allocation object: ${allocationPath}`);
     }
-    const maybeAllocation = parsed as FeedAllocation;
+    const version = typeof parsed.version === "number" ? parsed.version : 1;
+    const source = typeof parsed.source === "string" ? parsed.source : null;
     return {
-      version:
-        typeof maybeAllocation.version === "number"
-          ? maybeAllocation.version
-          : 1,
-      source:
-        typeof maybeAllocation.source === "string"
-          ? maybeAllocation.source
-          : null,
-      items: getAllocationItems(maybeAllocation),
+      version,
+      source,
+      items: getAllocationItems({
+        version,
+        source,
+        items: parsed.items,
+      } as unknown as FeedAllocation),
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -97,7 +92,7 @@ function mergeAllocations(
 }
 
 function getDocumentSaveDirs(
-  config: unknown,
+  config: FeedConfig,
   document: FeedDocument,
 ): string[] {
   const sources = getDocumentSources(document);
@@ -236,14 +231,14 @@ function groupPickedRowsByCategory(
   }));
 }
 
-module.exports = {
+export {
   assignCategories,
   groupPickedRowsByCategory,
-  loadAllocation: loadAllocationFromPath,
+  loadAllocationFromPath as loadAllocation,
   loadAllocationFromPath,
   loadAllocationFromDocument,
   mergeAllocations,
-  saveAllocation: saveAllocationToPath,
+  saveAllocationToPath as saveAllocation,
   saveAllocationToPath,
   saveAllocationToDocument,
 };

@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-"use strict";
-
 /**
  * CLI for Claude in Chrome (CiC) agent-orchestrated capture.
  *
@@ -19,17 +17,17 @@
  *     and persists to sqlite.  Outputs the merged document on stdout.
  */
 
-const fs = require("node:fs");
-const { requireArgValue } = require("./cli-args.js");
-const {
+import fs from "node:fs";
+import { requireArgValue } from "./cli-args.ts";
+import {
   loadOptionalConfig,
   getCaptureDefaults,
   resolveCanonicalSaveDir,
-} = require("./config.js");
-const { getSourceConfig, listCicSources } = require("./cic/source-config.js");
-const { getExtractionScript, isCicSupported } = require("./cic/extract.js");
-const { ingestDocument } = require("./cic/ingest.js");
-const { hasNewUnclassifiedItems } = require("./source-capture.js");
+} from "./config.ts";
+import { getSourceConfig, listCicSources } from "./cic/source-config.ts";
+import { getExtractionScript, isCicSupported } from "./cic/extract.ts";
+import { ingestDocument } from "./cic/ingest.ts";
+import { hasNewUnclassifiedItems } from "./source-capture.ts";
 
 function usage(): never {
   console.log(`Usage:
@@ -97,12 +95,12 @@ async function cmdIngest(
     throw new Error(`Failed to parse JSON input ${jsonFile}: ${message}`);
   }
   const appConfig = loadOptionalConfig();
-  const defaults = appConfig ? getCaptureDefaults(appConfig, sourceName) : {};
-  const assetsDir = flags.assetsDir || defaults.assets_dir || "";
+  const defaults = appConfig ? getCaptureDefaults(appConfig, sourceName) : null;
+  const assetsDir = flags.assetsDir || defaults?.assets_dir || "";
   const saveDir = appConfig
     ? resolveCanonicalSaveDir(
         appConfig,
-        flags.saveDir || defaults.save_dir,
+        flags.saveDir || defaults?.save_dir,
         sourceName,
       )
     : flags.saveDir || "";
@@ -167,10 +165,11 @@ if (subcommand === "prep") {
       flags.saveDir = requireArgValue(args, i, flag);
       i += 1;
     } else {
-      throw new Error(`Unknown argument: ${flag}`);
+      console.error(`Unknown argument: ${flag}`);
+      process.exit(1);
     }
   }
-  cmdIngest(sourceName, jsonFile, flags);
+  await cmdIngest(sourceName, jsonFile, flags);
 } else {
   console.error(`Unknown subcommand: ${subcommand}`);
   usage();

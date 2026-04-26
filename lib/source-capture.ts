@@ -1,24 +1,24 @@
-"use strict";
-
-const fs = require("node:fs");
-const fsPromises = require("node:fs/promises");
-const { downloadDocumentAssets } = require("./assets.js");
-const {
-  closeBrowserSession,
-  normalizeBrowserOptions,
-} = require("./browser.js");
-const { DEFAULT_SAVE_DIR } = require("./config.js");
-const { buildNormalizedFeedDocument } = require("./feed-document-normalize.js");
-const { getPreferredItemKey, normalizeItemShape } = require("./item-shape.js");
-const { mergeDocuments } = require("./merge.js");
-const {
+import fs from "node:fs";
+import fsPromises from "node:fs/promises";
+import { downloadDocumentAssets } from "./assets.ts";
+import { closeBrowserSession, normalizeBrowserOptions } from "./browser.ts";
+import { DEFAULT_SAVE_DIR } from "./config.ts";
+import { buildNormalizedFeedDocument } from "./feed-document-normalize.ts";
+import { getPreferredItemKey, normalizeItemShape } from "./item-shape.ts";
+import { mergeDocuments } from "./merge.ts";
+import {
   loadAllocationFromDb,
   loadCurrentDocumentFromDb,
   persistSourceDocument,
-} = require("./sqlite-store.js");
-const { ensureSourceStorage, getSourceStoragePaths } = require("./storage.js");
-import { isRecord } from "./coerce.js";
-import type { CaptureAdapter, FeedDocument, FeedItem } from "./types.js";
+} from "./sqlite-store.ts";
+import { ensureSourceStorage, getSourceStoragePaths } from "./storage.ts";
+import { isRecord } from "./coerce.ts";
+import type {
+  CaptureAdapter,
+  FeedBrowserConfig,
+  FeedDocument,
+  FeedItem,
+} from "./types.ts";
 
 interface PersistOptions {
   sourceName: string;
@@ -203,7 +203,7 @@ async function runSourceCapture(
     limit?: number;
     assetsDir?: string;
     saveDir?: string;
-    browserOptions?: Record<string, unknown>;
+    browserOptions?: FeedBrowserConfig;
   } = {},
 ): Promise<FeedDocument> {
   const {
@@ -358,7 +358,7 @@ function hasNewUnclassifiedItems(
   );
 }
 
-module.exports = {
+export {
   CaptureAccessError,
   assertAuthenticatedCapture,
   assertFeedPageAccessible,

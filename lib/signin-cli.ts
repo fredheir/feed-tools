@@ -1,14 +1,12 @@
 #!/usr/bin/env node
-"use strict";
-
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { isSupportedSource, listSupportedSources } from "./source-catalog.js";
-import type { FeedSourceName } from "./types.js";
+import { isSupportedSource, listSupportedSources } from "./source-catalog.ts";
+import type { FeedSourceName } from "./types.ts";
 
-const REPO_ROOT = path.resolve(__dirname, "..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 const CHROME_BIN = path.join(
   REPO_ROOT,
   "chrome-install",

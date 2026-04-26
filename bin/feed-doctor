@@ -1,9 +1,5 @@
 #!/usr/bin/env node
-// @ts-check
 
-const { runTsCli } = require("./_run-ts-cli.js");
+import { main } from "../lib/doctor-cli.ts";
 
-const cli = runTsCli("lib/doctor-cli.ts");
-if (cli?.main) {
-  void cli.main();
-}
+await main();

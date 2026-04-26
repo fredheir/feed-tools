@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * Declarative per-source configuration for Claude in Chrome (CiC) capture.
  *
@@ -106,4 +104,4 @@ function listCicSources(): CicSourceName[] {
   return Object.keys(SOURCE_CONFIGS) as CicSourceName[];
 }
 
-module.exports = { getSourceConfig, listCicSources };
+export { getSourceConfig, listCicSources };

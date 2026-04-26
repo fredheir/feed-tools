@@ -1,4 +1,4 @@
-import type { FeedItem } from "./types.js";
+import type { FeedItem } from "./types.ts";
 
 export function getItemMaskKeys(item: FeedItem | null | undefined): string[] {
   if (!item) return [];

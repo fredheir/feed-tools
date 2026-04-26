@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import {
   ensureSourceStorage,
   getSourceStoragePaths,
-} from "../../lib/storage.js";
+} from "../../lib/storage.ts";
 
 const tempDirs = [];
 

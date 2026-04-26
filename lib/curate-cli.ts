@@ -1,38 +1,30 @@
 #!/usr/bin/env node
-"use strict";
-
-const fs = require("node:fs");
-const path = require("node:path");
-const process = require("node:process");
-import { requireArgValue } from "./cli-args.js";
-const {
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { requireArgValue } from "./cli-args.ts";
+import {
   loadConfig,
   getSaveDir,
   getCurationPreferences,
   resolveCanonicalSaveDir,
-} = require("./config.js");
-const { getDefaultDocumentPath } = require("./document-paths.js");
-const {
-  exportDocumentsFromDb,
-  loadAllocationFromDb,
-} = require("./sqlite-store.js");
-const {
-  appendCommaList,
-  resolveSelectedSources,
-} = require("./source-selection.js");
-const {
+} from "./config.ts";
+import { getDefaultDocumentPath } from "./document-paths.ts";
+import { exportDocumentsFromDb, loadAllocationFromDb } from "./sqlite-store.ts";
+import { appendCommaList, resolveSelectedSources } from "./source-selection.ts";
+import {
   buildClassificationPrompt,
   buildRows,
   hasPositiveLimit,
   printClassificationRows,
   printRowsWithAllocation,
-} = require("./selection.js");
+} from "./selection.ts";
 import type {
   FeedAllocation,
   FeedConfig,
   FeedDocument,
   FeedItem,
-} from "./types.js";
+} from "./types.ts";
 
 interface MatchedRow {
   row: number;

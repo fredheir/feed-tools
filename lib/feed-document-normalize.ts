@@ -1,5 +1,5 @@
-import { assertFeedDocument, normalizeItemShape } from "./item-shape.js";
-import type { FeedDocument, FeedItem } from "./types.js";
+import { assertFeedDocument, normalizeItemShape } from "./item-shape.ts";
+import type { FeedDocument, FeedItem } from "./types.ts";
 
 type PartialFeedDocument = Partial<FeedDocument> & { items?: unknown[] };
 
@@ -117,9 +117,3 @@ export function normalizePersistedDocument(
     includeCaptureMetadata: options.includeCaptureMetadata,
   });
 }
-
-module.exports = {
-  buildNormalizedFeedDocument,
-  normalizeBoundaryItem,
-  normalizePersistedDocument,
-};

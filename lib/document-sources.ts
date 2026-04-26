@@ -1,4 +1,4 @@
-import type { FeedDocument } from "./types.js";
+import type { FeedDocument } from "./types.ts";
 
 export function getDocumentSource(document: FeedDocument): string | null {
   const source = document?.source || null;

@@ -4,7 +4,7 @@ import {
   getDefaultDocumentPath,
   getDefaultHtmlPath,
   getDefaultMaskPath,
-} from "../../lib/document-paths.js";
+} from "../../lib/document-paths.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 
