@@ -17,6 +17,14 @@ if command -v repo-standards >/dev/null 2>&1; then
   exec repo-standards "$@" --root "$ROOT_DIR" --config repo-standards.config.json
 fi
 
+if [[ "${1:-}" == "sync-if-needed" ]]; then
+  cat >&2 <<'MSG'
+repo-standards is unavailable; skipping maintainer-only sync-if-needed.
+Normal consumers can run pnpm install and the feed-* commands without markolo-shared access.
+MSG
+  exit 0
+fi
+
 cat >&2 <<'MSG'
 repo-standards is maintainer-only tooling and is not required for normal feed-tools use.
 
