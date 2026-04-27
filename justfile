@@ -61,6 +61,7 @@ ci: check
 
 hooks-install:
     config_tmp="$(mktemp)"; trap 'rm -f "$config_tmp"' EXIT; if git config --local --get-all core.hooksPath > "$config_tmp"; then git config --local --unset-all core.hooksPath; fi
+    rm -rf .husky
     rm -f "$(git rev-parse --git-path hooks/pre-commit)" "$(git rev-parse --git-path hooks/commit-msg)" "$(git rev-parse --git-path hooks/prepare-commit-msg)" "$(git rev-parse --git-path hooks/pre-push)" "$(git rev-parse --git-path hooks/post-merge)" "$(git rev-parse --git-path hooks/post-checkout)"
     git config --local --replace-all hook.lefthook-pre-commit.event pre-commit
     git config --local --replace-all hook.lefthook-pre-commit.command "pnpm exec lefthook run pre-commit --no-auto-install"
