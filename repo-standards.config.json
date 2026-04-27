@@ -57,5 +57,9 @@
   "allowBarePythonIn": [],
   "suppressionBudget": {
     "total": 0
-  }
+  },
+  "hooks": {
+    "lefthookCommand": "pnpm exec lefthook"
+  },
+  "requiredExecutableFiles": []
 }
