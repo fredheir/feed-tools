@@ -233,9 +233,10 @@ function cdpValueForUrl(input: string, url: string): string {
   return parsed.origin;
 }
 
-function assertCdpEndpoint(cdp: string): string {
+export function assertCdpEndpoint(cdp: string): string {
   const urls = getCdpVersionUrls(cdp);
   const failures: string[] = [];
+  const invalids: string[] = [];
   let output = "";
   for (const url of urls) {
     try {
@@ -251,14 +252,18 @@ function assertCdpEndpoint(cdp: string): string {
         return cdpValueForUrl(cdp, url);
       }
     } catch {
-      // Fall through to the targeted error below.
+      invalids.push(url);
+      continue;
     }
 
-    throw new Error(
-      `CDP endpoint ${cdp} responded at ${url}, but it did not look like Chrome DevTools Protocol JSON. Use a dedicated Chrome debugging port for feed capture.`,
-    );
+    invalids.push(url);
   }
 
+  if (invalids.length > 0) {
+    throw new Error(
+      `CDP endpoint ${cdp} responded at ${invalids.join(", ")}, but it did not look like Chrome DevTools Protocol JSON. Use a dedicated Chrome debugging port for feed capture.`,
+    );
+  }
   throw new Error(
     `CDP endpoint ${cdp} did not respond at ${failures.join(", ")}. If port ${cdp} is owned by Codex Desktop or another embedded browser, launch a dedicated Chrome profile on another port such as 9223 and set capture.browser.cdp to that port.`,
   );

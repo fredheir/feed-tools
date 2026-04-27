@@ -149,6 +149,7 @@ function cdpConfigValue(port: number, url: string): string {
 function getCdpVersion(port: number): CheckResult {
   const urls = getCdpVersionUrls(String(port));
   const misses: string[] = [];
+  const invalids: string[] = [];
   for (const url of urls) {
     let output = "";
     try {
@@ -173,26 +174,23 @@ function getCdpVersion(port: number): CheckResult {
         };
       }
     } catch {
-      return {
-        name: `cdp:${port}`,
-        ok: false,
-        detail: `${url} responded but did not return JSON`,
-        recommendation:
-          "Do not use this port for CDP capture; try agent-browser or launch dedicated Chrome with --remote-debugging-port.",
-      };
+      invalids.push(`${url} did not return JSON`);
+      continue;
     }
-    return {
-      name: `cdp:${port}`,
-      ok: false,
-      detail: `${url} responded but did not include webSocketDebuggerUrl`,
-      recommendation:
-        "Do not use this port for CDP capture; try agent-browser or launch dedicated Chrome with --remote-debugging-port.",
-    };
+    invalids.push(`${url} did not include webSocketDebuggerUrl`);
   }
+  const detail =
+    invalids.length > 0
+      ? invalids.join("; ")
+      : `${misses.join(", ")} are not usable CDP endpoints`;
   return {
     name: `cdp:${port}`,
     ok: false,
-    detail: `${misses.join(", ")} are not usable CDP endpoints`,
+    detail,
+    recommendation:
+      invalids.length > 0
+        ? "Do not use this port for CDP capture; try agent-browser or launch dedicated Chrome with --remote-debugging-port."
+        : undefined,
   };
 }
 
