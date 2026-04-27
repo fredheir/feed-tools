@@ -33,7 +33,7 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
    - If a `cdp:<port>` check is OK, set `capture.browser.cdp` to that port.
    - If CDP is unavailable but `agent-browser` is OK, use `capture.browser: {}` or omit the browser block.
    - If neither is available but the host has Chrome connector MCP tools, use the CiC flow below.
-5. If using CDP, confirm the port exposes Chrome DevTools Protocol with `curl -sf http://127.0.0.1:<port>/json/version`.
+5. If using CDP, confirm the port exposes Chrome DevTools Protocol with `curl -sf http://127.0.0.1:<port>/json/version || curl -sf http://localhost:<port>/json/version || curl -sf http://[::1]:<port>/json/version`.
 6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`.
 7. Default `capture.browser.args` to `["--no-sandbox"]` only when launching a dedicated browser, not when reusing an existing daemon.
 8. For video sources (tiktok, x, instagram), install yt-dlp with curl_cffi impersonation: `pnpm setup:yt-dlp` (requires `uv`)
@@ -73,11 +73,11 @@ DISPLAY=:0 <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
 ```
 
 - `DISPLAY=:0` should work without Xvfb in the sandbox environments this project targets.
-- Confirm CDP is up with `curl -sf http://127.0.0.1:9222/json/version`.
+- Confirm CDP is up with `curl -sf http://127.0.0.1:9222/json/version || curl -sf http://localhost:9222/json/version || curl -sf http://[::1]:9222/json/version`.
 - In Cowork VMs, Chrome is reaped at turn end even if launched with `setsid nohup`. Do sign-in and capture in the same turn; the profile on disk persists, but the browser process does not.
 - Tell the user to sign in to each platform in that Chrome profile before capture runs if the sandbox browser has not been authenticated yet. Prefer `./bin/feed-signin <source>...`; it keeps the turn open, prints per-source auth-cookie status, and closes Chrome once auth cookies are detected.
 - After `feed-signin` succeeds, relaunch Chrome on the same profile and CDP port before running `feed-capture`. `capture.browser: {}` / agent-browser auto-connect expects a running CDP endpoint; it will not cold-launch the signed-in profile after `feed-signin` closes Chrome.
-- Then set `"cdp": "9222"` in each source's `capture.browser` block.
+- Then set `"cdp"` to the value reported by `feed-doctor`, for example `"9222"` or `"http://[::1]:9222"`.
 - When `capture.browser.cdp` is set, omit `headed` and `auto_connect`.
 
 ## CDP port selection
@@ -85,7 +85,7 @@ DISPLAY=:0 <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
 Port `9222` must be a real Chrome DevTools Protocol endpoint. A local browser can listen on `9222` without serving CDP, for example Codex Desktop or another embedded Chromium surface. Always validate with:
 
 ```sh
-curl -sf http://127.0.0.1:9222/json/version
+curl -sf http://127.0.0.1:9222/json/version || curl -sf http://localhost:9222/json/version || curl -sf http://[::1]:9222/json/version
 ```
 
 - If this returns JSON with a `webSocketDebuggerUrl`, `capture.browser.cdp` may use `"9222"`.
@@ -103,8 +103,8 @@ curl -sf http://127.0.0.1:9222/json/version
 ## Git / PRs
 
 - Use `just fix` during edits, `just check-changed` before handoff, and `just check` before commit/CI handoff.
-- Runtime feed commands only need this repository's Node dependencies. Maintenance recipes such as `just doctor`, `just check`, `just sync-if-needed`, and `just hooks-install` also require the shared repo standards checkout at `../markolo-shared` or `REPO_STANDARDS_LOCAL` pointing to that checkout.
-- Run `just hooks-install` after clone or after hook migration changes once the shared repo standards checkout is available.
+- Normal feed commands and `pnpm install` only need this repository's dependencies; consumers do not need `markolo-shared`. Maintainer-only standards recipes such as `just doctor`, `just check`, `just sync-if-needed`, and `just hooks-install` require `REPO_STANDARDS_LOCAL` pointing at a `markolo-shared` checkout or a `repo-standards` binary on `PATH`.
+- Run `just hooks-install` after clone or after hook migration changes.
 - Commit hooks require Conventional Commits. Use messages like `feat: add feed doctor` or `fix: handle missing render input`.
 
 ## Supported platforms

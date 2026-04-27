@@ -19,6 +19,19 @@ describe("feed-doctor config helpers", () => {
     ).toEqual({ cdp: "9222" });
   });
 
+  test("preserves the verified CDP host when doctor finds an IPv6 endpoint", () => {
+    expect(
+      recommendedBrowserConfig([
+        {
+          name: "cdp:9222",
+          ok: true,
+          detail: "Chrome at http://[::1]:9222/json/version",
+          recommendation: 'Set capture.browser.cdp to "http://[::1]:9222".',
+        },
+      ]),
+    ).toEqual({ cdp: "http://[::1]:9222" });
+  });
+
   test("falls back to agent-browser when CDP is unavailable", () => {
     expect(
       recommendedBrowserConfig([

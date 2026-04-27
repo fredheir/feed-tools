@@ -3,6 +3,7 @@ import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { getCdpVersionUrls } from "./browser.ts";
 import { isSupportedSource, listSupportedSources } from "./source-catalog.ts";
 import type { FeedSourceName } from "./types.ts";
 
@@ -173,7 +174,7 @@ function assertPythonSqliteAvailable(): void {
   }
 }
 
-function readCdpVersion(cdpPort: string): boolean {
+function readCdpVersion(cdpPort: string): string | null {
   const script = `
 const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), 1000);
@@ -182,16 +183,18 @@ fetch(process.argv[1], { signal: controller.signal })
   .catch(() => process.exit(1))
   .finally(() => clearTimeout(timeout));
 `;
-  try {
-    execFileSync(
-      process.execPath,
-      ["-e", script, `http://127.0.0.1:${cdpPort}/json/version`],
-      { stdio: "ignore", timeout: 2000 },
-    );
-    return true;
-  } catch {
-    return false;
+  for (const url of getCdpVersionUrls(cdpPort)) {
+    try {
+      execFileSync(process.execPath, ["-e", script, url], {
+        stdio: "ignore",
+        timeout: 2000,
+      });
+      return url;
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 async function waitForCdp(cdpPort: string, child: ChildProcess): Promise<void> {
@@ -204,7 +207,7 @@ async function waitForCdp(cdpPort: string, child: ChildProcess): Promise<void> {
     await sleep(500);
   }
   throw new Error(
-    `Chrome did not expose CDP at http://127.0.0.1:${cdpPort}/json/version; see ${CHROME_LOG}`,
+    `Chrome did not expose CDP at ${getCdpVersionUrls(cdpPort).join(", ")}; see ${CHROME_LOG}`,
   );
 }
 

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-import { getCdpVersionUrl, readCdpVersionPayload } from "./browser.ts";
+import { getCdpVersionUrls, readCdpVersionPayload } from "./browser.ts";
 
 import { listCicSources } from "./cic/source-config.ts";
 
@@ -141,36 +141,57 @@ function checkAgentBrowser(): CheckResult {
   };
 }
 
+function cdpConfigValue(port: number, url: string): string {
+  const parsed = new URL(url);
+  return parsed.hostname === "127.0.0.1" ? String(port) : parsed.origin;
+}
+
 function getCdpVersion(port: number): CheckResult {
-  const url = getCdpVersionUrl(String(port));
-  try {
-    const output = readCdpVersionPayload(url);
-    const parsed = JSON.parse(output) as {
-      Browser?: unknown;
-      webSocketDebuggerUrl?: unknown;
-    };
-    if (typeof parsed.webSocketDebuggerUrl === "string") {
-      return {
-        name: `cdp:${port}`,
-        ok: true,
-        detail: String(parsed.Browser || "Chrome DevTools Protocol endpoint"),
-        recommendation: `Set capture.browser.cdp to "${port}".`,
-      };
+  const urls = getCdpVersionUrls(String(port));
+  const misses: string[] = [];
+  const invalids: string[] = [];
+  for (const url of urls) {
+    let output = "";
+    try {
+      output = readCdpVersionPayload(url);
+    } catch {
+      misses.push(url);
+      continue;
     }
-    return {
-      name: `cdp:${port}`,
-      ok: false,
-      detail: `${url} responded but did not include webSocketDebuggerUrl`,
-      recommendation:
-        "Do not use this port for CDP capture; try agent-browser or launch dedicated Chrome with --remote-debugging-port.",
-    };
-  } catch {
-    return {
-      name: `cdp:${port}`,
-      ok: false,
-      detail: `${url} is not a usable CDP endpoint`,
-    };
+    let parsed: { Browser?: unknown; webSocketDebuggerUrl?: unknown };
+    try {
+      parsed = JSON.parse(output) as {
+        Browser?: unknown;
+        webSocketDebuggerUrl?: unknown;
+      };
+      if (typeof parsed.webSocketDebuggerUrl === "string") {
+        const cdp = cdpConfigValue(port, url);
+        return {
+          name: `cdp:${port}`,
+          ok: true,
+          detail: `${String(parsed.Browser || "Chrome DevTools Protocol endpoint")} at ${url}`,
+          recommendation: `Set capture.browser.cdp to "${cdp}".`,
+        };
+      }
+    } catch {
+      invalids.push(`${url} did not return JSON`);
+      continue;
+    }
+    invalids.push(`${url} did not include webSocketDebuggerUrl`);
   }
+  const detail =
+    invalids.length > 0
+      ? invalids.join("; ")
+      : `${misses.join(", ")} are not usable CDP endpoints`;
+  return {
+    name: `cdp:${port}`,
+    ok: false,
+    detail,
+    recommendation:
+      invalids.length > 0
+        ? "Do not use this port for CDP capture; try agent-browser or launch dedicated Chrome with --remote-debugging-port."
+        : undefined,
+  };
 }
 
 function checkCdpPorts(ports: number[]): CheckResult[] {
@@ -413,7 +434,12 @@ export function recommendedBrowserConfig(
   const cdp = results.find(
     (result) => result.name.startsWith("cdp:") && result.ok,
   );
-  if (cdp) return { cdp: cdp.name.replace(/^cdp:/, "") };
+  if (cdp) {
+    const match = cdp.recommendation?.match(
+      /capture\.browser\.cdp to "([^"]+)"/,
+    );
+    return { cdp: match?.[1] ?? cdp.name.replace(/^cdp:/, "") };
+  }
   if (results.find((result) => result.name === "agent-browser")?.ok) {
     return {};
   }

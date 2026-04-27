@@ -185,17 +185,25 @@ export function sanitizeAgentBrowserOutput(output: unknown): string {
 }
 
 export function getCdpVersionUrl(cdp: string): string {
+  return getCdpVersionUrls(cdp)[0] ?? String(cdp || "").trim();
+}
+
+export function getCdpVersionUrls(cdp: string): string[] {
   const value = String(cdp || "").trim();
   if (/^\d+$/.test(value)) {
-    return `http://127.0.0.1:${value}/json/version`;
+    return [
+      `http://127.0.0.1:${value}/json/version`,
+      `http://localhost:${value}/json/version`,
+      `http://[::1]:${value}/json/version`,
+    ];
   }
   if (/^https?:\/\//i.test(value)) {
-    return new URL("/json/version", value).toString();
+    return [new URL("/json/version", value).toString()];
   }
   if (/^[^/]+:\d+$/.test(value)) {
-    return `http://${value}/json/version`;
+    return [`http://${value}/json/version`];
   }
-  return value;
+  return [value];
 }
 
 export function readCdpVersionPayload(url: string): string {
@@ -218,27 +226,46 @@ fetch(url, { signal: controller.signal })
   });
 }
 
-function assertCdpEndpoint(cdp: string): void {
-  const url = getCdpVersionUrl(cdp);
+function cdpValueForUrl(input: string, url: string): string {
+  if (!/^\d+$/.test(String(input || "").trim())) return input;
+  const parsed = new URL(url);
+  if (parsed.hostname === "127.0.0.1") return input;
+  return parsed.origin;
+}
+
+export function assertCdpEndpoint(cdp: string): string {
+  const urls = getCdpVersionUrls(cdp);
+  const failures: string[] = [];
+  const invalids: string[] = [];
   let output = "";
-  try {
-    output = readCdpVersionPayload(url);
-  } catch (error) {
+  for (const url of urls) {
+    try {
+      output = readCdpVersionPayload(url);
+    } catch {
+      failures.push(url);
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(output) as { webSocketDebuggerUrl?: unknown };
+      if (typeof parsed.webSocketDebuggerUrl === "string") {
+        return cdpValueForUrl(cdp, url);
+      }
+    } catch {
+      invalids.push(url);
+      continue;
+    }
+
+    invalids.push(url);
+  }
+
+  if (invalids.length > 0) {
     throw new Error(
-      `CDP endpoint ${cdp} did not respond at ${url}. If port ${cdp} is owned by Codex Desktop or another embedded browser, launch a dedicated Chrome profile on another port such as 9223 and set capture.browser.cdp to that port.`,
-      { cause: error },
+      `CDP endpoint ${cdp} responded at ${invalids.join(", ")}, but it did not look like Chrome DevTools Protocol JSON. Use a dedicated Chrome debugging port for feed capture.`,
     );
   }
-
-  try {
-    const parsed = JSON.parse(output) as { webSocketDebuggerUrl?: unknown };
-    if (typeof parsed.webSocketDebuggerUrl === "string") return;
-  } catch {
-    // Fall through to the targeted error below.
-  }
-
   throw new Error(
-    `CDP endpoint ${cdp} responded at ${url}, but it did not look like Chrome DevTools Protocol JSON. Use a dedicated Chrome debugging port for feed capture.`,
+    `CDP endpoint ${cdp} did not respond at ${failures.join(", ")}. If port ${cdp} is owned by Codex Desktop or another embedded browser, launch a dedicated Chrome profile on another port such as 9223 and set capture.browser.cdp to that port.`,
   );
 }
 
@@ -249,13 +276,17 @@ function runAgentBrowser(
   const { commandTimeoutMs = DEFAULT_COMMAND_TIMEOUT_MS, ...browserOptions } =
     options;
   const normalized = normalizeBrowserOptions(browserOptions);
+  let effectiveOptions = normalized;
   if (normalized.cdp) {
-    assertCdpEndpoint(normalized.cdp);
+    effectiveOptions = {
+      ...normalized,
+      cdp: assertCdpEndpoint(normalized.cdp),
+    };
   }
   return sanitizeAgentBrowserOutput(
     execFileSync(
       agentBrowserCommand(),
-      buildAgentBrowserArgs(normalized, commandArgs),
+      buildAgentBrowserArgs(effectiveOptions, commandArgs),
       {
         encoding: "utf8",
         timeout: commandTimeoutMs,

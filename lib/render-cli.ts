@@ -149,7 +149,14 @@ relativizeAssetPaths(document, outputPath, inputPath);
 const html = renderDocument(document);
 fs.writeFileSync(outputPath, html, "utf8");
 if (!noOpen) {
-  const browser = createBrowserSession();
-  browser.openPathOrUrl(outputPath);
+  try {
+    const browser = createBrowserSession();
+    browser.openPathOrUrl(outputPath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      `Render succeeded but could not auto-open ${path.resolve(outputPath)}: ${message}\n`,
+    );
+  }
 }
 console.log(path.resolve(outputPath));

@@ -2,8 +2,10 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { describe, expect, test } from "vitest";
 import {
+  assertCdpEndpoint,
   buildAgentBrowserArgs,
   getCdpVersionUrl,
+  getCdpVersionUrls,
   getRuntimeBrowserOptions,
   readCdpVersionPayload,
   sanitizeAgentBrowserOutput,
@@ -127,6 +129,11 @@ describe("buildAgentBrowserArgs", () => {
 
   test("builds CDP probe URLs from port and host forms", () => {
     expect(getCdpVersionUrl("9222")).toBe("http://127.0.0.1:9222/json/version");
+    expect(getCdpVersionUrls("9222")).toEqual([
+      "http://127.0.0.1:9222/json/version",
+      "http://localhost:9222/json/version",
+      "http://[::1]:9222/json/version",
+    ]);
     expect(getCdpVersionUrl("127.0.0.1:9223")).toBe(
       "http://127.0.0.1:9223/json/version",
     );
@@ -169,6 +176,51 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
       expect(JSON.parse(payload)).toMatchObject({
         webSocketDebuggerUrl: "ws://127.0.0.1/devtools/browser",
       });
+    } finally {
+      server.kill("SIGTERM");
+    }
+  });
+
+  test("keeps probing when one loopback host returns non-CDP content", async () => {
+    const server = spawn(process.execPath, [
+      "-e",
+      `
+import http from "node:http";
+const nonCdpServer = http.createServer((_request, response) => {
+  response.writeHead(200, { "content-type": "text/plain" });
+  response.end("not cdp");
+});
+nonCdpServer.listen(0, "127.0.0.1", () => {
+  const port = nonCdpServer.address().port;
+  const cdpServer = http.createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ webSocketDebuggerUrl: "ws://[::1]/devtools/browser" }));
+  });
+  cdpServer.on("error", () => process.exit(2));
+  cdpServer.listen(port, "::1", () => process.stdout.write(String(port) + "\\n"));
+  process.on("SIGTERM", () => {
+    cdpServer.close(() => nonCdpServer.close(() => process.exit(0)));
+  });
+});
+`,
+    ]);
+    const port = await new Promise((resolve, reject) => {
+      let payload = "";
+      server.stdout.on("data", (chunk) => {
+        payload += String(chunk);
+        const line = payload.split("\n")[0]?.trim();
+        if (line) resolve(line);
+      });
+      server.once("error", reject);
+      server.once("exit", (code) => {
+        if (code) reject(new Error(`probe server exited with ${code}`));
+      });
+    });
+
+    try {
+      expect(assertCdpEndpoint(String(port))).toMatch(
+        new RegExp(`^http://(localhost|\\[::1\\]):${port}$`),
+      );
     } finally {
       server.kill("SIGTERM");
     }
