@@ -84,6 +84,21 @@ function run(command, args, options = {}) {
   });
 }
 
+function commandExists(command) {
+  try {
+    execFileSync("sh", ["-c", `command -v ${command}`], {
+      stdio: "ignore",
+      env: {
+        ...process.env,
+        PATH: `${localBin}${path.delimiter}${process.env.PATH || ""}`,
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
@@ -92,7 +107,14 @@ function ensurePnpm() {
   const pnpm = localExecutablePath("pnpm");
   if (pnpm) return pnpm;
   fs.mkdirSync(localBin, { recursive: true });
-  run("npm", ["install", "-g", "--prefix", localPrefix, "pnpm"]);
+  if (commandExists("npm")) {
+    run("npm", ["install", "-g", "--prefix", localPrefix, "pnpm"]);
+  } else if (commandExists("corepack")) {
+    run("corepack", ["enable", "--install-directory", localBin]);
+    run("corepack", ["prepare", "pnpm@10.14.0", "--activate"]);
+  } else {
+    throw new Error("pnpm setup requires npm or corepack on PATH");
+  }
   const installed = localExecutablePath("pnpm");
   if (!installed)
     throw new Error(`pnpm install finished but ${localBin}/pnpm is missing`);
@@ -179,8 +201,12 @@ function ensureAgentBrowserBuild() {
   run(process.execPath, [postinstallScript]);
 }
 
-function cdpVersionUrl(cdpPort) {
-  return `http://127.0.0.1:${cdpPort}/json/version`;
+function cdpVersionUrls(cdpPort) {
+  return [
+    `http://127.0.0.1:${cdpPort}/json/version`,
+    `http://localhost:${cdpPort}/json/version`,
+    `http://[::1]:${cdpPort}/json/version`,
+  ];
 }
 
 function canReadCdpVersion(cdpPort) {
@@ -197,11 +223,18 @@ fetch(process.argv[1], { signal: controller.signal })
   .finally(() => clearTimeout(timeout));
 `;
   try {
-    execFileSync(process.execPath, ["-e", script, cdpVersionUrl(cdpPort)], {
-      stdio: "ignore",
-      timeout: 2000,
-    });
-    return true;
+    for (const url of cdpVersionUrls(cdpPort)) {
+      try {
+        execFileSync(process.execPath, ["-e", script, url], {
+          stdio: "ignore",
+          timeout: 2000,
+        });
+        return true;
+      } catch {
+        continue;
+      }
+    }
+    return false;
   } catch {
     return false;
   }
@@ -247,7 +280,7 @@ function launchWorkspaceChrome(cdpPort) {
     // Process already exited.
   }
   throw new Error(
-    `Chrome did not expose CDP at ${cdpVersionUrl(cdpPort)} within ${
+    `Chrome did not expose CDP at ${cdpVersionUrls(cdpPort).join(", ")} within ${
       cdpProbeTimeoutMs / 1000
     }s; see ${chromeLog}`,
   );

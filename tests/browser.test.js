@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildAgentBrowserArgs,
   getCdpVersionUrl,
+  getCdpVersionUrls,
   getRuntimeBrowserOptions,
   readCdpVersionPayload,
   sanitizeAgentBrowserOutput,
@@ -127,6 +128,11 @@ describe("buildAgentBrowserArgs", () => {
 
   test("builds CDP probe URLs from port and host forms", () => {
     expect(getCdpVersionUrl("9222")).toBe("http://127.0.0.1:9222/json/version");
+    expect(getCdpVersionUrls("9222")).toEqual([
+      "http://127.0.0.1:9222/json/version",
+      "http://localhost:9222/json/version",
+      "http://[::1]:9222/json/version",
+    ]);
     expect(getCdpVersionUrl("127.0.0.1:9223")).toBe(
       "http://127.0.0.1:9223/json/version",
     );
