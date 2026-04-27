@@ -103,7 +103,8 @@ curl -sf http://127.0.0.1:9222/json/version
 ## Git / PRs
 
 - Use `just fix` during edits, `just check-changed` before handoff, and `just check` before commit/CI handoff.
-- Run `just hooks-install` after clone or after hook migration changes.
+- Runtime feed commands only need this repository's Node dependencies. Maintenance recipes such as `just doctor`, `just check`, `just sync-if-needed`, and `just hooks-install` also require the shared repo standards checkout at `../markolo-shared` or `REPO_STANDARDS_LOCAL` pointing to that checkout.
+- Run `just hooks-install` after clone or after hook migration changes once the shared repo standards checkout is available.
 - Commit hooks require Conventional Commits. Use messages like `feat: add feed doctor` or `fix: handle missing render input`.
 
 ## Supported platforms
