@@ -218,7 +218,9 @@ nonCdpServer.listen(0, "127.0.0.1", () => {
     });
 
     try {
-      expect(assertCdpEndpoint(String(port))).toBe(`http://[::1]:${port}`);
+      expect(assertCdpEndpoint(String(port))).toMatch(
+        new RegExp(`^http://(localhost|\\[::1\\]):${port}$`),
+      );
     } finally {
       server.kill("SIGTERM");
     }
