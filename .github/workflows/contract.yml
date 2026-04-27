@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  MARKOLO_SHARED_STANDARDS_REF: f031f28c9cc4ba1f8a8d48de2f513da103338e24
+  MARKOLO_SHARED_STANDARDS_REF: 1b0a83ead0459551beec44a549d0d4c92accd5b3
 
 jobs:
   contract:
