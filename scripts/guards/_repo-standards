@@ -4,10 +4,23 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-cli="$ROOT_DIR/scripts/vendor/repo-standards-cli.cjs"
-if [[ ! -f "$cli" ]]; then
-  echo "repo-standards CLI not found at $cli" >&2
-  exit 1
+if [[ -n "${REPO_STANDARDS_LOCAL:-}" ]]; then
+  cli="$REPO_STANDARDS_LOCAL/packages/repo-standards/dist/cli.js"
+  if [[ ! -f "$cli" ]]; then
+    echo "repo-standards CLI not found at $cli" >&2
+    exit 1
+  fi
+  exec node "$cli" "$@" --root "$ROOT_DIR" --config repo-standards.config.json
 fi
 
-exec node "$cli" "$@" --root "$ROOT_DIR" --config repo-standards.config.json
+if command -v repo-standards >/dev/null 2>&1; then
+  exec repo-standards "$@" --root "$ROOT_DIR" --config repo-standards.config.json
+fi
+
+cat >&2 <<'MSG'
+repo-standards is maintainer-only tooling and is not required for normal feed-tools use.
+
+To run this guard, set REPO_STANDARDS_LOCAL to a markolo-shared checkout or install a repo-standards binary on PATH.
+Normal consumers can run pnpm install and the feed-* commands without markolo-shared access.
+MSG
+exit 1
