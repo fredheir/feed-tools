@@ -7,9 +7,11 @@
  *   prep <source>
  *     Outputs JSON describing how to navigate and prepare the feed.
  *
- *   extract <source> [limit]
+ *   extract <source> [limit] [--download [filename]]
  *     Outputs the extraction JavaScript to stdout.  The agent runs
  *     this in the browser via the CiC javascript_tool MCP call.
+ *     With --download, the script triggers a browser download instead
+ *     of returning the JSON payload through the MCP result channel.
  *
  *   ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
  *     Reads a raw capture document from <json-file>, normalises,
@@ -25,14 +27,18 @@ import {
   resolveCanonicalSaveDir,
 } from "./config.ts";
 import { getSourceConfig, listCicSources } from "./cic/source-config.ts";
-import { getExtractionScript, isCicSupported } from "./cic/extract.ts";
+import {
+  buildDownloadExtractionScript,
+  getExtractionScript,
+  isCicSupported,
+} from "./cic/extract.ts";
 import { ingestDocument } from "./cic/ingest.ts";
 import { hasNewUnclassifiedItems } from "./source-capture.ts";
 
 function usage(): never {
   console.log(`Usage:
   feed-capture-cic prep <source>
-  feed-capture-cic extract <source> [limit]
+  feed-capture-cic extract <source> [limit] [--download [filename]]
   feed-capture-cic ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
 
 Supported CiC sources: ${listCicSources().join(", ")}
@@ -61,14 +67,21 @@ function cmdPrep(sourceName: string): void {
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 }
 
-function cmdExtract(sourceName: string, limit: number): void {
+function cmdExtract(
+  sourceName: string,
+  limit: number,
+  flags: { downloadFilename?: string },
+): void {
   if (!isCicSupported(sourceName)) {
     console.error(
       `Source "${sourceName}" is not supported for CiC extraction.`,
     );
     process.exit(1);
   }
-  process.stdout.write(getExtractionScript(sourceName, limit));
+  const script = flags.downloadFilename
+    ? buildDownloadExtractionScript(sourceName, limit, flags.downloadFilename)
+    : getExtractionScript(sourceName, limit);
+  process.stdout.write(script);
   process.stdout.write("\n");
 }
 
@@ -137,15 +150,41 @@ if (subcommand === "prep") {
 } else if (subcommand === "extract") {
   const sourceName = args[1];
   if (!sourceName) {
-    console.error("Usage: feed-capture-cic extract <source> [limit]");
+    console.error(
+      "Usage: feed-capture-cic extract <source> [limit] [--download [filename]]",
+    );
     process.exit(1);
   }
-  const limit = args[2] ? Number.parseInt(args[2], 10) : 12;
-  if (args[2] && Number.isNaN(limit)) {
-    console.error(`Invalid limit: ${args[2]}`);
+  let limit = 12;
+  let limitWasSet = false;
+  const flags: { downloadFilename?: string } = {};
+  for (let i = 2; i < args.length; i += 1) {
+    const arg = args[i];
+    if (!arg) continue;
+    if (arg === "--download") {
+      const next = args[i + 1];
+      if (next && !next.startsWith("--")) {
+        flags.downloadFilename = next;
+        i += 1;
+      } else {
+        flags.downloadFilename = `cic-capture-${sourceName}.json`;
+      }
+      continue;
+    }
+    if (!arg.startsWith("--") && !limitWasSet) {
+      const parsedLimit = Number.parseInt(arg, 10);
+      if (Number.isNaN(parsedLimit)) {
+        console.error(`Invalid limit: ${arg}`);
+        process.exit(1);
+      }
+      limit = parsedLimit;
+      limitWasSet = true;
+      continue;
+    }
+    console.error(`Unknown argument: ${arg}`);
     process.exit(1);
   }
-  cmdExtract(sourceName, limit);
+  cmdExtract(sourceName, limit, flags);
 } else if (subcommand === "ingest") {
   const sourceName = args[1];
   const jsonFile = args[2];

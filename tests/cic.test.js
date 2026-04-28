@@ -107,6 +107,27 @@ describe("feed-capture-cic extract", () => {
     expect(script).toContain("const limit = 12");
   });
 
+  test("can wrap extraction as a browser download", () => {
+    const script = run(["extract", "x", "7", "--download"]);
+    expect(script).toContain("new Blob([json]");
+    expect(script).toContain('transport: "download"');
+    expect(script).toContain('filename: "cic-capture-x.json"');
+    expect(script).toContain("const limit = 7");
+    expect(script).toContain('source: "x"');
+    expect(() => new Function(script)).not.toThrow();
+  });
+
+  test("sanitizes custom download filenames", () => {
+    const script = run([
+      "extract",
+      "x",
+      "--download",
+      "../nested/capture.json",
+    ]);
+    expect(script).toContain('filename: "..-nested-capture.json"');
+    expect(script).not.toContain("../nested/capture.json");
+  });
+
   test("rejects unsupported source", () => {
     expect(() => run(["extract", "facebook"])).toThrow();
   });
