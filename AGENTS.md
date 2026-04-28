@@ -236,6 +236,11 @@ One-time setup:
    "Sites can ask to automatically download multiple files".
    (Without this, every download after the first per-session is
    silently blocked.)
+3. In `chrome://extensions`, open the Claude in Chrome extension
+   details and enable "Allow access to file URLs". This lets CiC open
+   the rendered `file:///sessions/.../mnt/.../var/feed.html` tab after
+   `feed-render`; without it, render still succeeds but the agent must
+   tell the user to open the HTML manually.
 
 Per source:
 
@@ -337,6 +342,12 @@ poll-and-log JS]`, then a separate later `read_console_messages`.
 ./bin/feed-curate --sources x
 ./bin/feed-render --tab
 ```
+
+If the Claude in Chrome extension has "Allow access to file URLs"
+enabled, navigate CiC to the rendered `file://` URL after `feed-render`
+so the result opens in the user's browser. If that toggle is off, do
+not debug the renderer; tell the user the HTML was written and give the
+path to open manually.
 
 ### Config
 
