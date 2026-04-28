@@ -283,4 +283,115 @@ describe("feed-curate", () => {
     expect(stdout).not.toContain("x:6");
     expect(stdout).toContain("hits:");
   });
+
+  test("applies --limit per source before combining multi-source output", () => {
+    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-curate-test-"));
+    tempDirs.push(saveDir);
+    const configPath = writeTestConfig(repoRoot);
+    const outputPath = path.join(saveDir, "workset.json");
+
+    const xDocument = {
+      schema_version: 1,
+      source: "x",
+      captured_at: "2026-04-03T10:00:00Z",
+      items: [
+        {
+          id: "x:limit-1",
+          source: "x",
+          author: { handle: "@x1" },
+          content: { text: "first x item" },
+          stats: {},
+        },
+        {
+          id: "x:limit-2",
+          source: "x",
+          author: { handle: "@x2" },
+          content: { text: "second x item" },
+          stats: {},
+        },
+      ],
+    };
+    const blueskyDocument = {
+      schema_version: 1,
+      source: "bluesky",
+      captured_at: "2026-04-03T10:00:00Z",
+      items: [
+        {
+          id: "bluesky:limit-1",
+          source: "bluesky",
+          author: { handle: "@b1" },
+          content: { text: "first bluesky item" },
+          stats: {},
+        },
+        {
+          id: "bluesky:limit-2",
+          source: "bluesky",
+          author: { handle: "@b2" },
+          content: { text: "second bluesky item" },
+          stats: {},
+        },
+      ],
+    };
+    persistSourceDocument(saveDir, {
+      sourceName: "x",
+      document: xDocument,
+    });
+    persistSourceDocument(saveDir, {
+      sourceName: "bluesky",
+      document: blueskyDocument,
+    });
+    saveAllocationToDb(saveDir, xDocument, {
+      version: 1,
+      source: "x",
+      items: {
+        "x:limit-1": {
+          category: "Coding",
+          updated_at: "2026-04-03T12:00:00Z",
+        },
+        "x:limit-2": {
+          category: "Coding",
+          updated_at: "2026-04-03T12:00:00Z",
+        },
+      },
+    });
+    saveAllocationToDb(saveDir, blueskyDocument, {
+      version: 1,
+      source: "bluesky",
+      items: {
+        "bluesky:limit-1": {
+          category: "Politics",
+          updated_at: "2026-04-03T12:00:00Z",
+        },
+        "bluesky:limit-2": {
+          category: "Politics",
+          updated_at: "2026-04-03T12:00:00Z",
+        },
+      },
+    });
+
+    execFileSync(
+      process.execPath,
+      [
+        "./bin/feed-curate",
+        outputPath,
+        "--save-dir",
+        saveDir,
+        "--sources",
+        "x,bluesky",
+        "--limit",
+        "1",
+      ],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: withConfigEnv(configPath),
+      },
+    );
+
+    const items = JSON.parse(fs.readFileSync(outputPath, "utf8")).items;
+    expect(items.map((item) => item.id)).toEqual([
+      "x:limit-1",
+      "bluesky:limit-1",
+    ]);
+  });
 });

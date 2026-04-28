@@ -447,19 +447,17 @@ function exportDocumentsFromDb(
       .filter((document): document is FeedDocument => Boolean(document));
     const stateByKey = loadItemStateMap(db, selectedSources);
 
-    if (documents.length === 1) {
-      return applyStateFilters(documents[0], stateByKey, {
+    const filteredDocuments = documents.map((document) =>
+      applyStateFilters(document, stateByKey, {
         excludeSeen,
         excludeCompleted,
         limit,
-      });
-    }
+      }),
+    );
 
-    return applyStateFilters(combineDocuments(documents), stateByKey, {
-      excludeSeen,
-      excludeCompleted,
-      limit,
-    });
+    if (filteredDocuments.length === 1) return filteredDocuments[0];
+
+    return combineDocuments(filteredDocuments);
   } finally {
     db.close();
   }

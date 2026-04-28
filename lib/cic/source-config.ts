@@ -67,8 +67,8 @@ const SOURCE_CONFIGS = {
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
-        const n = document.querySelectorAll('[data-id]').length;
-        return n > 0;
+        const text = document.querySelector('main')?.innerText || '';
+        return text.includes('Feed post') || text.includes('Promoted') || text.length > 1000;
       })()`,
     ],
     scrollTopScript: SCROLL_TOP_SCRIPT,
@@ -77,9 +77,73 @@ const SOURCE_CONFIGS = {
       if (main) main.scrollBy({ top: Math.round(main.clientHeight * 0.9), behavior: "instant" });
       else window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
     })()`,
-    itemCountExpression: `document.querySelectorAll('[data-id]').length`,
+    itemCountExpression: `(document.querySelector('main')?.innerText.match(/Feed post/g) || []).length`,
     blockedUrlPatterns: ["/login", "/authwall"],
     blockedTextPatterns: ["sign in", "join now"],
+  },
+
+  instagram: {
+    url: "https://www.instagram.com/",
+    urlPrefixes: ["https://www.instagram.com/"],
+    readyChecks: [
+      "document.readyState === 'complete'",
+      `(() => {
+        const articles = document.querySelectorAll('main article').length;
+        const t = document.body?.innerText || "";
+        return articles > 0 || t.includes("For you") || t.includes("Following");
+      })()`,
+    ],
+    scrollTopScript: SCROLL_TOP_SCRIPT,
+    scrollDownScript: SCROLL_DOWN_WINDOW,
+    itemCountExpression: `document.querySelectorAll('main article').length`,
+    blockedUrlPatterns: ["/accounts/login", "/challenge/", "/checkpoint/"],
+    blockedTextPatterns: ["log in"],
+  },
+
+  tiktok: {
+    url: "https://www.tiktok.com/",
+    urlPrefixes: ["https://www.tiktok.com/"],
+    readyChecks: [
+      "document.readyState === 'complete'",
+      `(() => {
+        const articles = document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length;
+        const videos = document.querySelectorAll('video').length;
+        const t = document.body?.innerText || "";
+        return articles > 0 || videos > 0 || t.includes("For You");
+      })()`,
+      `(() => {
+        const items = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"];
+        return Array.isArray(items) && items.length > 0;
+      })()`,
+    ],
+    scrollTopScript: SCROLL_TOP_SCRIPT,
+    scrollDownScript: SCROLL_DOWN_WINDOW,
+    itemCountExpression: `document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length`,
+    blockedUrlPatterns: ["/login", "captcha"],
+    blockedTextPatterns: ["log in", "captcha"],
+  },
+
+  youtube: {
+    url: "https://www.youtube.com/",
+    urlPrefixes: ["https://www.youtube.com/"],
+    readyChecks: [
+      "document.readyState === 'complete'",
+      `(() => {
+        const hasFeedTabs = document.querySelectorAll('[role="tab"]').length > 0;
+        const hasVideoCards = document.querySelectorAll('div.ytLockupViewModelHost').length > 0;
+        const hasShortsCards = document.querySelectorAll('ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length > 0;
+        return hasFeedTabs && (hasVideoCards || hasShortsCards);
+      })()`,
+      `(() => {
+        const text = document.body?.innerText || "";
+        return !text.includes("Turn on history") && !text.includes("Leave history off");
+      })()`,
+    ],
+    scrollTopScript: SCROLL_TOP_SCRIPT,
+    scrollDownScript: `window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: "instant" })`,
+    itemCountExpression: `document.querySelectorAll('div.ytLockupViewModelHost, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length`,
+    blockedUrlPatterns: ["consent", "sorry"],
+    blockedTextPatterns: ["Turn on history", "Make YouTube your own"],
   },
 } as const;
 
@@ -92,7 +156,8 @@ const hasOwnSourceConfig = (sourceName: string): sourceName is CicSourceName =>
 /**
  * Facebook is not supported in CiC mode because its capture adapter uses
  * accessibility-tree snapshots (snapshotText) rather than JS extraction.
- * A dedicated CiC adapter for Facebook would need to use read_page instead.
+ * A dedicated CiC adapter for Facebook would need to use read_page or the
+ * accessibility tree of the Chrome connector instead.
  */
 
 function getSourceConfig(sourceName: string): CicSourceConfig | null {

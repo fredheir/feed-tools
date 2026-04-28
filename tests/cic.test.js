@@ -5,6 +5,14 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const CLI = join(import.meta.dirname, "..", "bin", "feed-capture-cic");
+const CIC_SOURCES = [
+  "x",
+  "bluesky",
+  "linkedin",
+  "instagram",
+  "tiktok",
+  "youtube",
+];
 
 function run(args) {
   return execFileSync("node", [CLI, ...args], {
@@ -37,6 +45,17 @@ describe("feed-capture-cic prep", () => {
     const output = JSON.parse(run(["prep", "linkedin"]));
     expect(output.source).toBe("linkedin");
     expect(output.url).toContain("linkedin.com");
+  });
+
+  test.each(CIC_SOURCES)("returns valid JSON for %s", (source) => {
+    const output = JSON.parse(run(["prep", source]));
+    expect(output.source).toBe(source);
+    expect(output.url).toMatch(/^https:\/\//);
+    expect(output.urlPrefixes).toBeInstanceOf(Array);
+    expect(output.readyChecks.length).toBeGreaterThan(0);
+    expect(output.scrollTopScript).toBeTruthy();
+    expect(output.scrollDownScript).toBeTruthy();
+    expect(output.itemCountExpression).toBeTruthy();
   });
 
   test("rejects unsupported source", () => {
@@ -73,6 +92,14 @@ describe("feed-capture-cic extract", () => {
     const script = run(["extract", "linkedin"]);
     expect(script).toContain("(() => {");
     expect(script).toContain('source: "linkedin"');
+  });
+
+  test.each(CIC_SOURCES)("outputs parseable JavaScript for %s", (source) => {
+    const script = run(["extract", source, "4"]);
+    expect(script).toContain("(() => {");
+    expect(script).toContain("const limit = 4");
+    expect(script).toContain(`source: "${source}"`);
+    expect(() => new Function(script)).not.toThrow();
   });
 
   test("defaults limit to 12", () => {

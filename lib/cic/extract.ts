@@ -1,11 +1,17 @@
 import { buildExtractionScript as buildBlueskyScript } from "../../sources/bluesky/capture.ts";
+import { buildExtractionScript as buildInstagramScript } from "../../sources/instagram/capture.ts";
 import { buildExtractionScript as buildLinkedInScript } from "../../sources/linkedin/capture.ts";
+import { buildExtractionScript as buildTikTokScript } from "../../sources/tiktok/capture.ts";
 import { buildExtractionScript as buildXScript } from "../../sources/x/capture.ts";
+import { buildExtractionScript as buildYouTubeScript } from "../../sources/youtube/capture.ts";
 
 const EXTRACTION_SCRIPTS = {
   x: buildXScript,
   bluesky: buildBlueskyScript,
   linkedin: buildLinkedInScript,
+  instagram: buildInstagramScript,
+  tiktok: buildTikTokScript,
+  youtube: buildYouTubeScript,
 };
 
 type CicSourceName = keyof typeof EXTRACTION_SCRIPTS;
