@@ -60,5 +60,8 @@ describe("generated browser extraction scripts", () => {
       String.raw`\/groups\/[^/?#]+\/(?:posts|permalink)\/[^/?#]+`,
     );
     expect(script).not.toContain("photo|groups");
+    expect(script).not.toContain("videos|watch|permalink");
+    expect(script).toContain("path === '/watch'");
+    expect(script).toContain("parsed.searchParams.get('v')");
   });
 });

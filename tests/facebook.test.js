@@ -33,6 +33,20 @@ describe("extractFacebookSourceItemId", () => {
     ).toBe("permalink:123456789");
   });
 
+  test("extracts group permalink identifiers", () => {
+    expect(
+      extractFacebookSourceItemId(
+        "https://www.facebook.com/groups/123/permalink/987654321/",
+      ),
+    ).toBe("groups:987654321");
+  });
+
+  test("extracts watch identifiers from query strings", () => {
+    expect(
+      extractFacebookSourceItemId("https://www.facebook.com/watch/?v=13579"),
+    ).toBe("watch:13579");
+  });
+
   test("unwraps l.facebook redirects", () => {
     expect(
       extractFacebookSourceItemId(

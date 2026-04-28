@@ -514,10 +514,17 @@ export function buildExtractionScript(limit: number): string {
     const FB_BASE = "https://www.facebook.com";
 
     function isPostPermalink(url) {
+      try {
+        const parsed = new URL(url, FB_BASE);
+        const path = parsed.pathname.replace(/\\/+$/, '');
+        if (path === '/watch' && parsed.searchParams.get('v')) return true;
+      } catch {
+        return false;
+      }
       if (/\\/groups\\/[^/?#]+\\/(?:posts|permalink)\\/[^/?#]+/i.test(url)) {
         return true;
       }
-      return /\\/(posts|reel|videos|watch|permalink|photo)\\b/i.test(url);
+      return /\\/(posts|reel|videos|permalink|photo)\\b/i.test(url);
     }
 
     function pickPermalink(root) {

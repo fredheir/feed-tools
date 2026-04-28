@@ -46,14 +46,14 @@ function extractFacebookSourceItemId(
     }
 
     const path = parsed.pathname.replace(/\/+$/, "");
-    let match = path.match(/\/groups\/[^/]+\/posts\/(\d+)/);
+    let match = path.match(/\/groups\/[^/]+\/(?:posts|permalink)\/([^/?#]+)/);
     if (match) return `groups:${match[1]}`;
 
     match = path.match(/\/reel\/(\d+)/);
     if (match) return `reel:${match[1]}`;
 
-    match = path.match(/\/watch\/?\?v=(\d+)/);
-    if (match) return `watch:${match[1]}`;
+    const watchId = parsed.searchParams.get("v");
+    if (path === "/watch" && watchId) return `watch:${watchId}`;
 
     match = path.match(/\/videos\/(\d+)/);
     if (match) return `video:${match[1]}`;
