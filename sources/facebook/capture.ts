@@ -1,5 +1,10 @@
 #!/usr/bin/env node
-import { canonicalizeItemUrl } from "../../lib/item-shape.ts";
+import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
+import {
+  canonicalizeItemUrl,
+  isPlainObject,
+  normalizeItemShape,
+} from "../../lib/item-shape.ts";
 import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
@@ -494,6 +499,250 @@ const source = {
   captureDocument,
 } as unknown as CaptureAdapter;
 const prepareFeed = prepareFacebookFeed;
+
+/**
+ * CiC (Claude in Chrome) extraction script.  Unlike the regular Facebook
+ * adapter (which relies on the accessibility-tree snapshot), this runs in
+ * the page context and reads the rendered DOM directly.  Returns a JSON
+ * string with raw items that `normalizeFacebookExtractionDocument` later
+ * converts to canonical FeedItems.
+ */
+export function buildExtractionScript(limit: number): string {
+  return buildBrowserRuntimeScript(
+    limit,
+    `
+    const FB_BASE = "https://www.facebook.com";
+
+    function pickPermalink(root) {
+      const links = Array.from(root.querySelectorAll('a[href]'));
+      for (const link of links) {
+        const href = link.getAttribute('href') || '';
+        const abs = makeAbsoluteUrl(href, FB_BASE);
+        if (!abs) continue;
+        if (/\\/(posts|reel|videos|watch|permalink|photo|groups)\\b/.test(abs)) {
+          return abs;
+        }
+      }
+      const timeLink = root.querySelector('a[role="link"] time, a[role="link"] abbr')?.closest('a[href]');
+      const timeHref = timeLink?.getAttribute('href');
+      return timeHref ? makeAbsoluteUrl(timeHref, FB_BASE) : null;
+    }
+
+    function pickAuthorLink(root) {
+      const links = Array.from(root.querySelectorAll('h2 a[href], h3 a[href], h4 a[href], strong a[href]'));
+      for (const link of links) {
+        const text = textOf(link);
+        if (text && text.length > 1) return link;
+      }
+      // Fallback: first profile/page link with non-empty text.
+      const fallback = Array.from(root.querySelectorAll('a[href]')).find((link) => {
+        const href = link.getAttribute('href') || '';
+        const text = textOf(link);
+        return text.length > 1 && /^\\/(?!plugins|sharer|home|login)[A-Za-z0-9._-]+\\/?($|\\?)/.test(href);
+      });
+      return fallback || null;
+    }
+
+    function pickAuthorImage(root, authorName) {
+      const images = Array.from(root.querySelectorAll('image[xlink\\\\:href], svg image, img[src]'));
+      for (const img of images) {
+        const alt = String(img.getAttribute('alt') || img.getAttribute('aria-label') || '').trim();
+        const xlink = img.getAttribute('xlink:href') || img.getAttribute('href');
+        const src = img.currentSrc || img.src || xlink || null;
+        if (!src) continue;
+        if (alt && authorName && alt.includes(authorName)) return src;
+        if (/profile/i.test(alt)) return src;
+      }
+      return null;
+    }
+
+    function isNoiseRoot(root) {
+      const text = (root.innerText || '').replace(/\\s+/g, ' ').trim();
+      if (!text) return true;
+      if (/^People you may know/i.test(text)) return true;
+      if (/^Suggested for you/i.test(text)) return true;
+      if (/^Friend requests/i.test(text)) return true;
+      if (/^Stories/i.test(text)) return true;
+      return false;
+    }
+
+    function getStats(root) {
+      const text = multilineTextOf(root);
+      function pick(re) {
+        const m = text.match(re);
+        return m ? m[1] : null;
+      }
+      return {
+        like: pick(/(\\d[\\d,.KkMm]*)\\s+(?:reactions?|likes?)/i),
+        reply: pick(/(\\d[\\d,.KkMm]*)\\s+comments?/i),
+        share: pick(/(\\d[\\d,.KkMm]*)\\s+shares?/i),
+        view: pick(/(\\d[\\d,.KkMm]*)\\s+views?/i),
+      };
+    }
+
+    function getMedia(root, authorImageUrl) {
+      const out = [];
+      const seen = new Set();
+      for (const video of Array.from(root.querySelectorAll('video[poster], video[src]'))) {
+        const src = video.getAttribute('poster') || video.getAttribute('src') || null;
+        if (!src || seen.has(src)) continue;
+        seen.add(src);
+        out.push({
+          src,
+          href: video.closest('a[href]')?.href || null,
+          alt: video.getAttribute('aria-label') || 'video',
+          media_kind: 'video',
+        });
+      }
+      for (const img of Array.from(root.querySelectorAll('img[src]'))) {
+        const src = img.currentSrc || img.src || '';
+        if (!src || src === authorImageUrl || seen.has(src)) continue;
+        const rect = img.getBoundingClientRect();
+        if (rect.width < 120 && rect.height < 120) continue;
+        seen.add(src);
+        out.push({
+          src,
+          href: img.closest('a[href]')?.href || null,
+          alt: img.getAttribute('alt') || null,
+          media_kind: 'image',
+        });
+      }
+      return out;
+    }
+
+    function getPostText(root, authorName) {
+      const blocks = Array.from(root.querySelectorAll('[data-ad-preview="message"], [data-ad-comet-preview="message"], div[dir="auto"]'));
+      const candidates = blocks
+        .map((node) => multilineTextOf(node))
+        .filter((text) => text && text !== authorName && text.length > 12);
+      candidates.sort((a, b) => b.length - a.length);
+      if (candidates[0]) return candidates[0];
+      const lines = linesOf(root);
+      return lines
+        .filter((line) => line && line !== authorName && line.length > 12 && !/^\\d+[smhdwy]$/i.test(line))
+        .slice(0, 4)
+        .join('\\n');
+    }
+
+    function getEmbeddedLinks(root, permalinkUrl) {
+      const out = [];
+      const seen = new Set();
+      for (const link of Array.from(root.querySelectorAll('a[href]'))) {
+        const href = makeAbsoluteUrl(link.getAttribute('href'), FB_BASE);
+        if (!href || href === permalinkUrl || seen.has(href)) continue;
+        if (/^https:\\/\\/www\\.facebook\\.com\\/(?:plugins|sharer|home|login|stories)/i.test(href)) continue;
+        if (/^https:\\/\\/www\\.facebook\\.com\\/[A-Za-z0-9._-]+\\/?$/.test(href)) continue;
+        seen.add(href);
+        out.push({
+          href,
+          text: textOf(link) || null,
+          kind: /facebook\\.com/i.test(href) ? 'entity' : 'link',
+        });
+      }
+      return out;
+    }
+
+    function pickPostRoots() {
+      const roots = Array.from(document.querySelectorAll('[role="article"]'));
+      // De-dupe nested articles: keep outer-most.
+      return roots.filter((node) => !roots.some((other) => other !== node && other.contains(node)));
+    }
+
+    const items = pickPostRoots()
+      .slice(0, Math.max(limit * 3, limit))
+      .map((root, idx) => {
+        if (isNoiseRoot(root)) return null;
+        const permalinkUrl = pickPermalink(root);
+        const authorLink = pickAuthorLink(root);
+        const authorName = textOf(authorLink) || null;
+        const authorHref = authorLink?.href ? makeAbsoluteUrl(authorLink.getAttribute('href'), FB_BASE) : null;
+        const authorImageUrl = pickAuthorImage(root, authorName);
+        const text = getPostText(root, authorName);
+        if (!text || text.length < 12) return null;
+        return {
+          source: "facebook",
+          source_item_id: null,
+          index: idx + 1,
+          url: permalinkUrl,
+          author: {
+            handle: authorName,
+            display_name: authorName,
+            profile_image_url: authorImageUrl,
+            profile_url: authorHref,
+          },
+          content: { text },
+          stats: getStats(root),
+          media: getMedia(root, authorImageUrl),
+          cards: [],
+          embedded_links: getEmbeddedLinks(root, permalinkUrl),
+          thread: {
+            has_thread_line: false,
+            thread_line_height: null,
+            thread_line_x: null,
+            child_candidate_index: null,
+            child_candidate_handle: null,
+            child_candidate_url: null,
+            relationship_confidence: null,
+          },
+        };
+      })
+      .filter(Boolean)
+      .slice(0, limit);
+
+    return JSON.stringify({
+      schema_version: 1,
+      source: "facebook",
+      captured_at: new Date().toISOString(),
+      items,
+    });
+    `,
+  );
+}
+
+type RawFacebookExtractionPayload = {
+  captured_at?: string | null;
+  items: Parameters<typeof normalizeItemShape>[0][];
+};
+
+function assertRawFacebookExtractionPayload(
+  payload: unknown,
+): asserts payload is RawFacebookExtractionPayload {
+  if (!isPlainObject(payload) || !Array.isArray(payload.items)) {
+    throw new Error("Invalid facebook extraction payload");
+  }
+}
+
+export function normalizeFacebookExtractionDocument(
+  payload: unknown,
+): FeedDocument {
+  assertRawFacebookExtractionPayload(payload);
+  const capturedAt =
+    typeof payload.captured_at === "string" && payload.captured_at
+      ? payload.captured_at
+      : new Date().toISOString();
+  const items = payload.items
+    .map((item, index) => {
+      const url = typeof item.url === "string" ? item.url : null;
+      const sourceItemId =
+        extractFacebookSourceItemId(url) ||
+        (typeof item.source_item_id === "string" ? item.source_item_id : null);
+      const normalized = normalizeItemShape(
+        { ...item, source_item_id: sourceItemId },
+        { source: "facebook", index: index + 1 },
+      );
+      if (normalized.url) {
+        normalized.url = canonicalizeItemUrl("facebook", normalized.url);
+      }
+      return normalized;
+    })
+    .filter((item) => isFacebookItemWorthKeeping(item));
+  return {
+    schema_version: 1,
+    source: "facebook",
+    captured_at: capturedAt,
+    items,
+  };
+}
 
 export {
   source,

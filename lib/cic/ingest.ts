@@ -7,6 +7,7 @@ import {
   persistCapturedDocument,
 } from "../source-capture.ts";
 
+import { normalizeFacebookExtractionDocument } from "../../sources/facebook/capture.ts";
 import { normalizeInstagramExtractionDocument } from "../../sources/instagram/capture.ts";
 import { normalizeYouTubeExtractionDocument } from "../../sources/youtube/capture.ts";
 
@@ -19,6 +20,7 @@ import { normalizeYouTubeExtractionDocument } from "../../sources/youtube/captur
 const PRE_NORMALISERS: Record<string, (raw: unknown) => FeedDocument> = {
   instagram: (raw) => normalizeInstagramExtractionDocument(raw),
   youtube: (raw) => normalizeYouTubeExtractionDocument(raw),
+  facebook: (raw) => normalizeFacebookExtractionDocument(raw),
 };
 
 function preNormalise(rawDocument: unknown, sourceName: string): FeedDocument {

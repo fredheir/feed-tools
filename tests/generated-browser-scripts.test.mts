@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { buildExtractionScript as buildBlueskyScript } from "../sources/bluesky/capture.ts";
+import { buildExtractionScript as buildFacebookScript } from "../sources/facebook/capture.ts";
 import { buildExtractionScript as buildInstagramScript } from "../sources/instagram/capture.ts";
 import { buildExtractionScript as buildLinkedInScript } from "../sources/linkedin/capture.ts";
 import { buildExtractionScript as buildTikTokScript } from "../sources/tiktok/capture.ts";
@@ -9,6 +10,7 @@ import { buildExtractionScript as buildYouTubeScript } from "../sources/youtube/
 
 const scripts = {
   bluesky: buildBlueskyScript,
+  facebook: buildFacebookScript,
   instagram: buildInstagramScript,
   linkedin: buildLinkedInScript,
   tiktok: buildTikTokScript,

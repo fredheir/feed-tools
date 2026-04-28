@@ -198,70 +198,142 @@ daemon.
 
 ### Supported sources
 
-`x`, `bluesky`, `linkedin`, `instagram`, `tiktok`, `youtube`. Facebook
-is not supported because its adapter relies on accessibility-tree
-snapshots (`snapshotText`), which have no direct CiC equivalent yet.
+`x`, `bluesky`, `linkedin`, `instagram`, `tiktok`, `youtube`, `facebook`.
+The Facebook CiC adapter reads the rendered DOM directly
+(`buildExtractionScript` in `sources/facebook/capture.ts`); the legacy
+accessibility-tree path is still the default for the regular
+(non-CiC) capture flow.
 
-`youtube` and `instagram` extraction emits a non-canonical payload
-(YouTube returns `cards`, Instagram emits items needing source-id
-enrichment); `lib/cic/ingest.ts` runs per-source pre-normalisers
-(`normalizeYouTubeExtractionDocument`, `normalizeInstagramExtractionDocument`)
-before merging.
+`youtube`, `instagram`, and `facebook` extraction emit non-canonical
+payloads; `lib/cic/ingest.ts` runs per-source pre-normalisers
+(`normalizeYouTubeExtractionDocument`,
+`normalizeInstagramExtractionDocument`,
+`normalizeFacebookExtractionDocument`) before merging.
 
 ### CLI
 
 ```text
 feed-capture-cic prep <source>
 feed-capture-cic extract <source> [limit] [--download [filename]]
-feed-capture-cic configure-downloads [download-dir] [--profile DIR]
 feed-capture-cic ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
 ```
 
-### Agent orchestration flow
+### Recommended flow: per-source `browser_batch` with download transport
+
+This is the fastest path that actually works in Cowork today. One
+`browser_batch` per source, then bash reads the downloaded file and
+ingests. Do **not** chain multiple `[navigate, js]` pairs into one
+batch - the next `navigate` destroys the previous tab's pending
+`setTimeout`, killing the polling-then-download script before it fires.
+
+One-time setup:
+
+1. Mount `~/Downloads` in the sandbox via the filesystem connector
+   (`request_cowork_directory ~/Downloads`). Anything Chrome writes
+   to its default download folder then appears under
+   `/sessions/.../mnt/Downloads/`.
+2. In Chrome: `chrome://settings/content/automaticDownloads` ->
+   "Sites can ask to automatically download multiple files".
+   (Without this, every download after the first per-session is
+   silently blocked.)
+
+Per source:
+
+```
+# 1. Generate the polling-aware extract+download script.
+script=$(./bin/feed-capture-cic extract x 30 --download cic-capture-x.json)
+
+# 2. Fire one browser_batch:
+#    -> mcp__Claude_in_Chrome__browser_batch({
+#        actions: [
+#          { name: "navigate",         input: { url: "https://x.com/home", tabId } },
+#          { name: "javascript_tool",  input: { tabId, action: "javascript_exec", text: script } },
+#        ],
+#      })
+#    The script polls until itemCountExpression returns >= minItems (default 3)
+#    and is stable across two ticks, or until the timeout (default 8000ms)
+#    fires, then triggers exactly one <a download>. File lands at
+#    ~/Downloads/cic-capture-x.json.
+
+# 3. Read + ingest from the sandbox mount path exposed by the filesystem connector:
+./bin/feed-capture-cic ingest x /sessions/.../mnt/Downloads/cic-capture-x.json
+```
+
+Repeat steps 1-3 for each source you want.
+
+### Fallback: console.log channel
+
+Use this when the download path is unavailable (no `~/Downloads` mount,
+or auto-downloads disabled in Chrome). Two MCP round-trips per source
+and a per-source byte cap of roughly 100-200 KB.
 
 ```
 # 1. Get navigation + ready-check metadata
 prep=$(./bin/feed-capture-cic prep x)
 
-# 2. Navigate via CiC MCP
-#    → mcp__Claude_in_Chrome__navigate({ url: prep.url, tabId })
+# 2. Navigate
+#    -> mcp__Claude_in_Chrome__navigate({ url: prep.url, tabId })
 
-# 3. Run each readyCheck via CiC javascript_tool
-#    → mcp__Claude_in_Chrome__javascript_tool({ text: check, tabId })
+# 3. Run each readyCheck via javascript_tool
+#    -> mcp__Claude_in_Chrome__javascript_tool({ text: check, tabId })
 
-# 4. Scroll to top
-#    → mcp__Claude_in_Chrome__javascript_tool({ text: prep.scrollTopScript, tabId })
-
-# 5. Get extraction script and run it via console.log channel
+# 4. Scroll to top + extract via console.log
 script=$(./bin/feed-capture-cic extract x 30)
-#    The CiC security filter blocks URL-containing JSON in return values.
-#    Wrap the script to output via console.log, which is unfiltered:
-#    → mcp__Claude_in_Chrome__javascript_tool({
+#    The CiC security filter blocks URL-containing JSON in return values,
+#    so wrap the script to log instead:
+#    -> mcp__Claude_in_Chrome__javascript_tool({
 #        text: 'console.log("CIC_DATA:" + (' + script + '))',
 #        tabId
 #      })
-#    → mcp__Claude_in_Chrome__read_console_messages({
+#    -> mcp__Claude_in_Chrome__read_console_messages({
 #        tabId, pattern: "CIC_DATA", clear: true
 #      })
-#    → strip prefix, save result JSON to ./var/cic-capture.json
+#    NOTE: read_console_messages must be called once on the tab before
+#    the message fires, otherwise the line is dropped. In a batch, put a
+#    no-op read_console_messages action before navigate, then navigate,
+#    run javascript_tool, and read_console_messages again.
+#    -> strip the "CIC_DATA:" prefix and save the JSON.
 
-# 5a. Preferred transport: browser download into the workspace
-#     Run before launching the workspace Chrome profile used by CiC:
-./bin/feed-capture-cic configure-downloads ./var/cic-downloads --profile ./chrome-profile
-#     Then run the download-wrapped script in CiC:
-script=$(./bin/feed-capture-cic extract x 30 --download cic-capture-x.json)
-#    → mcp__Claude_in_Chrome__javascript_tool({ text: script, tabId })
-#    → wait for ./var/cic-downloads/cic-capture-x.json to appear
-#    → use that path directly for ingest
+# 5. Ingest as usual
+./bin/feed-capture-cic ingest x ./var/cic-capture-x.json
+```
 
-# 6. (Optional) Scroll loop for more items
-#    → mcp__Claude_in_Chrome__javascript_tool({ text: prep.scrollDownScript, tabId })
-#    → re-run extraction via same console.log pattern, merge results
+#### console.log gotchas (read this if you choose this path)
 
-# 7. Ingest into the standard pipeline
-./bin/feed-capture-cic ingest x ./var/cic-capture.json
+- **Console tracking starts on first read.** A `read_console_messages`
+  call that arrives before the first `console.log` on the tab silently
+  returns nothing. Either (a) put a no-op `read_console_messages` as
+  the first action in your batch, or (b) accept that the read
+  immediately following the JS will miss and do a follow-up read in
+  the next turn - by then the message is buffered and survives until
+  you `clear: true`.
+- **Wait for items before logging.** The synchronous extract right
+  after `navigate` runs against an empty DOM. Wrap the script in a
+  poll loop that only fires `console.log` once
+  `itemCountExpression >= minItems` or a timeout elapses (same shape
+  as `buildDownloadExtractionScript` uses for the download path -
+  reuse the polling wrapper or copy it).
+- **Always pass `pattern`.** `read_console_messages` returns up to 100
+  unrelated app logs without it. Use a unique prefix per source
+  (`CIC_DATA_x`, `CIC_DATA_bluesky`, etc.) and pass that prefix as
+  `pattern` so reads can't cross-contaminate.
+- **Set `clear: true`.** Otherwise re-reads (which you'll do on
+  retries) return stale data plus the new line.
+- **Per-source byte budget ~100-200 KB.** A 30-card YouTube payload
+  (~30 KB) sails through; a payload past ~200 KB risks being truncated
+  by the connector. If you need bigger, switch to the download path.
+- **Don't chain navigates in one batch.** Each `navigate` destroys the
+  previous tab's JS heap, killing any pending `setTimeout` from a
+  polling extract. Use one `browser_batch` per source: `[navigate,
+poll-and-log JS]`, then a separate later `read_console_messages`.
+- **The CiC security filter strips URL-bearing JSON from JS return
+  values.** That's why we route via `console.log` in the first place;
+  do not try to "just return the JSON" from `javascript_tool` for
+  sources whose payloads contain URLs.
 
-# 8. Continue with normal curation
+### Continue with the standard pipeline
+
+```
 ./bin/feed-curate --sources x
 ./bin/feed-render --tab
 ```
