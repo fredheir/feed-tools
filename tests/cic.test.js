@@ -107,6 +107,7 @@ describe("feed-capture-cic extract", () => {
   test("can wrap extraction as a browser download", () => {
     const script = run(["extract", "x", "7", "--download"]);
     expect(script).toContain("new Promise");
+    expect(script).toContain("reject(error)");
     expect(script).toContain("new Blob([json]");
     expect(script).toContain('link.download = "cic-capture-x.json"');
     expect(script).toContain("const limit = 7");

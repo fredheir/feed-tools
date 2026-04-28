@@ -517,14 +517,17 @@ export function buildExtractionScript(limit: number): string {
       try {
         const parsed = new URL(url, FB_BASE);
         const path = parsed.pathname.replace(/\\/+$/, '');
+        if (/\\/groups\\/[^/]+\\/(?:posts|permalink)\\/[^/?#]+$/i.test(path)) return true;
+        if (/\\/reel\\/\\d+$/i.test(path)) return true;
+        if (/\\/videos\\/\\d+$/i.test(path)) return true;
+        if (/\\/[^/]+\\/posts\\/[^/?#]+$/i.test(path)) return true;
         if (path === '/watch' && parsed.searchParams.get('v')) return true;
+        if (path === '/photo' && parsed.searchParams.get('fbid')) return true;
+        if (path === '/permalink.php' && parsed.searchParams.get('story_fbid')) return true;
       } catch {
         return false;
       }
-      if (/\\/groups\\/[^/?#]+\\/(?:posts|permalink)\\/[^/?#]+/i.test(url)) {
-        return true;
-      }
-      return /\\/(posts|reel|videos|permalink|photo)\\b/i.test(url);
+      return false;
     }
 
     function pickPermalink(root) {

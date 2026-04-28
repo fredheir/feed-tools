@@ -57,11 +57,13 @@ describe("generated browser extraction scripts", () => {
     const script = buildFacebookScript(2);
 
     expect(script).toContain(
-      String.raw`\/groups\/[^/?#]+\/(?:posts|permalink)\/[^/?#]+`,
+      String.raw`\/groups\/[^/]+\/(?:posts|permalink)\/[^/?#]+$`,
     );
     expect(script).not.toContain("photo|groups");
     expect(script).not.toContain("videos|watch|permalink");
     expect(script).toContain("path === '/watch'");
     expect(script).toContain("parsed.searchParams.get('v')");
+    expect(script).toContain("path === '/photo'");
+    expect(script).toContain("path === '/permalink.php'");
   });
 });

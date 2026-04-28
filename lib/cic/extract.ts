@@ -57,28 +57,34 @@ export function buildDownloadExtractionScript(
   const minItems = options.minItems ?? 3;
   const timeoutMs = options.timeoutMs ?? 8000;
   const itemCountExpr = options.itemCountExpression ?? "1";
-  return `(() => new Promise((resolve) => {
+  return `(() => new Promise((resolve, reject) => {
     const start = Date.now();
     let fired = false;
     let previousCount = -1;
     let stableTicks = 0;
     function fire() {
       if (fired) return;
-      fired = true;
-      const json = (${extractionScript});
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = ${JSON.stringify(safeFilename)};
-      link.rel = "noopener";
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-      window.__CIC_LAST__ = { ok: true, source: ${JSON.stringify(sourceName)}, bytes: json.length, filename: ${JSON.stringify(safeFilename)} };
-      resolve(JSON.stringify(window.__CIC_LAST__));
+      try {
+        const json = (${extractionScript});
+        fired = true;
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = ${JSON.stringify(safeFilename)};
+        link.rel = "noopener";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        window.__CIC_LAST__ = { ok: true, source: ${JSON.stringify(sourceName)}, bytes: json.length, filename: ${JSON.stringify(safeFilename)} };
+        resolve(JSON.stringify(window.__CIC_LAST__));
+      } catch (error) {
+        fired = true;
+        window.__CIC_LAST__ = { ok: false, source: ${JSON.stringify(sourceName)}, error: String(error?.message || error) };
+        reject(error);
+      }
     }
     function tick() {
       try {
