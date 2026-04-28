@@ -116,6 +116,26 @@ describe("feed-capture-cic extract", () => {
     expect(() => new Function(script)).not.toThrow();
   });
 
+  test("passes download polling options into the generated script", () => {
+    const script = run([
+      "extract",
+      "x",
+      "7",
+      "--download",
+      "--min-items",
+      "6",
+      "--stable-ticks",
+      "4",
+      "--timeout-ms",
+      "15000",
+    ]);
+
+    expect(script).toContain("count >= 6");
+    expect(script).toContain("stableTicks >= 4");
+    expect(script).toContain("Date.now() - start > 15000");
+    expect(() => new Function(script)).not.toThrow();
+  });
+
   test("sanitizes custom download filenames", () => {
     const script = run([
       "extract",

@@ -8,6 +8,7 @@
  *     Outputs JSON describing how to navigate and prepare the feed.
  *
  *   extract <source> [limit] [--download [filename]]
+ *     [--min-items N] [--stable-ticks N] [--timeout-ms N]
  *     Outputs the extraction JavaScript to stdout.  The agent runs
  *     this in the browser via the CiC javascript_tool MCP call.
  *     With --download, the script triggers a browser download instead
@@ -38,7 +39,7 @@ import { hasNewUnclassifiedItems } from "./source-capture.ts";
 function usage(): never {
   console.log(`Usage:
   feed-capture-cic prep <source>
-  feed-capture-cic extract <source> [limit] [--download [filename]]
+  feed-capture-cic extract <source> [limit] [--download [filename]] [--min-items N] [--stable-ticks N] [--timeout-ms N]
   feed-capture-cic ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
 
 Supported CiC sources: ${listCicSources().join(", ")}
@@ -70,7 +71,12 @@ function cmdPrep(sourceName: string): void {
 function cmdExtract(
   sourceName: string,
   limit: number,
-  flags: { downloadFilename?: string },
+  flags: {
+    downloadFilename?: string;
+    minItems?: number;
+    stableTicks?: number;
+    timeoutMs?: number;
+  },
 ): void {
   if (!isCicSupported(sourceName)) {
     console.error(
@@ -80,15 +86,24 @@ function cmdExtract(
   }
   const config = getSourceConfig(sourceName);
   const script = flags.downloadFilename
-    ? buildDownloadExtractionScript(
-        sourceName,
-        limit,
-        flags.downloadFilename,
-        config ? { itemCountExpression: config.itemCountExpression } : {},
-      )
+    ? buildDownloadExtractionScript(sourceName, limit, flags.downloadFilename, {
+        itemCountExpression: config?.itemCountExpression,
+        minItems: flags.minItems,
+        stableTicks: flags.stableTicks,
+        timeoutMs: flags.timeoutMs,
+      })
     : getExtractionScript(sourceName, limit);
   process.stdout.write(script);
   process.stdout.write("\n");
+}
+
+function parsePositiveInteger(value: string, name: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0 || String(parsed) !== value) {
+    console.error(`Invalid ${name}: ${value}`);
+    process.exit(1);
+  }
+  return parsed;
 }
 
 async function cmdIngest(
@@ -163,7 +178,12 @@ if (subcommand === "prep") {
   }
   let limit = 12;
   let limitWasSet = false;
-  const flags: { downloadFilename?: string } = {};
+  const flags: {
+    downloadFilename?: string;
+    minItems?: number;
+    stableTicks?: number;
+    timeoutMs?: number;
+  } = {};
   for (let i = 2; i < args.length; i += 1) {
     const arg = args[i];
     if (!arg) continue;
@@ -177,13 +197,21 @@ if (subcommand === "prep") {
       }
       continue;
     }
+    if (
+      arg === "--min-items" ||
+      arg === "--stable-ticks" ||
+      arg === "--timeout-ms"
+    ) {
+      const value = requireArgValue(args, i, arg);
+      const parsed = parsePositiveInteger(value, arg);
+      if (arg === "--min-items") flags.minItems = parsed;
+      if (arg === "--stable-ticks") flags.stableTicks = parsed;
+      if (arg === "--timeout-ms") flags.timeoutMs = parsed;
+      i += 1;
+      continue;
+    }
     if (!arg.startsWith("--") && !limitWasSet) {
-      const parsedLimit = Number.parseInt(arg, 10);
-      if (Number.isNaN(parsedLimit)) {
-        console.error(`Invalid limit: ${arg}`);
-        process.exit(1);
-      }
-      limit = parsedLimit;
+      limit = parsePositiveInteger(arg, "limit");
       limitWasSet = true;
       continue;
     }

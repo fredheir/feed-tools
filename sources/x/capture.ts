@@ -162,7 +162,11 @@ function buildExtractionScript(limit: number): string {
     }
 
     function getProfileImageUrl(article) {
+      const avatarContainer =
+        article.querySelector('[data-testid="Tweet-User-Avatar"]') ||
+        article.querySelector('[data-testid^="UserAvatar-Container-"]');
       const avatarImg =
+        avatarContainer?.querySelector("img[src]") ||
         article.querySelector('[data-testid="Tweet-User-Avatar"] img[src]') ||
         article.querySelector('[data-testid^="UserAvatar-Container-"] img[src]');
       if (avatarImg?.src) return avatarImg.src;
@@ -177,11 +181,62 @@ function buildExtractionScript(limit: number): string {
       });
       if (fallback?.src) return fallback.src;
 
+      function findProfileImageUrlInProps(value, seen = new Set(), depth = 0) {
+        if (!value || depth > 5) return null;
+        if (typeof value === "string") {
+          return value.includes("pbs.twimg.com/profile_images/") ? value : null;
+        }
+        if (typeof value !== "object" || seen.has(value)) return null;
+        seen.add(value);
+
+        for (const [key, nested] of Object.entries(value)) {
+          if (
+            typeof nested === "string" &&
+            key.toLowerCase().includes("profile") &&
+            nested.includes("pbs.twimg.com/profile_images/")
+          ) {
+            return nested;
+          }
+        }
+        for (const nested of Object.values(value)) {
+          const match = findProfileImageUrlInProps(nested, seen, depth + 1);
+          if (match) return match;
+        }
+        return null;
+      }
+
+      function getReactFiberProfileImageUrl(root) {
+        if (!root) return null;
+        const nodes = [root, ...Array.from(root.querySelectorAll("*"))];
+        for (const node of nodes) {
+          const fiberKey = Object.keys(node).find((key) =>
+            key.startsWith("__reactFiber$"),
+          );
+          let fiber = fiberKey ? node[fiberKey] : null;
+          for (let depth = 0; fiber && depth < 20; depth += 1) {
+            const match = findProfileImageUrlInProps(fiber.memoizedProps);
+            if (match) return match;
+            fiber = fiber.return;
+          }
+
+          const propsKey = Object.keys(node).find((key) =>
+            key.startsWith("__reactProps$"),
+          );
+          const propsMatch = propsKey
+            ? findProfileImageUrlInProps(node[propsKey])
+            : null;
+          if (propsMatch) return propsMatch;
+        }
+        return null;
+      }
+
+      const reactProfileImageUrl =
+        getReactFiberProfileImageUrl(avatarContainer) ||
+        getReactFiberProfileImageUrl(article);
+      if (reactProfileImageUrl) return reactProfileImageUrl;
+
       // Fallback: extract from background-image CSS (works in CiC where
       // the security filter strips <img> elements but leaves CSS intact).
-      const avatarContainer =
-        article.querySelector('[data-testid="Tweet-User-Avatar"]') ||
-        article.querySelector('[data-testid^="UserAvatar-Container-"]');
       if (avatarContainer) {
         const divs = Array.from(avatarContainer.querySelectorAll("div"));
         for (const div of divs) {

@@ -67,4 +67,13 @@ describe("generated browser extraction scripts", () => {
     expect(script).toContain("path === '/photo'");
     expect(script).toContain("path === '/permalink.php'");
   });
+
+  test("x script can recover avatars from React fiber props", () => {
+    const script = buildXScript(2);
+
+    expect(script).toContain("__reactFiber$");
+    expect(script).toContain("__reactProps$");
+    expect(script).toContain("pbs.twimg.com/profile_images/");
+    expect(script).toContain("memoizedProps");
+  });
 });
