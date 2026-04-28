@@ -511,6 +511,8 @@ export function buildExtractionScript(limit: number): string {
     function isPostPermalink(url) {
       try {
         const parsed = new URL(url, FB_BASE);
+        const host = parsed.hostname.replace(/^www\\./, '');
+        if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) return false;
         const path = parsed.pathname.replace(/\\/+$/, '');
         if (/\\/groups\\/[^/]+\\/(?:posts|permalink)\\/[^/?#]+$/i.test(path)) return true;
         if (/\\/reel\\/\\d+$/i.test(path)) return true;

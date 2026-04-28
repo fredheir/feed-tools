@@ -59,6 +59,7 @@ describe("generated browser extraction scripts", () => {
     expect(script).toContain(
       String.raw`\/groups\/[^/]+\/(?:posts|permalink)\/[^/?#]+$`,
     );
+    expect(script).toContain("host !== 'facebook.com'");
     expect(script).not.toContain("photo|groups");
     expect(script).not.toContain("videos|watch|permalink");
     expect(script).toContain("path === '/watch'");
