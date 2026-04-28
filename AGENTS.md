@@ -198,9 +198,15 @@ daemon.
 
 ### Supported sources
 
-`x`, `bluesky`, `linkedin`. Facebook is not supported because its
-adapter relies on accessibility-tree snapshots (`snapshotText`), which
-have no direct CiC equivalent yet.
+`x`, `bluesky`, `linkedin`, `instagram`, `tiktok`, `youtube`. Facebook
+is not supported because its adapter relies on accessibility-tree
+snapshots (`snapshotText`), which have no direct CiC equivalent yet.
+
+`youtube` and `instagram` extraction emits a non-canonical payload
+(YouTube returns `cards`, Instagram emits items needing source-id
+enrichment); `lib/cic/ingest.ts` runs per-source pre-normalisers
+(`normalizeYouTubeExtractionDocument`, `normalizeInstagramExtractionDocument`)
+before merging.
 
 ### CLI
 

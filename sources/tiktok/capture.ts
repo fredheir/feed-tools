@@ -175,14 +175,14 @@ function findTikTokButtonCount(
 }
 
 function buildTikTokItemsFromDom(limit: number): FeedItem[] {
-  const articles = Array.from<BrowserElement>(
+  const articles = Array.from(
     document.querySelectorAll(
       'article[data-e2e="recommend-list-item-container"]',
     ),
-  );
+  ) as BrowserElement[];
   return articles.slice(0, limit).flatMap((article, idx): FeedItem[] => {
-    const authorLink = Array.from<BrowserElement>(
-      article.querySelectorAll("a[href]"),
+    const authorLink = (
+      Array.from(article.querySelectorAll("a[href]")) as BrowserElement[]
     ).find((link) => {
       const href = String(link.getAttribute("href") || "");
       return /^\/@[^/]+$/.test(href) && Boolean(textOf(link));
@@ -197,23 +197,27 @@ function buildTikTokItemsFromDom(limit: number): FeedItem[] {
       sourceItemId && handleText
         ? `${TIKTOK_BASE_URL}/@${handleText}/video/${sourceItemId}`
         : null;
-    const cover = Array.from<BrowserElement>(
-      article.querySelectorAll("img[src]"),
+    const cover = (
+      Array.from(article.querySelectorAll("img[src]")) as BrowserElement[]
     )
       .map((img) => ({
         src: img.currentSrc || img.src || null,
         alt: String(img.getAttribute("alt") || "").trim(),
       }))
       .find((img) => img.src && !img.src.startsWith("data:"));
-    const embeddedLinks = Array.from<BrowserElement>(
-      article.querySelectorAll('a[href*="/tag/"], a[href*="/music/"]'),
+    const embeddedLinks = (
+      Array.from(
+        article.querySelectorAll('a[href*="/tag/"], a[href*="/music/"]'),
+      ) as BrowserElement[]
     ).map((link) => ({
       href: makeAbsoluteUrl(link.getAttribute("href"), TIKTOK_BASE_URL),
       text: textOf(link) || null,
       kind: "entity",
     }));
-    const buttons = Array.from<BrowserElement>(
-      article.querySelectorAll("button,[role='button']"),
+    const buttons = (
+      Array.from(
+        article.querySelectorAll("button,[role='button']"),
+      ) as BrowserElement[]
     ).map((button) => ({
       text: textOf(button),
       aria: String(button.getAttribute("aria-label") || ""),

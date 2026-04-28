@@ -190,9 +190,9 @@ function normalizeYouTubeExtractionDocument(payload: unknown): FeedDocument {
 function buildExtractionScript(limit: number): string {
   return buildBrowserRuntimeScript(
     limit,
-    `
+    String.raw`
     function normalizeText(value) {
-      return String(value || "").replace(/\\s+/g, " ").trim();
+      return String(value || "").replace(/\s+/g, " ").trim();
     }
 
     function findText(nodes) {
@@ -287,7 +287,7 @@ function buildExtractionScript(limit: number): string {
         durationText: normalizeText(textOf(durationNode)) || fallbackDurationText,
         thumbnailUrl,
         profileImageUrl: authorImage,
-        sponsored: /\\bSponsored\\b/i.test(normalizeText(textOf(root))),
+        sponsored: /\bSponsored\b/i.test(normalizeText(textOf(root))),
       };
     }
 

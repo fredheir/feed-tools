@@ -37,8 +37,17 @@ describe("generated browser extraction scripts", () => {
     expect(script).toContain("webapp.updated-items");
     expect(script).toContain("buildTikTokItemsFromUniversalData");
     expect(script).toContain("buildTikTokItemsFromDom");
+    expect(script).not.toContain("Array.from                (");
     expect(script).toContain(
       'article[data-e2e="recommend-list-item-container"]',
     );
+  });
+
+  test("youtube script preserves regex escapes used by text fallbacks", () => {
+    const script = buildYouTubeScript(2);
+
+    expect(script).toContain(String.raw`/(\d[\d.,KMBmkmb]*\s+views?)/i`);
+    expect(script).toContain(String.raw`/\bSponsored\b/i`);
+    expect(script).not.toContain("/(d[d.,KMBmkmb]*s+views?)/i");
   });
 });
