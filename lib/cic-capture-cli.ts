@@ -13,10 +13,6 @@
  *     With --download, the script triggers a browser download instead
  *     of returning the JSON payload through the MCP result channel.
  *
- *   configure-downloads [download-dir] [--profile DIR]
- *     Creates the download directory and writes Chrome profile
- *     preferences so downloads land in the workspace without prompting.
- *
  *   ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
  *     Reads a raw capture document from <json-file>, normalises,
  *     deduplicates, merges with existing state, downloads assets,
@@ -24,7 +20,6 @@
  */
 
 import fs from "node:fs";
-import path from "node:path";
 import { requireArgValue } from "./cli-args.ts";
 import {
   loadOptionalConfig,
@@ -40,109 +35,15 @@ import {
 import { ingestDocument } from "./cic/ingest.ts";
 import { hasNewUnclassifiedItems } from "./source-capture.ts";
 
-const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-const DEFAULT_CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
-const DEFAULT_CIC_DOWNLOAD_DIR = path.join(REPO_ROOT, "var", "cic-downloads");
-
 function usage(): never {
   console.log(`Usage:
   feed-capture-cic prep <source>
   feed-capture-cic extract <source> [limit] [--download [filename]]
-  feed-capture-cic configure-downloads [download-dir] [--profile DIR]
   feed-capture-cic ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
 
 Supported CiC sources: ${listCicSources().join(", ")}
 `);
   process.exit(0);
-}
-
-function readJsonObject(filePath: string): Record<string, unknown> {
-  if (!fs.existsSync(filePath)) return {};
-  const value = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`Expected JSON object in ${filePath}`);
-  }
-  return value as Record<string, unknown>;
-}
-
-function writeJsonObject(
-  filePath: string,
-  value: Record<string, unknown>,
-): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-}
-
-function setNestedObject(
-  target: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> {
-  const existing = target[key];
-  if (existing && typeof existing === "object" && !Array.isArray(existing)) {
-    return existing as Record<string, unknown>;
-  }
-  const created: Record<string, unknown> = {};
-  target[key] = created;
-  return created;
-}
-
-function configureChromeDownloads({
-  profileDir,
-  downloadDir,
-}: {
-  profileDir: string;
-  downloadDir: string;
-}): { profileDir: string; downloadDir: string; preferencesPath: string } {
-  const resolvedProfileDir = path.resolve(profileDir);
-  const resolvedDownloadDir = path.resolve(downloadDir);
-  const preferencesPath = path.join(
-    resolvedProfileDir,
-    "Default",
-    "Preferences",
-  );
-  fs.mkdirSync(resolvedDownloadDir, { recursive: true });
-
-  const preferences = readJsonObject(preferencesPath);
-  const downloadPrefs = setNestedObject(preferences, "download");
-  downloadPrefs.default_directory = resolvedDownloadDir;
-  downloadPrefs.directory_upgrade = true;
-  downloadPrefs.prompt_for_download = false;
-
-  const saveFilePrefs = setNestedObject(preferences, "savefile");
-  saveFilePrefs.default_directory = resolvedDownloadDir;
-
-  writeJsonObject(preferencesPath, preferences);
-  return {
-    profileDir: resolvedProfileDir,
-    downloadDir: resolvedDownloadDir,
-    preferencesPath,
-  };
-}
-
-function cmdConfigureDownloads(args: string[]): void {
-  let downloadDir = DEFAULT_CIC_DOWNLOAD_DIR;
-  let profileDir = DEFAULT_CHROME_PROFILE;
-  let downloadDirWasSet = false;
-
-  for (let i = 0; i < args.length; i += 1) {
-    const arg = args[i];
-    if (!arg) continue;
-    if (arg === "--profile") {
-      profileDir = requireArgValue(args, i, arg);
-      i += 1;
-      continue;
-    }
-    if (!arg.startsWith("--") && !downloadDirWasSet) {
-      downloadDir = arg;
-      downloadDirWasSet = true;
-      continue;
-    }
-    console.error(`Unknown argument: ${arg}`);
-    process.exit(1);
-  }
-
-  const result = configureChromeDownloads({ profileDir, downloadDir });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
 function cmdPrep(sourceName: string): void {
@@ -177,8 +78,14 @@ function cmdExtract(
     );
     process.exit(1);
   }
+  const config = getSourceConfig(sourceName);
   const script = flags.downloadFilename
-    ? buildDownloadExtractionScript(sourceName, limit, flags.downloadFilename)
+    ? buildDownloadExtractionScript(
+        sourceName,
+        limit,
+        flags.downloadFilename,
+        config ? { itemCountExpression: config.itemCountExpression } : {},
+      )
     : getExtractionScript(sourceName, limit);
   process.stdout.write(script);
   process.stdout.write("\n");
@@ -284,8 +191,6 @@ if (subcommand === "prep") {
     process.exit(1);
   }
   cmdExtract(sourceName, limit, flags);
-} else if (subcommand === "configure-downloads") {
-  cmdConfigureDownloads(args.slice(1));
 } else if (subcommand === "ingest") {
   const sourceName = args[1];
   const jsonFile = args[2];

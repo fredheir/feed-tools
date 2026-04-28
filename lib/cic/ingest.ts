@@ -7,6 +7,7 @@ import {
   persistCapturedDocument,
 } from "../source-capture.ts";
 
+import { normalizeFacebookExtractionDocument } from "../../sources/facebook/capture.ts";
 import { normalizeInstagramExtractionDocument } from "../../sources/instagram/capture.ts";
 import { normalizeYouTubeExtractionDocument } from "../../sources/youtube/capture.ts";
 
@@ -17,8 +18,9 @@ import { normalizeYouTubeExtractionDocument } from "../../sources/youtube/captur
  * emits canonical items can omit the entry.
  */
 const PRE_NORMALISERS: Record<string, (raw: unknown) => FeedDocument> = {
-  instagram: (raw) => normalizeInstagramExtractionDocument(raw),
-  youtube: (raw) => normalizeYouTubeExtractionDocument(raw),
+  instagram: normalizeInstagramExtractionDocument,
+  youtube: normalizeYouTubeExtractionDocument,
+  facebook: normalizeFacebookExtractionDocument,
 };
 
 function preNormalise(rawDocument: unknown, sourceName: string): FeedDocument {

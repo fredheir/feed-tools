@@ -145,6 +145,28 @@ const SOURCE_CONFIGS = {
     blockedUrlPatterns: ["consent", "sorry"],
     blockedTextPatterns: ["Turn on history", "Make YouTube your own"],
   },
+
+  facebook: {
+    url: "https://www.facebook.com/",
+    urlPrefixes: ["https://www.facebook.com/", "https://m.facebook.com/"],
+    readyChecks: [
+      "document.readyState === 'complete'",
+      `(() => {
+        const articles = document.querySelectorAll('[role="article"]').length;
+        const t = document.body?.innerText || "";
+        return articles > 0 || t.includes("What's on your mind") || t.includes("Stories");
+      })()`,
+    ],
+    scrollTopScript: SCROLL_TOP_SCRIPT,
+    scrollDownScript: SCROLL_DOWN_WINDOW,
+    itemCountExpression: `document.querySelectorAll('[role="article"]').length`,
+    blockedUrlPatterns: ["/login", "/checkpoint"],
+    blockedTextPatterns: [
+      "log in to facebook",
+      "forgotten password",
+      "forgot password",
+    ],
+  },
 } as const;
 
 type CicSourceName = keyof typeof SOURCE_CONFIGS;
@@ -154,10 +176,10 @@ const hasOwnSourceConfig = (sourceName: string): sourceName is CicSourceName =>
   Object.prototype.hasOwnProperty.call(SOURCE_CONFIGS, sourceName);
 
 /**
- * Facebook is not supported in CiC mode because its capture adapter uses
- * accessibility-tree snapshots (snapshotText) rather than JS extraction.
- * A dedicated CiC adapter for Facebook would need to use read_page or the
- * accessibility tree of the Chrome connector instead.
+ * Facebook now has a CiC-compatible adapter that reads the rendered DOM
+ * directly (see sources/facebook/capture.ts buildExtractionScript).  The
+ * legacy accessibility-tree path remains the default for the regular
+ * (non-CiC) capture flow.
  */
 
 function getSourceConfig(sourceName: string): CicSourceConfig | null {

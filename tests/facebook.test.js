@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   extractFacebookSourceItemId,
   isFacebookItemWorthKeeping,
+  normalizeFacebookExtractionDocument,
   scoreFacebookItemQuality,
 } from "../sources/facebook/capture.ts";
 import { canonicalizeItemUrl } from "../lib/item-shape.ts";
@@ -30,6 +31,20 @@ describe("extractFacebookSourceItemId", () => {
         "https://www.facebook.com/permalink.php?story_fbid=123456789&id=42",
       ),
     ).toBe("permalink:123456789");
+  });
+
+  test("extracts group permalink identifiers", () => {
+    expect(
+      extractFacebookSourceItemId(
+        "https://www.facebook.com/groups/123/permalink/987654321/",
+      ),
+    ).toBe("groups:987654321");
+  });
+
+  test("extracts watch identifiers from query strings", () => {
+    expect(
+      extractFacebookSourceItemId("https://www.facebook.com/watch/?v=13579"),
+    ).toBe("watch:13579");
   });
 
   test("unwraps l.facebook redirects", () => {
@@ -130,5 +145,45 @@ describe("facebook item quality", () => {
       'button "Send this to friends or post it on your profile."',
     );
     expect(snapshot).toContain('heading "Sponsored" [level=3');
+  });
+});
+
+describe("facebook CiC extraction normalisation", () => {
+  test("canonicalizes extracted items and derives source ids", () => {
+    const document = normalizeFacebookExtractionDocument({
+      captured_at: "2026-04-28T05:00:00Z",
+      items: [
+        {
+          source: "facebook",
+          index: 1,
+          url: "https://www.facebook.com/rolfef/posts/pfbid123/?__tn__=-R",
+          author: {
+            handle: "Rolf",
+            display_name: "Rolf",
+            profile_image_url: "https://example.com/profile.jpg",
+          },
+          content: {
+            text: "This is a real Facebook post extracted from the rendered DOM.",
+          },
+          stats: { like: "10", reply: "2", share: "1", view: null },
+          media: [],
+          cards: [],
+          embedded_links: [],
+          thread: {
+            has_thread_line: false,
+            thread_line_height: null,
+            thread_line_x: null,
+          },
+        },
+      ],
+    });
+
+    expect(document.source).toBe("facebook");
+    expect(document.captured_at).toBe("2026-04-28T05:00:00Z");
+    expect(document.items).toHaveLength(1);
+    expect(document.items[0].source_item_id).toBe("posts:pfbid123");
+    expect(document.items[0].url).toBe(
+      "https://www.facebook.com/rolfef/posts/pfbid123",
+    );
   });
 });
