@@ -213,6 +213,7 @@ before merging.
 ```text
 feed-capture-cic prep <source>
 feed-capture-cic extract <source> [limit] [--download [filename]]
+feed-capture-cic configure-downloads [download-dir] [--profile DIR]
 feed-capture-cic ingest <source> <json-file> [--assets-dir DIR] [--save-dir DIR]
 ```
 
@@ -244,13 +245,10 @@ script=$(./bin/feed-capture-cic extract x 30)
 #      })
 #    → strip prefix, save result JSON to ./var/cic-capture.json
 
-# 5a. Preferred when Chrome downloads are workspace-visible: download channel
-#     One-time browser setup:
-#       chrome://settings/downloads
-#       Location: /home/rolf/Downloads/tempdd/var/cic-downloads
-#       Ask where to save each file before downloading: off
-#     Then run the download-wrapped script:
-mkdir -p ./var/cic-downloads
+# 5a. Preferred transport: browser download into the workspace
+#     Run before launching the workspace Chrome profile used by CiC:
+./bin/feed-capture-cic configure-downloads ./var/cic-downloads --profile ./chrome-profile
+#     Then run the download-wrapped script in CiC:
 script=$(./bin/feed-capture-cic extract x 30 --download cic-capture-x.json)
 #    → mcp__Claude_in_Chrome__javascript_tool({ text: script, tabId })
 #    → wait for ./var/cic-downloads/cic-capture-x.json to appear
