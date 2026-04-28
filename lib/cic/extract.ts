@@ -57,7 +57,7 @@ export function buildDownloadExtractionScript(
   const minItems = options.minItems ?? 3;
   const timeoutMs = options.timeoutMs ?? 8000;
   const itemCountExpr = options.itemCountExpression ?? "1";
-  return `(() => {
+  return `(() => new Promise((resolve) => {
     const start = Date.now();
     let fired = false;
     let previousCount = -1;
@@ -78,6 +78,7 @@ export function buildDownloadExtractionScript(
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
       window.__CIC_LAST__ = { ok: true, source: ${JSON.stringify(sourceName)}, bytes: json.length, filename: ${JSON.stringify(safeFilename)} };
+      resolve(JSON.stringify(window.__CIC_LAST__));
     }
     function tick() {
       try {
@@ -94,8 +95,7 @@ export function buildDownloadExtractionScript(
       setTimeout(tick, 200);
     }
     tick();
-    return JSON.stringify({ scheduled: true, source: ${JSON.stringify(sourceName)} });
-  })()`;
+  }))()`;
 }
 
 export function isCicSupported(

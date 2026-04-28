@@ -513,13 +513,20 @@ export function buildExtractionScript(limit: number): string {
     `
     const FB_BASE = "https://www.facebook.com";
 
+    function isPostPermalink(url) {
+      if (/\\/groups\\/[^/?#]+\\/(?:posts|permalink)\\/[^/?#]+/i.test(url)) {
+        return true;
+      }
+      return /\\/(posts|reel|videos|watch|permalink|photo)\\b/i.test(url);
+    }
+
     function pickPermalink(root) {
       const links = Array.from(root.querySelectorAll('a[href]'));
       for (const link of links) {
         const href = link.getAttribute('href') || '';
         const abs = makeAbsoluteUrl(href, FB_BASE);
         if (!abs) continue;
-        if (/\\/(posts|reel|videos|watch|permalink|photo|groups)\\b/.test(abs)) {
+        if (isPostPermalink(abs)) {
           return abs;
         }
       }

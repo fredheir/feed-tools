@@ -52,4 +52,13 @@ describe("generated browser extraction scripts", () => {
     expect(script).toContain(String.raw`/\bSponsored\b/i`);
     expect(script).not.toContain("/(d[d.,KMBmkmb]*s+views?)/i");
   });
+
+  test("facebook script does not treat group home links as post permalinks", () => {
+    const script = buildFacebookScript(2);
+
+    expect(script).toContain(
+      String.raw`\/groups\/[^/?#]+\/(?:posts|permalink)\/[^/?#]+`,
+    );
+    expect(script).not.toContain("photo|groups");
+  });
 });
