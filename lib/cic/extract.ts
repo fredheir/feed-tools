@@ -49,12 +49,14 @@ export function buildDownloadExtractionScript(
   options: {
     itemCountExpression?: string;
     minItems?: number;
+    stableTicks?: number;
     timeoutMs?: number;
   } = {},
 ): string {
   const extractionScript = getExtractionScript(sourceName, limit);
   const safeFilename = filename.replace(/[\\/]+/g, "-") || "cic-capture.json";
   const minItems = options.minItems ?? 3;
+  const stableTicks = options.stableTicks ?? 1;
   const timeoutMs = options.timeoutMs ?? 8000;
   const itemCountExpr = options.itemCountExpression ?? "1";
   return `(() => new Promise((resolve, reject) => {
@@ -91,7 +93,7 @@ export function buildDownloadExtractionScript(
         const count = Number(${itemCountExpr}) || 0;
         stableTicks = count === previousCount ? stableTicks + 1 : 0;
         previousCount = count;
-        if ((count >= ${minItems} && stableTicks >= 1) || Date.now() - start > ${timeoutMs}) {
+        if ((count >= ${minItems} && stableTicks >= ${stableTicks}) || Date.now() - start > ${timeoutMs}) {
           fire();
           return;
         }
