@@ -32,6 +32,35 @@ export function getExtractionScript(sourceName: string, limit = 12): string {
   return builder(limit);
 }
 
+export function buildDownloadExtractionScript(
+  sourceName: string,
+  limit = 12,
+  filename = `cic-capture-${sourceName}.json`,
+): string {
+  const extractionScript = getExtractionScript(sourceName, limit);
+  const safeFilename = filename.replace(/[\\/]+/g, "-") || "cic-capture.json";
+  return `(() => {
+    const json = (${extractionScript});
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = ${JSON.stringify(safeFilename)};
+    link.rel = "noopener";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return JSON.stringify({
+      ok: true,
+      transport: "download",
+      filename: ${JSON.stringify(safeFilename)},
+      bytes: json.length
+    });
+  })()`;
+}
+
 export function isCicSupported(
   sourceName: string,
 ): sourceName is CicSourceName {

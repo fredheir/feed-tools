@@ -1,6 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
-import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  mkdtempSync,
+  rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -71,6 +78,55 @@ describe("feed-capture-cic prep", () => {
   });
 });
 
+describe("feed-capture-cic configure-downloads", () => {
+  test("writes Chrome preferences for workspace-visible downloads", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cic-downloads-test-"));
+    const profileDir = join(tmp, "chrome-profile");
+    const downloadDir = join(tmp, "var", "cic-downloads");
+
+    const output = JSON.parse(
+      run(["configure-downloads", downloadDir, "--profile", profileDir]),
+    );
+    const preferencesPath = join(profileDir, "Default", "Preferences");
+    const preferences = JSON.parse(readFileSync(preferencesPath, "utf8"));
+
+    expect(output.profileDir).toBe(profileDir);
+    expect(output.downloadDir).toBe(downloadDir);
+    expect(output.preferencesPath).toBe(preferencesPath);
+    expect(existsSync(downloadDir)).toBe(true);
+    expect(preferences.download.default_directory).toBe(downloadDir);
+    expect(preferences.download.prompt_for_download).toBe(false);
+    expect(preferences.download.directory_upgrade).toBe(true);
+    expect(preferences.savefile.default_directory).toBe(downloadDir);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("preserves unrelated Chrome preferences", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cic-downloads-test-"));
+    const profileDir = join(tmp, "chrome-profile");
+    const preferencesPath = join(profileDir, "Default", "Preferences");
+    const downloadDir = join(tmp, "downloads");
+    mkdirSync(join(profileDir, "Default"), { recursive: true });
+    writeFileSync(
+      preferencesPath,
+      JSON.stringify({
+        browser: { check_default_browser: false },
+        download: { old_setting: "kept" },
+      }),
+    );
+
+    run(["configure-downloads", downloadDir, "--profile", profileDir]);
+    const preferences = JSON.parse(readFileSync(preferencesPath, "utf8"));
+
+    expect(preferences.browser.check_default_browser).toBe(false);
+    expect(preferences.download.old_setting).toBe("kept");
+    expect(preferences.download.default_directory).toBe(downloadDir);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+});
+
 describe("feed-capture-cic extract", () => {
   test("outputs a JavaScript IIFE for x", () => {
     const script = run(["extract", "x", "10"]);
@@ -105,6 +161,27 @@ describe("feed-capture-cic extract", () => {
   test("defaults limit to 12", () => {
     const script = run(["extract", "x"]);
     expect(script).toContain("const limit = 12");
+  });
+
+  test("can wrap extraction as a browser download", () => {
+    const script = run(["extract", "x", "7", "--download"]);
+    expect(script).toContain("new Blob([json]");
+    expect(script).toContain('transport: "download"');
+    expect(script).toContain('filename: "cic-capture-x.json"');
+    expect(script).toContain("const limit = 7");
+    expect(script).toContain('source: "x"');
+    expect(() => new Function(script)).not.toThrow();
+  });
+
+  test("sanitizes custom download filenames", () => {
+    const script = run([
+      "extract",
+      "x",
+      "--download",
+      "../nested/capture.json",
+    ]);
+    expect(script).toContain('filename: "..-nested-capture.json"');
+    expect(script).not.toContain("../nested/capture.json");
   });
 
   test("rejects unsupported source", () => {
