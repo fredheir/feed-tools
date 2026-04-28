@@ -500,13 +500,8 @@ const source = {
 } as unknown as CaptureAdapter;
 const prepareFeed = prepareFacebookFeed;
 
-/**
- * CiC (Claude in Chrome) extraction script.  Unlike the regular Facebook
- * adapter (which relies on the accessibility-tree snapshot), this runs in
- * the page context and reads the rendered DOM directly.  Returns a JSON
- * string with raw items that `normalizeFacebookExtractionDocument` later
- * converts to canonical FeedItems.
- */
+// CiC path reads the rendered DOM directly because the accessibility-tree
+// snapshot used by the default adapter has no equivalent inside Chrome.
 export function buildExtractionScript(limit: number): string {
   return buildBrowserRuntimeScript(
     limit,
@@ -587,7 +582,7 @@ export function buildExtractionScript(limit: number): string {
       const text = multilineTextOf(root);
       function pick(re) {
         const m = text.match(re);
-        return m ? m[1] : null;
+        return m ? normalizeCount(m[1]) : null;
       }
       return {
         like: pick(/(\\d[\\d,.KkMm]*)\\s+(?:reactions?|likes?)/i),
@@ -659,15 +654,10 @@ export function buildExtractionScript(limit: number): string {
       return out;
     }
 
-    function pickPostRoots() {
-      const roots = Array.from(document.querySelectorAll('[role="article"]'));
-      // De-dupe nested articles: keep outer-most.
-      return roots.filter((node) => !roots.some((other) => other !== node && other.contains(node)));
-    }
-
-    const items = pickPostRoots()
-      .slice(0, Math.max(limit * 3, limit))
-      .map((root, idx) => {
+    const items = Array.from(document.querySelectorAll('[role="article"]'))
+      .filter((node) => !node.parentElement?.closest('[role="article"]'))
+      .slice(0, limit * 3)
+      .map((root) => {
         if (isNoiseRoot(root)) return null;
         const permalinkUrl = pickPermalink(root);
         const authorLink = pickAuthorLink(root);
@@ -677,9 +667,6 @@ export function buildExtractionScript(limit: number): string {
         const text = getPostText(root, authorName);
         if (!text || text.length < 12) return null;
         return {
-          source: "facebook",
-          source_item_id: null,
-          index: idx + 1,
           url: permalinkUrl,
           author: {
             handle: authorName,
@@ -743,14 +730,10 @@ export function normalizeFacebookExtractionDocument(
       const sourceItemId =
         extractFacebookSourceItemId(url) ||
         (typeof item.source_item_id === "string" ? item.source_item_id : null);
-      const normalized = normalizeItemShape(
+      return normalizeItemShape(
         { ...item, source_item_id: sourceItemId },
         { source: "facebook", index: index + 1 },
       );
-      if (normalized.url) {
-        normalized.url = canonicalizeItemUrl("facebook", normalized.url);
-      }
-      return normalized;
     })
     .filter((item) => isFacebookItemWorthKeeping(item));
   return {

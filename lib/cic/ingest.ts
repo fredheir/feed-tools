@@ -18,9 +18,9 @@ import { normalizeYouTubeExtractionDocument } from "../../sources/youtube/captur
  * emits canonical items can omit the entry.
  */
 const PRE_NORMALISERS: Record<string, (raw: unknown) => FeedDocument> = {
-  instagram: (raw) => normalizeInstagramExtractionDocument(raw),
-  youtube: (raw) => normalizeYouTubeExtractionDocument(raw),
-  facebook: (raw) => normalizeFacebookExtractionDocument(raw),
+  instagram: normalizeInstagramExtractionDocument,
+  youtube: normalizeYouTubeExtractionDocument,
+  facebook: normalizeFacebookExtractionDocument,
 };
 
 function preNormalise(rawDocument: unknown, sourceName: string): FeedDocument {
