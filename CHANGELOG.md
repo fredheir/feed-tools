@@ -4,6 +4,8 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-29
+
 ### Added
 
 - Added CiC capture support for YouTube, TikTok, X download transport, and Facebook capture, so operators can collect more source-specific campaign evidence through the same capture workflow instead of using one-off browser scripts.
