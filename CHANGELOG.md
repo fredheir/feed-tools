@@ -4,6 +4,20 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added CiC capture support for YouTube, TikTok, X download transport, and Facebook capture, so operators can collect more source-specific campaign evidence through the same capture workflow instead of using one-off browser scripts.
+- Added `feed-doctor`, sandbox bootstrap, and sign-in flow improvements, making browser/runtime setup easier to diagnose and recover in sandboxed or bind-mounted workspaces.
+
+### Changed
+
+- Migrated the feed tooling runtime to strict TypeScript with native Node 24 TypeScript execution, removing the custom `tsx` loader wrapper while keeping the CLI entrypoints intact.
+- Adopted the shared repo standards command surface and actions hygiene gates, so local and CI maintenance checks now follow the Markolo repo contract instead of repo-local guard wiring.
+
+### Fixed
+
+- Fixed CiC/X capture extraction and async CLI error handling, so failed capture paths surface cleanly and X downloads produce more reliable captured output.
+
 ## [0.2.0] - 2026-04-02
 
 ### Added
