@@ -6,3 +6,5 @@ minimumReleaseAgeExclude:
   - "@markolo-research/*"
   - "@markolo/*"
 blockExoticSubdeps: true
+trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 10080
