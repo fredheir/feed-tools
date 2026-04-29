@@ -234,11 +234,9 @@ function groupPickedRowsByCategory(
 export {
   assignCategories,
   groupPickedRowsByCategory,
-  loadAllocationFromPath as loadAllocation,
   loadAllocationFromPath,
   loadAllocationFromDocument,
   mergeAllocations,
-  saveAllocationToPath as saveAllocation,
   saveAllocationToPath,
   saveAllocationToDocument,
 };
