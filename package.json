@@ -15,7 +15,7 @@
     "test": "vitest run",
     "doctor": "./bin/feed-doctor",
     "setup:sandbox": "./bin/feed-setup-sandbox",
-    "deadcode": "knip --exclude exports,types",
+    "deadcode": "knip",
     "slop:scan": "slop-scan scan .",
     "slop:lint": "slop-scan scan . --lint",
     "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode",
