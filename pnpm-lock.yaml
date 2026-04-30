@@ -43,8 +43,8 @@ importers:
         specifier: ^3.6.2
         version: 3.8.1
       slop-scan:
-        specifier: ~0.3.0
-        version: 0.3.0
+        specifier: github:modem-dev/slop-scan#v0.4.0
+        version: https://codeload.github.com/modem-dev/slop-scan/tar.gz/0c07c5766bc95c24cf691a114c1ef3bdafab961d
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -2552,11 +2552,12 @@ packages:
       }
     engines: { node: ">=14.16" }
 
-  slop-scan@0.3.0:
+  slop-scan@https://codeload.github.com/modem-dev/slop-scan/tar.gz/0c07c5766bc95c24cf691a114c1ef3bdafab961d:
     resolution:
       {
-        integrity: sha512-uviaHdntkRX5+4RZhzk/N3wYzoW9FMe9XrA4uCuNUslTt8GxbXc8B99YE9map78hJ9/FbXDpmn3phG/EsD7TZQ==,
+        tarball: https://codeload.github.com/modem-dev/slop-scan/tar.gz/0c07c5766bc95c24cf691a114c1ef3bdafab961d,
       }
+    version: 0.4.0
     engines: { node: ">=18" }
     hasBin: true
 
@@ -4282,7 +4283,7 @@ snapshots:
 
   slash@5.1.0: {}
 
-  slop-scan@0.3.0:
+  slop-scan@https://codeload.github.com/modem-dev/slop-scan/tar.gz/0c07c5766bc95c24cf691a114c1ef3bdafab961d:
     dependencies:
       globby: 16.2.0
       typescript: 5.9.3

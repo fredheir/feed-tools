@@ -8,3 +8,6 @@ minimumReleaseAgeExclude:
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 10080
+
+onlyBuiltDependencies:
+  - slop-scan

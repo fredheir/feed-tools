@@ -161,8 +161,13 @@ function probeVideoCodec(filePath: string): VideoProbeResult {
     }
     return { ok: true, codec };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: `ffprobe failed for ${filePath}: ${message}` };
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+    return {
+      ok: false,
+      reason: `ffprobe failed for ${filePath}: ${error.message}`,
+    };
   }
 }
 
@@ -220,10 +225,12 @@ function ensureBrowserPlayableVideo(
       },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    if (!(error instanceof Error)) {
+      throw error;
+    }
     return {
       ok: false,
-      reason: `ffmpeg failed to transcode ${filePath}: ${message}`,
+      reason: `ffmpeg failed to transcode ${filePath}: ${error.message}`,
     };
   }
   return { ok: true, filePath: target };
