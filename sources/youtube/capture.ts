@@ -89,9 +89,9 @@ function parseDurationSeconds(value: string | null | undefined): number | null {
 }
 
 function cleanText(value: string | null | undefined): string {
-  return String(value || "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const rawText = String(value || "");
+  if (!rawText) return "";
+  return rawText.replace(/\s+/g, " ").trim();
 }
 
 function normalizeYouTubeCardsToItems(

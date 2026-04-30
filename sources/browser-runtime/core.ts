@@ -4,9 +4,9 @@ function textOf(
     | null
     | undefined,
 ): string {
-  return (node?.innerText || node?.textContent || "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const rawText = node?.innerText || node?.textContent || "";
+  if (!rawText) return "";
+  return rawText.replace(/\s+/g, " ").trim();
 }
 
 function multilineTextOf(
