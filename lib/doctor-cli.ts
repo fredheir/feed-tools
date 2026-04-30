@@ -349,7 +349,8 @@ function hasSshPrivateKey(sshDir: string): boolean {
           isSshPrivateKeyFilename(entry.name),
       );
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "EACCES" || code === "EPERM") {
       return false;
     }
     throw error;

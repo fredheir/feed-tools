@@ -219,7 +219,12 @@ async function runSourceCapture(
     (normalizedBrowserOptions.statePath || normalizedBrowserOptions.profile);
 
   if (shouldResetSession) {
-    closeBrowserSession(normalizedBrowserOptions);
+    try {
+      closeBrowserSession(normalizedBrowserOptions);
+    } catch {
+      // Preflight reset is best-effort: tolerate "no session" / daemon-not-running
+      // failures so the first capture attempt isn't aborted before it starts.
+    }
   }
 
   const document = await adapter.captureDocument({
