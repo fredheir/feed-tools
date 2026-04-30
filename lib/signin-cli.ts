@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -143,12 +143,11 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 function commandExists(command: string): boolean {
-  try {
-    execFileSync("sh", ["-c", `command -v ${command}`], { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
+  return (
+    spawnSync("sh", ["-c", `command -v ${command}`], {
+      stdio: "ignore",
+    }).status === 0
+  );
 }
 
 function findPythonCommand(): string | null {
@@ -164,12 +163,11 @@ function assertPythonSqliteAvailable(): void {
       "feed-signin requires python3 or python with sqlite3 support",
     );
   }
-  try {
-    execFileSync(python, ["-c", "import sqlite3"], {
-      stdio: "ignore",
-      timeout: 5000,
-    });
-  } catch {
+  const result = spawnSync(python, ["-c", "import sqlite3"], {
+    stdio: "ignore",
+    timeout: 5000,
+  });
+  if (result.status !== 0) {
     throw new Error(`${python} is available but cannot import sqlite3`);
   }
 }
@@ -184,14 +182,12 @@ fetch(process.argv[1], { signal: controller.signal })
   .finally(() => clearTimeout(timeout));
 `;
   for (const url of getCdpVersionUrls(cdpPort)) {
-    try {
-      execFileSync(process.execPath, ["-e", script, url], {
-        stdio: "ignore",
-        timeout: 2000,
-      });
+    const result = spawnSync(process.execPath, ["-e", script, url], {
+      stdio: "ignore",
+      timeout: 2000,
+    });
+    if (result.status === 0) {
       return url;
-    } catch {
-      continue;
     }
   }
   return null;
@@ -237,10 +233,6 @@ export function findCookieStores(profileDir: string): string[] {
   return stores;
 }
 
-function quotePythonJson(value: unknown): string {
-  return JSON.stringify(value);
-}
-
 export function hasAuthCookie(
   cookieStores: string[],
   authCookies: SourceSigninTarget["authCookies"],
@@ -279,21 +271,13 @@ for store in stores:
 sys.exit(1)
 	`;
 
-  try {
-    execFileSync(
+  return (
+    spawnSync(
       python,
-      [
-        "-c",
-        script,
-        quotePythonJson(cookieStores),
-        quotePythonJson(authCookies),
-      ],
+      ["-c", script, JSON.stringify(cookieStores), JSON.stringify(authCookies)],
       { stdio: "ignore", timeout: 5000 },
-    );
-    return true;
-  } catch {
-    return false;
-  }
+    ).status === 0
+  );
 }
 
 function getSigninStatus(
