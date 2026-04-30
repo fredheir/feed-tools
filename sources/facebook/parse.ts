@@ -190,10 +190,9 @@ function isNoiseStaticText(label: string | null | undefined): boolean {
 }
 
 function cleanBodyText(text: string | null | undefined): string {
-  return String(text || "")
-    .replace(/^["“”]\s*/, "")
-    .replace(/\s*["“”]\s*$/, "")
-    .trim();
+  const bodyText = String(text || "").trim();
+  if (!bodyText) return "";
+  return bodyText.replace(/^["“”]\s*/, "").replace(/\s*["“”]\s*$/, "");
 }
 
 function cleanAuthorHeading(label: string | null | undefined): {
