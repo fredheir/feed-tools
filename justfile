@@ -59,5 +59,11 @@ check: doctor fmt-check lint actions-hygiene typecheck test secrets deps-check
 
 ci: check
 
+deps-update:
+    pnpm update --latest
+
+deps-diff:
+    git diff -- package.json pnpm-lock.yaml pnpm-workspace.yaml
+
 hooks-install:
     scripts/guards/_repo-standards hooks-install

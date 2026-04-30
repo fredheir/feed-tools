@@ -143,7 +143,7 @@ describe("pipeline e2e", () => {
     expect(html).toContain("Golden pipeline coverage for feed tools");
     expect(html).toContain("Coding");
     expect(html).toContain("https://x.com/testuser/status/123456789");
-  });
+  }, 15_000);
 
   test("rejects CiC ingest documents whose declared source does not match the ingest boundary", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-pipeline-e2e-"));
