@@ -124,8 +124,15 @@ async function cmdIngest(
   try {
     raw = JSON.parse(fs.readFileSync(jsonFile, "utf8"));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to parse JSON input ${jsonFile}: ${message}`);
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+    throw new Error(
+      `Failed to parse JSON input ${jsonFile}: ${error.message}`,
+      {
+        cause: error,
+      },
+    );
   }
   const appConfig = loadOptionalConfig();
   const defaults = appConfig ? getCaptureDefaults(appConfig, sourceName) : null;

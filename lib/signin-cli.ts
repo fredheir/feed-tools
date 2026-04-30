@@ -1,5 +1,10 @@
 #!/usr/bin/env node
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import {
+  execFileSync,
+  spawn,
+  spawnSync,
+  type ChildProcess,
+} from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -163,12 +168,18 @@ function assertPythonSqliteAvailable(): void {
       "feed-signin requires python3 or python with sqlite3 support",
     );
   }
-  const result = spawnSync(python, ["-c", "import sqlite3"], {
-    stdio: "ignore",
-    timeout: 5000,
-  });
-  if (result.status !== 0) {
-    throw new Error(`${python} is available but cannot import sqlite3`);
+  try {
+    execFileSync(python, ["-c", "import sqlite3"], {
+      stdio: "ignore",
+      timeout: 5000,
+    });
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+    throw new Error(`${python} is available but cannot import sqlite3`, {
+      cause: error,
+    });
   }
 }
 
@@ -271,13 +282,12 @@ for store in stores:
 sys.exit(1)
 	`;
 
-  return (
-    spawnSync(
-      python,
-      ["-c", script, JSON.stringify(cookieStores), JSON.stringify(authCookies)],
-      { stdio: "ignore", timeout: 5000 },
-    ).status === 0
+  const result = spawnSync(
+    python,
+    ["-c", script, JSON.stringify(cookieStores), JSON.stringify(authCookies)],
+    { stdio: "ignore", timeout: 5000 },
   );
+  return result.status === 0;
 }
 
 function getSigninStatus(

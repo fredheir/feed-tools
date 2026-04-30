@@ -153,9 +153,11 @@ if (!noOpen) {
     const browser = createBrowserSession();
     browser.openPathOrUrl(outputPath);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    if (!(error instanceof Error)) {
+      throw error;
+    }
     process.stderr.write(
-      `Render succeeded but could not auto-open ${path.resolve(outputPath)}: ${message}\n`,
+      `Render succeeded but could not auto-open ${path.resolve(outputPath)}: ${error.message}\n`,
     );
   }
 }

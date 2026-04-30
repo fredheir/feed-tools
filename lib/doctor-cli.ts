@@ -340,36 +340,20 @@ export function isSshPrivateKeyFilename(filename: string): boolean {
 }
 
 function hasSshPrivateKey(sshDir: string): boolean {
-  let stats: fs.Stats;
   try {
-    stats = fs.statSync(sshDir);
+    return fs
+      .readdirSync(sshDir, { withFileTypes: true })
+      .some(
+        (entry) =>
+          (entry.isFile() || entry.isSymbolicLink()) &&
+          isSshPrivateKeyFilename(entry.name),
+      );
   } catch (error) {
-    if (isFilesystemMiss(error)) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return false;
     }
     throw error;
   }
-  if (!stats.isDirectory()) return false;
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(sshDir, { withFileTypes: true });
-  } catch (error) {
-    if (isFilesystemMiss(error)) return false;
-    throw error;
-  }
-  return entries.some(
-    (entry) =>
-      (entry.isFile() || entry.isSymbolicLink()) &&
-      isSshPrivateKeyFilename(entry.name),
-  );
-}
-
-function isFilesystemMiss(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    ["EACCES", "ENOENT", "ENOTDIR"].includes(String(error.code))
-  );
 }
 
 function hasSshAgentKey(): boolean {

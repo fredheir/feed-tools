@@ -175,8 +175,12 @@ function getMountInfo(targetPath: string): MountInfo | null {
     );
     return parseFindmntPayload(payload);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`findmnt failed for ${lookupTarget}: ${message}`);
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+    throw new Error(`findmnt failed for ${lookupTarget}: ${error.message}`, {
+      cause: error,
+    });
   }
 }
 

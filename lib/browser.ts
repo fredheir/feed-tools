@@ -205,13 +205,19 @@ const url = process.argv[1];
 const timeoutMs = Number(process.argv[2]);
 const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), timeoutMs);
-fetch(url, { signal: controller.signal })
-  .then(async (response) => {
-    if (!response.ok) process.exit(1);
-    process.stdout.write(await response.text());
-  })
-  .catch(() => process.exit(1))
-  .finally(() => clearTimeout(timeout));
+	fetch(url, { signal: controller.signal })
+	  .then(async (response) => {
+	    if (!response.ok) {
+	      process.stderr.write(String(response.status));
+	      process.exit(1);
+	    }
+	    process.stdout.write(await response.text());
+	  })
+	  .catch((error) => {
+	    process.stderr.write(error instanceof Error ? error.message : "CDP probe failed");
+	    process.exit(1);
+	  })
+	  .finally(() => clearTimeout(timeout));
 `;
   return execFileSync(process.execPath, ["-e", script, url, "2000"], {
     encoding: "utf8",
@@ -300,22 +306,11 @@ export function jitterTimeout(baseMs: number, spreadMs = 750): number {
 export function closeBrowserSession(options: FeedBrowserConfig = {}): boolean {
   const normalized = normalizeBrowserOptions(options);
   if (!normalized.session) return false;
-  const result = spawnSync(
-    agentBrowserCommand(),
-    buildAgentBrowserArgs(
-      {
-        session: normalized.session,
-        autoConnect: false,
-      },
-      ["close"],
-    ),
-    {
-      encoding: "utf8",
-      timeout: DEFAULT_COMMAND_TIMEOUT_MS,
-      maxBuffer: 20 * 1024 * 1024,
-    },
-  );
-  return result.status === 0;
+  runAgentBrowser(["close"], {
+    session: normalized.session,
+    autoConnect: false,
+  });
+  return true;
 }
 
 export function createBrowserSession(
