@@ -8,7 +8,6 @@ import {
   getCdpVersionUrls,
   getRuntimeBrowserOptions,
   readCdpVersionPayload,
-  sanitizeAgentBrowserOutput,
 } from "../lib/browser.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -224,13 +223,5 @@ nonCdpServer.listen(0, "127.0.0.1", () => {
     } finally {
       server.kill("SIGTERM");
     }
-  });
-
-  test("strips repeated daemon args warnings from agent-browser output", () => {
-    expect(
-      sanitizeAgentBrowserOutput(`⚠ --args ignored: daemon already running. Use 'agent-browser close' first to restart with new options.
-{"ok":true}
-`),
-    ).toBe('{"ok":true}');
   });
 });

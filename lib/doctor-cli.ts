@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 import { getCdpVersionUrls, readCdpVersionPayload } from "./browser.ts";
 
@@ -108,15 +108,12 @@ function localAgentBrowserBinary(): string {
 }
 
 function commandResponds(command: string, args: string[]): string | null {
-  try {
-    return execFileSync(command, args, {
-      encoding: "utf8",
-      timeout: 5000,
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  } catch {
-    return null;
-  }
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    timeout: 5000,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  return result.status === 0 ? result.stdout.trim() : null;
 }
 
 function checkAgentBrowser(): CheckResult {
@@ -343,17 +340,36 @@ export function isSshPrivateKeyFilename(filename: string): boolean {
 }
 
 function hasSshPrivateKey(sshDir: string): boolean {
+  let stats: fs.Stats;
   try {
-    return fs
-      .readdirSync(sshDir, { withFileTypes: true })
-      .some(
-        (entry) =>
-          (entry.isFile() || entry.isSymbolicLink()) &&
-          isSshPrivateKeyFilename(entry.name),
-      );
-  } catch {
-    return false;
+    stats = fs.statSync(sshDir);
+  } catch (error) {
+    if (isFilesystemMiss(error)) {
+      return false;
+    }
+    throw error;
   }
+  if (!stats.isDirectory()) return false;
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(sshDir, { withFileTypes: true });
+  } catch (error) {
+    if (isFilesystemMiss(error)) return false;
+    throw error;
+  }
+  return entries.some(
+    (entry) =>
+      (entry.isFile() || entry.isSymbolicLink()) &&
+      isSshPrivateKeyFilename(entry.name),
+  );
+}
+
+function isFilesystemMiss(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    ["EACCES", "ENOENT", "ENOTDIR"].includes(String(error.code))
+  );
 }
 
 function hasSshAgentKey(): boolean {

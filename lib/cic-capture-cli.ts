@@ -31,7 +31,6 @@ import { getSourceConfig, listCicSources } from "./cic/source-config.ts";
 import {
   buildDownloadExtractionScript,
   getExtractionScript,
-  isCicSupported,
 } from "./cic/extract.ts";
 import { ingestDocument } from "./cic/ingest.ts";
 import { hasNewUnclassifiedItems } from "./source-capture.ts";
@@ -78,16 +77,16 @@ function cmdExtract(
     timeoutMs?: number;
   },
 ): void {
-  if (!isCicSupported(sourceName)) {
+  const config = getSourceConfig(sourceName);
+  if (!config) {
     console.error(
       `Source "${sourceName}" is not supported for CiC extraction.`,
     );
     process.exit(1);
   }
-  const config = getSourceConfig(sourceName);
   const script = flags.downloadFilename
     ? buildDownloadExtractionScript(sourceName, limit, flags.downloadFilename, {
-        itemCountExpression: config?.itemCountExpression,
+        itemCountExpression: config.itemCountExpression,
         minItems: flags.minItems,
         stableTicks: flags.stableTicks,
         timeoutMs: flags.timeoutMs,

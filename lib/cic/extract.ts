@@ -105,9 +105,3 @@ export function buildDownloadExtractionScript(
     tick();
   }))()`;
 }
-
-export function isCicSupported(
-  sourceName: string,
-): sourceName is CicSourceName {
-  return hasOwnExtractionScript(sourceName);
-}

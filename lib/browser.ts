@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createBrowserSession as createSession } from "./browser/session.ts";
@@ -177,13 +177,6 @@ export function buildAgentBrowserArgs(
   return args.concat(commandArgs);
 }
 
-export function sanitizeAgentBrowserOutput(output: unknown): string {
-  return String(output || "")
-    .replace(AGENT_BROWSER_IGNORED_WARNING_PATTERN, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
 export function getCdpVersionUrl(cdp: string): string {
   return getCdpVersionUrls(cdp)[0] ?? String(cdp || "").trim();
 }
@@ -283,17 +276,18 @@ function runAgentBrowser(
       cdp: assertCdpEndpoint(normalized.cdp),
     };
   }
-  return sanitizeAgentBrowserOutput(
-    execFileSync(
-      agentBrowserCommand(),
-      buildAgentBrowserArgs(effectiveOptions, commandArgs),
-      {
-        encoding: "utf8",
-        timeout: commandTimeoutMs,
-        maxBuffer: 20 * 1024 * 1024,
-      },
-    ),
-  );
+  return execFileSync(
+    agentBrowserCommand(),
+    buildAgentBrowserArgs(effectiveOptions, commandArgs),
+    {
+      encoding: "utf8",
+      timeout: commandTimeoutMs,
+      maxBuffer: 20 * 1024 * 1024,
+    },
+  )
+    .replace(AGENT_BROWSER_IGNORED_WARNING_PATTERN, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export function jitterTimeout(baseMs: number, spreadMs = 750): number {
@@ -306,15 +300,22 @@ export function jitterTimeout(baseMs: number, spreadMs = 750): number {
 export function closeBrowserSession(options: FeedBrowserConfig = {}): boolean {
   const normalized = normalizeBrowserOptions(options);
   if (!normalized.session) return false;
-  try {
-    runAgentBrowser(["close"], {
-      session: normalized.session,
-      autoConnect: false,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+  const result = spawnSync(
+    agentBrowserCommand(),
+    buildAgentBrowserArgs(
+      {
+        session: normalized.session,
+        autoConnect: false,
+      },
+      ["close"],
+    ),
+    {
+      encoding: "utf8",
+      timeout: DEFAULT_COMMAND_TIMEOUT_MS,
+      maxBuffer: 20 * 1024 * 1024,
+    },
+  );
+  return result.status === 0;
 }
 
 export function createBrowserSession(
