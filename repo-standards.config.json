@@ -2,7 +2,7 @@
   "repoType": ["node"],
   "packageManager": "pnpm",
   "requiresGeneratedCheck": false,
-  "selfHostedRunnerLabels": ["self-hosted", "linux", "x64", "markolo-hetzner"],
+  "selfHostedRunnerLabels": ["self-hosted", "linux", "x64", "markolo-hetzner", "ci-light"],
   "requiredFiles": [
     "AGENTS.md",
     "justfile",
