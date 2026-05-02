@@ -4,6 +4,11 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed first-run source capture and doctor preflight probes so a missing browser session or unreadable `~/.ssh` directory reports recoverably instead of aborting the capture or doctor command (PR [#38](https://github.com/fredheir/feed-tools/pull/38)).
+- Tightened capture and CLI error handling so operational failures are reported explicitly while preserving the existing feed capture workflow (PR [#37](https://github.com/fredheir/feed-tools/pull/37)).
+
 ## [0.3.0] - 2026-04-29
 
 ### Added
