@@ -2,8 +2,32 @@ name: typecheck
 
 on:
   pull_request:
+    paths:
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - ".github/workflows/typecheck.yml"
   push:
     branches: [main]
+    paths:
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - ".github/workflows/typecheck.yml"
 
 permissions:
   contents: read

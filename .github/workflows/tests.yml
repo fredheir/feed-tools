@@ -2,8 +2,36 @@ name: tests
 
 on:
   pull_request:
+    paths:
+      - "assets/**"
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - "vitest.config.mts"
+      - ".github/workflows/tests.yml"
   push:
     branches: [main]
+    paths:
+      - "assets/**"
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - "vitest.config.mts"
+      - ".github/workflows/tests.yml"
 
 permissions:
   contents: read

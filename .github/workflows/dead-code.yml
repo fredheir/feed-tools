@@ -2,8 +2,36 @@ name: dead-code
 
 on:
   pull_request:
+    paths:
+      - "assets/**"
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "skills/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - ".github/workflows/dead-code.yml"
   push:
     branches: [main]
+    paths:
+      - "assets/**"
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "skills/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - ".github/workflows/dead-code.yml"
 
 permissions:
   contents: read
