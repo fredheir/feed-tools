@@ -4,6 +4,8 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-02
+
 ### Changed
 
 - Changed the `_repo-standards` guard script to auto-detect the `markolo-shared` standards installation from `$HOME/Projects/markolo-shared` and sibling-directory paths, so the guard no longer requires `REPO_STANDARDS_LOCAL` to be set explicitly when the standards checkout exists at a conventional location ([101da371](https://github.com/fredheir/feed-tools/commit/101da371f0053cc0bd33aec44e8c093be923ec8d)).
