@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  MARKOLO_SHARED_STANDARDS_REF: 74ccc8173522a03d00a3bd425a35c6d9b6676ed3
+  MARKOLO_SHARED_STANDARDS_REF: main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
