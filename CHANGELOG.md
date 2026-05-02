@@ -4,6 +4,11 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Changed the `_repo-standards` guard script to auto-detect the `markolo-shared` standards installation from `$HOME/Projects/markolo-shared` and sibling-directory paths, so the guard no longer requires `REPO_STANDARDS_LOCAL` to be set explicitly when the standards checkout exists at a conventional location ([101da371](https://github.com/fredheir/feed-tools/commit/101da371f0053cc0bd33aec44e8c093be923ec8d)).
+- Scoped CI workflows (`lint`, `dead-code`, `tests`, `typecheck`, `dependency`) to path filters so pushes and PRs that touch only unrelated files no longer trigger unnecessary workflow runs ([e5c9cc71](https://github.com/fredheir/feed-tools/commit/e5c9cc7181cc630cd27afb3407ddaaaf1939db8d)).
+
 ### Fixed
 
 - Fixed first-run source capture and doctor preflight probes so a missing browser session or unreadable `~/.ssh` directory reports recoverably instead of aborting the capture or doctor command (PR [#38](https://github.com/fredheir/feed-tools/pull/38)).
