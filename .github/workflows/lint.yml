@@ -2,8 +2,36 @@ name: lint
 
 on:
   pull_request:
+    paths:
+      - "assets/**"
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "skills/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - ".github/workflows/lint.yml"
   push:
     branches: [main]
+    paths:
+      - "assets/**"
+      - "bin/**"
+      - "lib/**"
+      - "scripts/**"
+      - "skills/**"
+      - "sources/**"
+      - "tests/**"
+      - "*.config.*"
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig*.json"
+      - ".github/workflows/lint.yml"
 
 permissions:
   contents: read

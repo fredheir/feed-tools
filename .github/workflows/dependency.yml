@@ -2,8 +2,18 @@ name: dependency
 
 on:
   pull_request:
+    paths:
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/dependency.yml"
   push:
     branches: [main]
+    paths:
+      - "justfile"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/dependency.yml"
 
 permissions:
   contents: read
