@@ -1,0 +1,42 @@
+lockfile_version: "1"
+generated_at: "2026-05-04T19:39:00.239846+00:00"
+apm_version: 0.12.1
+dependencies:
+  - repo_url: Markolo-Research/markolo-shared
+    host: github.com
+    resolved_commit: 56dc2f52bf1cfad2f2b07f310c88bf07cb4110b9
+    resolved_ref: main
+    virtual_path: skills
+    is_virtual: true
+    package_type: apm_package
+    deployed_files:
+      - .agents/skills/apply-gdoc-changes
+      - .agents/skills/changelog-audit
+      - .agents/skills/consolidate-test-suites
+      - .agents/skills/dependency-vulnerability-scan
+      - .agents/skills/dogfood
+      - .agents/skills/github-pr-workflow
+      - .agents/skills/hard-cut
+      - .agents/skills/jenkins
+      - .agents/skills/visualization
+    content_hash: sha256:1b3aed4bc6dc7325948fe990a3dd2812b07253c90764b00bae0b92433227985e
+  - repo_url: peteromallet/desloppify
+    host: github.com
+    resolved_commit: a084a7cbb4b47c83782b3160f8bd8f10151e789f
+    resolved_ref: main
+    virtual_path: desloppify/data/global
+    is_virtual: true
+    package_type: claude_skill
+    deployed_files:
+      - .agents/skills/global
+    content_hash: sha256:38a507267a12ef3c7f34af8cfe3386774b04feb74d3d21de43944d3e37c45283
+  - repo_url: vercel-labs/agent-browser
+    host: github.com
+    resolved_commit: 7ada3384e2afb5f3c43d9106389da86d8f807dca
+    resolved_ref: main
+    virtual_path: skills/agent-browser
+    is_virtual: true
+    package_type: claude_skill
+    deployed_files:
+      - .agents/skills/agent-browser
+    content_hash: sha256:6f68d01b14796e410746fab39c2d6b36dcfa030dd59eb772f6418e2db949a16c
