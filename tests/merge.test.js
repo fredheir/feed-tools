@@ -247,7 +247,6 @@ describe("mergeDocuments", () => {
         content: { text: "Same post body" },
       },
       "facebook",
-      { index: 1 },
     );
     const second = getSyntheticItemId(
       {
@@ -256,7 +255,6 @@ describe("mergeDocuments", () => {
         content: { text: "Same post body" },
       },
       "facebook",
-      { index: 9 },
     );
 
     expect(first).toBe(second);

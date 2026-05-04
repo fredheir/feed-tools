@@ -293,7 +293,6 @@ function buildSyntheticFingerprint(
 export function getSyntheticItemId(
   item: LooseFeedItem,
   source: string,
-  _fallback: { index?: number | null } = {},
 ): string {
   const fingerprint = buildSyntheticFingerprint(item, source);
   const hash = crypto
@@ -317,10 +316,7 @@ export function getPreferredItemKey(
   if (sourceItemId) return `${source}:${sourceItemId}`;
   if (url && !isGenericIdentityUrl(source, url)) return url;
   if (itemId) return itemId;
-  return (
-    getSyntheticItemId(item, source, fallback) ||
-    `${source}:${item?.index ?? fallback.index ?? "no-index"}`
-  );
+  return getSyntheticItemId(item, source);
 }
 
 export function normalizeItemShape(
@@ -343,7 +339,7 @@ export function normalizeItemShape(
       itemId ||
       (sourceItemId
         ? `${source}:${sourceItemId}`
-        : getSyntheticItemId(item, source, fallback)),
+        : getSyntheticItemId(item, source)),
     source,
     source_item_id: sourceItemId,
     index: item?.index ?? fallback.index ?? null,
