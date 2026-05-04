@@ -1,0 +1,12 @@
+name: feed_tools
+version: 1.0.0
+description: APM project for feed_tools
+author: Rolf Fredheim
+dependencies:
+  apm:
+    - Markolo-Research/markolo-shared/skills#main
+    - peteromallet/desloppify/desloppify/data/global#main
+    - vercel-labs/agent-browser/skills/agent-browser#main
+  mcp: []
+includes: auto
+scripts: {}

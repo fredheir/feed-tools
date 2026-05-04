@@ -5,7 +5,6 @@ source-env.sh
 .tmp/
 var/
 .desloppify/
-.agents/skills/desloppify/
 .codex
 scorecard.png
 .changelog-audit-cursor
@@ -14,3 +13,18 @@ chrome-profile/
 chrome-profile-feed*/
 chrome.log
 chrome-feed.log
+
+# APM generated skills
+apm_modules/
+.agents/skills/agent-browser/
+.agents/skills/apply-gdoc-changes/
+.agents/skills/changelog-audit/
+.agents/skills/consolidate-test-suites/
+.agents/skills/dependency-vulnerability-scan/
+.agents/skills/dogfood/
+.agents/skills/github-pr-workflow/
+.agents/skills/global/
+.agents/skills/hard-cut/
+.agents/skills/jenkins/
+.agents/skills/visualization/
+!.agents/skills/.gitkeep
