@@ -25,4 +25,4 @@ jobs:
         with:
           persist-credentials: false
       - run: actionlint
-      - run: uvx zizmor --pedantic --min-severity high --min-confidence high .github/workflows
+      - run: zizmor --pedantic --min-severity high --min-confidence high .github/workflows
