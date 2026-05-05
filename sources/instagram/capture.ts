@@ -407,7 +407,7 @@ async function captureDocument({
 const source = {
   name: "instagram",
   captureDocument,
-} as unknown as CaptureAdapter;
+} satisfies CaptureAdapter;
 const prepareFeed = prepareInstagramFeed;
 
 export {

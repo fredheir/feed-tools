@@ -497,7 +497,7 @@ async function captureDocument({
 const source = {
   name: "facebook",
   captureDocument,
-} as unknown as CaptureAdapter;
+} satisfies CaptureAdapter;
 const prepareFeed = prepareFacebookFeed;
 
 // CiC path reads the rendered DOM directly because the accessibility-tree

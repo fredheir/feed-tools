@@ -117,28 +117,6 @@ export interface FeedBrowserConfig {
   executablePath?: string | null;
 }
 
-export interface RawFeedBrowserConfig {
-  cdp?: string;
-  auto_connect?: boolean;
-  autoConnect?: boolean;
-  headed?: boolean;
-  args?: string[];
-  browser_args?: string[];
-  session?: string;
-  session_name?: string;
-  sessionName?: string;
-  profile?: string;
-  state?: string;
-  state_path?: string;
-  statePath?: string;
-  allow_file_access?: boolean;
-  allowFileAccess?: boolean;
-  color_scheme?: string;
-  colorScheme?: string;
-  executable_path?: string;
-  executablePath?: string;
-}
-
 export interface SourceCaptureConfig {
   default_limit?: number;
   assets_dir?: string;
@@ -150,7 +128,7 @@ export interface RawSourceCaptureConfig {
   default_limit?: number;
   assets_dir?: string;
   save_dir?: string;
-  browser?: RawFeedBrowserConfig;
+  browser?: FeedBrowserConfig;
 }
 
 export interface SourcePreference {

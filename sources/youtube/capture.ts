@@ -9,6 +9,7 @@ import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
 import type {
   BrowserSession,
+  CaptureAdapter,
   FeedBrowserConfig,
   FeedDocument,
   FeedItem,
@@ -490,7 +491,7 @@ async function captureDocument({
 const source = {
   name: "youtube",
   captureDocument,
-};
+} satisfies CaptureAdapter;
 
 const prepareFeed = prepareYouTubeFeed;
 

@@ -599,7 +599,7 @@ async function captureDocument({
 const source = {
   name: "linkedin",
   captureDocument,
-} as unknown as CaptureAdapter;
+} satisfies CaptureAdapter;
 const prepareFeed = prepareLinkedInFeed;
 
 export {

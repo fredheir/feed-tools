@@ -137,7 +137,7 @@ describe("config helpers", () => {
     );
   });
 
-  test("parseConfigPayload normalizes raw browser aliases at the boundary", () => {
+  test("parseConfigPayload normalizes canonical browser options at the boundary", () => {
     const config = parseConfigPayload(
       JSON.stringify({
         user_preferences: {
@@ -146,13 +146,13 @@ describe("config helpers", () => {
               name: "x",
               capture: {
                 browser: {
-                  auto_connect: false,
-                  browser_args: ["--no-sandbox", 12],
-                  session_name: "feed-session",
-                  state_path: "./tmp/browser-state.json",
-                  allow_file_access: true,
-                  color_scheme: "dark",
-                  executable_path: "./chrome",
+                  autoConnect: false,
+                  args: ["--no-sandbox", 12],
+                  sessionName: "feed-session",
+                  statePath: "./tmp/browser-state.json",
+                  allowFileAccess: true,
+                  colorScheme: "dark",
+                  executablePath: "./chrome",
                 },
               },
             },
@@ -180,15 +180,6 @@ describe("config helpers", () => {
       default_limit: undefined,
       save_dir: undefined,
     });
-    expect(getCaptureBrowserOptions(config, "x")).not.toHaveProperty(
-      "auto_connect",
-    );
-    expect(getCaptureBrowserOptions(config, "x")).not.toHaveProperty(
-      "browser_args",
-    );
-    expect(getCaptureBrowserOptions(config, "x")).not.toHaveProperty(
-      "session_name",
-    );
   });
 
   test("parseConfigPayload keeps config-side string coercion behavior", () => {

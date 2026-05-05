@@ -598,7 +598,7 @@ async function captureDocument({
 const source = {
   name: "x",
   captureDocument,
-} as unknown as CaptureAdapter;
+} satisfies CaptureAdapter;
 const prepareFeed = prepareXFeed;
 
 export {
