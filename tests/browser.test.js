@@ -64,9 +64,9 @@ describe("buildAgentBrowserArgs", () => {
 
   test("strips startup-only options from runtime session reuse", () => {
     const runtime = getRuntimeBrowserOptions({
-      auto_connect: false,
+      autoConnect: false,
       session: "feed-x",
-      state_path: "./.auth/x.json",
+      statePath: "./.auth/x.json",
       profile: "./.profiles/x",
       args: ["--no-sandbox"],
       headed: true,
@@ -82,15 +82,15 @@ describe("buildAgentBrowserArgs", () => {
     });
   });
 
-  test("accepts legacy config-style aliases for browser options", () => {
+  test("builds optional browser args from canonical config options", () => {
     const args = buildAgentBrowserArgs(
       {
-        session_name: "feed",
-        state: "./.auth/x.json",
-        allow_file_access: true,
-        color_scheme: "dark",
-        executable_path: "/bin/chrome",
-        browser_args: ["--no-sandbox"],
+        sessionName: "feed",
+        statePath: "./.auth/x.json",
+        allowFileAccess: true,
+        colorScheme: "dark",
+        executablePath: "/bin/chrome",
+        args: ["--no-sandbox"],
       },
       ["snapshot"],
     );
@@ -115,7 +115,7 @@ describe("buildAgentBrowserArgs", () => {
   test("normalizes cdp config to disable headed and auto-connect", () => {
     const runtime = getRuntimeBrowserOptions({
       cdp: "9222",
-      auto_connect: true,
+      autoConnect: true,
       headed: true,
     });
 

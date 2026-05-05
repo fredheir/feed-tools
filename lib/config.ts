@@ -6,7 +6,6 @@ import type {
   FeedBrowserConfig,
   FeedConfig,
   FeedSourceName,
-  RawFeedBrowserConfig,
   RawFeedConfig,
   RawSourcePreference,
   RenderPreferences,
@@ -32,22 +31,19 @@ const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
 
 function normalizeBrowserConfig(value: unknown): FeedBrowserConfig {
   if (!isRecord(value)) return {};
-  const raw = value as RawFeedBrowserConfig;
+  const raw = value as Partial<FeedBrowserConfig>;
   return {
     cdp: toOptionalString(raw.cdp),
-    autoConnect:
-      toOptionalBoolean(raw.autoConnect) ?? toOptionalBoolean(raw.auto_connect),
+    autoConnect: toOptionalBoolean(raw.autoConnect),
     headed: toOptionalBoolean(raw.headed),
-    args: toStringArray(raw.args ?? raw.browser_args),
+    args: toStringArray(raw.args),
     session: toOptionalString(raw.session),
-    sessionName: toOptionalString(raw.sessionName ?? raw.session_name),
+    sessionName: toOptionalString(raw.sessionName),
     profile: toOptionalString(raw.profile),
-    statePath: toOptionalString(raw.statePath ?? raw.state_path ?? raw.state),
-    allowFileAccess: toOptionalBoolean(
-      raw.allowFileAccess ?? raw.allow_file_access,
-    ),
-    colorScheme: toOptionalString(raw.colorScheme ?? raw.color_scheme),
-    executablePath: toOptionalString(raw.executablePath ?? raw.executable_path),
+    statePath: toOptionalString(raw.statePath),
+    allowFileAccess: toOptionalBoolean(raw.allowFileAccess),
+    colorScheme: toOptionalString(raw.colorScheme),
+    executablePath: toOptionalString(raw.executablePath),
   };
 }
 

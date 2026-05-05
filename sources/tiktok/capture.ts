@@ -415,7 +415,7 @@ async function captureDocument({
 const source = {
   name: "tiktok",
   captureDocument,
-} as unknown as CaptureAdapter;
+} satisfies CaptureAdapter;
 const prepareFeed = prepareTikTokFeed;
 
 export {

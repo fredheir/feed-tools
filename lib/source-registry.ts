@@ -52,30 +52,30 @@ const SOURCE_MODULES: Record<
   { source: CaptureAdapter; prepareFeed: BootstrapHandler }
 > = {
   bluesky: {
-    source: blueskySource as CaptureAdapter,
+    source: blueskySource,
     prepareFeed: prepareBlueskyFeed,
   },
   facebook: {
-    source: facebookSource as unknown as CaptureAdapter,
+    source: facebookSource,
     prepareFeed: prepareFacebookFeed,
   },
   instagram: {
-    source: instagramSource as CaptureAdapter,
+    source: instagramSource,
     prepareFeed: prepareInstagramFeed,
   },
   linkedin: {
-    source: linkedinSource as unknown as CaptureAdapter,
+    source: linkedinSource,
     prepareFeed: prepareLinkedInFeed,
   },
   tiktok: {
-    source: tiktokSource as CaptureAdapter,
+    source: tiktokSource,
     prepareFeed: prepareTikTokFeed,
   },
   youtube: {
-    source: youtubeSource as CaptureAdapter,
+    source: youtubeSource,
     prepareFeed: prepareYouTubeFeed,
   },
-  x: { source: xSource as CaptureAdapter, prepareFeed: prepareXFeed },
+  x: { source: xSource, prepareFeed: prepareXFeed },
 };
 
 export function getCaptureHandler(

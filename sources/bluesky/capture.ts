@@ -381,7 +381,7 @@ async function captureDocument({
 const source = {
   name: "bluesky",
   captureDocument,
-} as unknown as CaptureAdapter;
+} satisfies CaptureAdapter;
 const prepareFeed = prepareBlueskyFeed;
 
 export {
