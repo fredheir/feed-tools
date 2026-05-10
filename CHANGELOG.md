@@ -4,6 +4,16 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-10
+
+### Fixed
+
+- Removed the silent `try`/`except` around the preflight `closeBrowserSession` call in `source-capture`, so failures during the pre-capture session reset now propagate and fail loud instead of being swallowed and proceeding into a stale session; the call now also forwards `cdp` and `executablePath` so the reset targets the same browser the capture will use (PR [#46](https://github.com/fredheir/feed-tools/pull/46)).
+
+### Breaking
+
+- Removed the legacy snake_case aliases (`auto_connect`, `session_name`, `state`, `state_path`, `color_scheme`, `executable_path`, `allow_file_access`, `browser_args`) from the browser config normalization; configs and callers must now use the canonical camelCase keys (`autoConnect`, `sessionName`, `statePath`, `colorScheme`, `executablePath`, `allowFileAccess`, `args`) instead of the previously-supported snake_case fallbacks (PR [#45](https://github.com/fredheir/feed-tools/pull/45)).
+
 ## [0.3.1] - 2026-05-02
 
 ### Changed
