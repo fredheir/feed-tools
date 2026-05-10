@@ -8,9 +8,6 @@ on:
 permissions:
   contents: read
 
-env:
-  MARKOLO_SHARED_STANDARDS_REF: standards/stable
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -30,13 +27,8 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
       - run: |
-          standards_dir="${RUNNER_TEMP}/markolo-shared-contract"
-          rm -rf "$standards_dir"
-          git clone --depth 1 git@github.com:Markolo-Research/markolo-shared.git "$standards_dir"
-          git -C "$standards_dir" fetch --depth 1 origin "$MARKOLO_SHARED_STANDARDS_REF"
-          git -C "$standards_dir" checkout --detach FETCH_HEAD
-      - run: just doctor
-        env:
-          REPO_STANDARDS_LOCAL: ${{ runner.temp }}/markolo-shared-contract
+          bun_target=1.3.13
+          if [[ "$(bun --version 2>/dev/null)" != "$bun_target" ]]; then npm install -g "bun@$bun_target"; fi
+      - run: pnpm install --frozen-lockfile
+      - run: scripts/guards/repo-contract

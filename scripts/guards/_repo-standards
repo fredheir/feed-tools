@@ -40,6 +40,13 @@ Normal consumers can run pnpm install, feed-* commands, lint, typecheck, and tes
 MSG
   exit 0
   ;;
+secrets | secrets-staged)
+  cat >&2 <<'MSG'
+repo-standards is unavailable; skipping maintainer-only secret pattern check.
+Normal consumers can run pnpm install, feed-* commands, lint, typecheck, and tests without markolo-shared access.
+MSG
+  exit 0
+  ;;
 esac
 
 cat >&2 <<'MSG'
