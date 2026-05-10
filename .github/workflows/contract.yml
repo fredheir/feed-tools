@@ -39,6 +39,7 @@ jobs:
           git clone --depth 1 git@github.com:Markolo-Research/markolo-shared.git "$standards_dir"
           git -C "$standards_dir" fetch --depth 1 origin "$MARKOLO_SHARED_STANDARDS_REF"
           git -C "$standards_dir" checkout --detach FETCH_HEAD
+      - run: apm install --target agent-skills
       - run: scripts/guards/repo-contract
         env:
           REPO_STANDARDS_LOCAL: ${{ runner.temp }}/markolo-shared-contract
