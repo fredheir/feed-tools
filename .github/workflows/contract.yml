@@ -19,6 +19,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
+      - name: Configure private Git auth
+        run: scripts/ci/configure-private-github-git
+        env:
+          GH_PRIVATE_REPO_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
       - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
         with:
           version: 10.14.0
@@ -28,4 +33,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: scripts/guards/repo-contract
+      - run: |
+          standards_dir="${RUNNER_TEMP}/markolo-shared-contract"
+          rm -rf "$standards_dir"
+          git clone --depth 1 git@github.com:Markolo-Research/markolo-shared.git "$standards_dir"
+          git -C "$standards_dir" fetch --depth 1 origin "$MARKOLO_SHARED_STANDARDS_REF"
+          git -C "$standards_dir" checkout --detach FETCH_HEAD
+      - run: scripts/ci/just doctor
+        env:
+          REPO_STANDARDS_LOCAL: ${{ runner.temp }}/markolo-shared-contract
