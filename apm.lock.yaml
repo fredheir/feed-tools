@@ -1,10 +1,10 @@
 lockfile_version: "1"
-generated_at: "2026-05-04T19:39:00.239846+00:00"
+generated_at: "2026-05-10T10:33:05.229149+00:00"
 apm_version: 0.12.1
 dependencies:
   - repo_url: Markolo-Research/markolo-shared
     host: github.com
-    resolved_commit: 56dc2f52bf1cfad2f2b07f310c88bf07cb4110b9
+    resolved_commit: 0310f05be25100035772d8637575e5fe6a0f1155
     resolved_ref: main
     virtual_path: skills
     is_virtual: true
@@ -32,7 +32,7 @@ dependencies:
     content_hash: sha256:38a507267a12ef3c7f34af8cfe3386774b04feb74d3d21de43944d3e37c45283
   - repo_url: vercel-labs/agent-browser
     host: github.com
-    resolved_commit: 7ada3384e2afb5f3c43d9106389da86d8f807dca
+    resolved_commit: 82eadcee41240b1c8477870f846bc8528e77a8a6
     resolved_ref: main
     virtual_path: skills/agent-browser
     is_virtual: true
