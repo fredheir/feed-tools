@@ -42,6 +42,10 @@ jobs:
           git clone --depth 1 git@github.com:Markolo-Research/markolo-shared.git "$standards_dir"
           git -C "$standards_dir" fetch --depth 1 origin "$MARKOLO_SHARED_STANDARDS_REF"
           git -C "$standards_dir" checkout --detach FETCH_HEAD
-      - run: scripts/ci/just doctor
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: |
+          uv tool install apm-cli
+          apm install --target agent-skills
+      - run: scripts/guards/repo-contract
         env:
           REPO_STANDARDS_LOCAL: ${{ runner.temp }}/markolo-shared-contract

@@ -12,6 +12,14 @@ if [[ -z "$standards_root" && -f "$ROOT_DIR/../markolo-shared/packages/repo-stan
   standards_root="$ROOT_DIR/../markolo-shared"
 fi
 
+if [[ -z "$standards_root" && "${CI:-}" == "true" ]]; then
+  standards_root="$(mktemp -d "${RUNNER_TEMP:-/tmp}/markolo-shared.XXXXXX")"
+  git init "$standards_root"
+  git -C "$standards_root" remote add origin git@github.com:Markolo-Research/markolo-shared.git
+  git -C "$standards_root" fetch --depth 1 origin "${MARKOLO_SHARED_STANDARDS_REF:-standards/stable}"
+  git -C "$standards_root" checkout --detach FETCH_HEAD
+fi
+
 if [[ -n "$standards_root" ]]; then
   cli="$standards_root/packages/repo-standards/dist/cli.js"
   if [[ ! -f "$cli" ]]; then
@@ -36,6 +44,13 @@ MSG
 doctor)
   cat >&2 <<'MSG'
 repo-standards is unavailable; skipping maintainer-only repo contract check.
+Normal consumers can run pnpm install, feed-* commands, lint, typecheck, and tests without markolo-shared access.
+MSG
+  exit 0
+  ;;
+secrets | secrets-staged)
+  cat >&2 <<'MSG'
+repo-standards is unavailable; skipping maintainer-only secret pattern check.
 Normal consumers can run pnpm install, feed-* commands, lint, typecheck, and tests without markolo-shared access.
 MSG
   exit 0

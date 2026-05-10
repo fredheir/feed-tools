@@ -59,7 +59,7 @@
     "knip": "^6.9.0",
     "lefthook": "^2.1.6",
     "prettier": "^3.8.3",
-    "slop-scan": "github:modem-dev/slop-scan#v0.4.0",
+    "slop-scan": "0.3.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",
     "vite": "^8.0.10",
