@@ -19,5 +19,17 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Bootstrap hosted-runner tools
+        run: |
+          if ! command -v actionlint >/dev/null 2>&1; then
+            go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.10
+          fi
+          if ! command -v zizmor >/dev/null 2>&1; then
+            uv tool install zizmor
+          fi
       - run: actionlint
       - run: zizmor --pedantic --min-severity high --min-confidence high .github/workflows
