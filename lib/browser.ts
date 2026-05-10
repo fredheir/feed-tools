@@ -254,6 +254,8 @@ export function closeBrowserSession(options: FeedBrowserConfig = {}): boolean {
   if (!normalized.session) return false;
   runAgentBrowser(["close"], {
     session: normalized.session,
+    cdp: normalized.cdp,
+    executablePath: normalized.executablePath,
     autoConnect: false,
   });
   return true;
