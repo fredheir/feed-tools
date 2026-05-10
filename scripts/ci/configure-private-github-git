@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -z "${GH_PRIVATE_REPO_TOKEN:-}" ]; then
+  exit 0
+fi
+
+netrc_path="${NETRC:-$HOME/.netrc}"
+{
+  printf 'machine github.com\n'
+  printf 'login x-access-token\n'
+  printf 'password %s\n' "$GH_PRIVATE_REPO_TOKEN"
+} > "$netrc_path"
+chmod 600 "$netrc_path"
+
+git config --global url."https://x-access-token:${GH_PRIVATE_REPO_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+git config --global url."https://x-access-token:${GH_PRIVATE_REPO_TOKEN}@github.com/".insteadOf "git@github.com:"
+
+if command -v gh >/dev/null 2>&1; then
+  export GH_TOKEN="$GH_PRIVATE_REPO_TOKEN"
+  gh auth setup-git --hostname github.com
+fi
+
+if [ -n "${GITHUB_ENV:-}" ]; then
+  {
+    echo "NETRC=$netrc_path"
+    echo "UV_GIT_EXTERNAL=true"
+  } >> "$GITHUB_ENV"
+fi

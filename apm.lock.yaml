@@ -1,10 +1,10 @@
 lockfile_version: "1"
-generated_at: "2026-05-10T10:33:05.229149+00:00"
+generated_at: "2026-05-10T14:33:04.559183+00:00"
 apm_version: 0.12.1
 dependencies:
   - repo_url: Markolo-Research/markolo-shared
     host: github.com
-    resolved_commit: 0310f05be25100035772d8637575e5fe6a0f1155
+    resolved_commit: 82b2eec1ec083c2e6fa3c0c559826d856f84a8f6
     resolved_ref: main
     virtual_path: skills
     is_virtual: true
@@ -19,7 +19,7 @@ dependencies:
       - .agents/skills/hard-cut
       - .agents/skills/jenkins
       - .agents/skills/visualization
-    content_hash: sha256:1b3aed4bc6dc7325948fe990a3dd2812b07253c90764b00bae0b92433227985e
+    content_hash: sha256:e9d405fee59d1c43415ee25920c56303cda8fedfb4c77b8f0df4dd40731c442d
   - repo_url: peteromallet/desloppify
     host: github.com
     resolved_commit: a084a7cbb4b47c83782b3160f8bd8f10151e789f
@@ -39,4 +39,4 @@ dependencies:
     package_type: claude_skill
     deployed_files:
       - .agents/skills/agent-browser
-    content_hash: sha256:6f68d01b14796e410746fab39c2d6b36dcfa030dd59eb772f6418e2db949a16c
+    content_hash: sha256:edad4d958bc4baf821e3391bb9889a03a8bbc0e4d7f54ee4a5f30837654fed83
