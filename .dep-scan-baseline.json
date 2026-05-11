@@ -1,9 +1,41 @@
 {
-  "last_scan": "2026-05-04",
-  "findings": [],
+  "last_scan": "2026-05-11",
+  "findings": [
+    {
+      "package": "fast-uri",
+      "version": "3.1.0",
+      "id": "GHSA-q3j6-qgpj-74h6",
+      "status": "fix-pending-release-age",
+      "direct": false,
+      "note": "Transitive via @commitlint chain. Dev tooling. Fix 3.1.2 blocked by minimumReleaseAge until 2026-05-15."
+    },
+    {
+      "package": "fast-uri",
+      "version": "3.1.0",
+      "id": "GHSA-v39h-62p7-jpjc",
+      "status": "fix-pending-release-age",
+      "direct": false,
+      "note": "Transitive via @commitlint chain. Fix 3.1.2."
+    }
+  ],
   "notes": [
     "2026-04-21: Initial baseline. Weekly scan via pnpm audit. Starting state found 6 advisories: vite GHSA-4w7w-66w2-5vf9 / GHSA-v2wj-q39q-566r / GHSA-p9ff-h696-f583 (transitive via vitest), axios GHSA-3p68-rc4w-qgx5 / GHSA-fvcv-3m26-pcqx (transitive via @j178/prek), follow-redirects GHSA-r4q5-vmmm-2653 (transitive via @j178/prek->axios). Fix: bumped @j178/prek 0.3.8->0.3.10 (clears axios+follow-redirects chain), added vite ^8.0.9 as direct devDependency and pnpm.overrides for vite (^8.0.9), axios (>=1.12.0), follow-redirects (>=1.15.6). vite override alone did not take effect due to pnpm autoInstallPeers + optionalDependencies interaction; adding vite directly forced the resolution. Post-install pnpm audit clean.",
     "2026-04-29: Weekly scan. 370 deps clean.",
-    "2026-05-04: Weekly scan. 355 deps clean."
+    "2026-05-04: Weekly scan. 355 deps clean.",
+    "2026-05-11: Weekly scan. 2 NEW transitive fast-uri 3.1.0 advisories via @commitlint dev chain. Fix 3.1.2 blocked by 7d minimumReleaseAge; re-attempt 2026-05-18."
+  ],
+  "deferred": [
+    {
+      "package": "fast-uri",
+      "id": "GHSA-q3j6-qgpj-74h6",
+      "reason": "Transitive via @commitlint chain. Dev tooling. Fix 3.1.2 blocked by minimumReleaseAge until 2026-05-15.",
+      "since": "2026-05-11"
+    },
+    {
+      "package": "fast-uri",
+      "id": "GHSA-v39h-62p7-jpjc",
+      "reason": "Transitive via @commitlint chain. Fix 3.1.2.",
+      "since": "2026-05-11"
+    }
   ]
 }
