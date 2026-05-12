@@ -12,14 +12,15 @@
     "lint": "pnpm run typecheck && eslint .",
     "format": "biome format --write . && prettier --write \"**/*.{md,yml,yaml}\"",
     "format:check": "biome format . && prettier --check \"**/*.{md,yml,yaml}\"",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --disable-warning=ExperimentalWarning\" vitest run",
     "doctor": "./bin/feed-doctor",
     "setup:sandbox": "./bin/feed-setup-sandbox",
     "deadcode": "knip",
     "slop:scan": "slop-scan scan .",
     "slop:lint": "slop-scan scan . --lint",
     "check": "pnpm run lint && pnpm run format:check && pnpm run test && pnpm run deadcode",
-    "setup:yt-dlp": "uv tool install --force 'yt-dlp[default,curl-cffi]'"
+    "setup:yt-dlp": "uv tool install --force 'yt-dlp[default,curl-cffi]'",
+    "setup:ffmpeg": "./bin/feed-setup-ffmpeg"
   },
   "knip": {
     "entry": [
@@ -28,6 +29,7 @@
       "bin/feed-classify",
       "bin/feed-curate",
       "bin/feed-doctor",
+      "bin/feed-setup-ffmpeg",
       "bin/feed-setup-sandbox",
       "bin/feed-render",
       "lib/*-cli.ts",

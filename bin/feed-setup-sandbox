@@ -201,6 +201,11 @@ function ensureAgentBrowserBuild() {
   run(process.execPath, [postinstallScript]);
 }
 
+function ensureFfmpeg() {
+  if (commandExists("ffmpeg") && commandExists("ffprobe")) return;
+  run(process.execPath, [path.join(rootDir, "bin", "feed-setup-ffmpeg")]);
+}
+
 function cdpVersionUrls(cdpPort) {
   return [
     `http://127.0.0.1:${cdpPort}/json/version`,
@@ -294,6 +299,7 @@ function main() {
   run(pnpm, ["install"]);
   ensureAgentBrowserBuild();
   run(pnpm, ["setup:yt-dlp"]);
+  ensureFfmpeg();
   ensureChrome();
   fs.mkdirSync(chromeProfile, { recursive: true });
   if (launchChrome) launchWorkspaceChrome(cdpPort);

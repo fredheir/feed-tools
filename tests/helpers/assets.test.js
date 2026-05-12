@@ -232,6 +232,83 @@ describe("downloadDocumentAssets", () => {
     );
   });
 
+  test("redownloads stale yt-dlp partials without a video stream", async () => {
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
+    tempDirs.push(assetsDir);
+    prependFakeBin(["yt-dlp", "ffprobe", "ffmpeg"]);
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get(name) {
+          return name === "content-type" ? "image/jpeg" : null;
+        },
+      },
+      async arrayBuffer() {
+        return Uint8Array.from([4, 5, 6]).buffer;
+      },
+    }));
+
+    const staleAudio = hashedAssetPath(
+      assetsDir,
+      "video-4",
+      "https://www.youtube.com/watch?v=abc123",
+      "f140.m4a",
+    );
+    const downloadedVideo = hashedAssetPath(
+      assetsDir,
+      "video-4",
+      "https://www.youtube.com/watch?v=abc123",
+    );
+    fs.writeFileSync(staleAudio, Uint8Array.from([1, 2, 3]));
+
+    vi.spyOn(childProcess, "execFileSync").mockImplementation(
+      (command, args) => {
+        const joined = [command, ...(args || [])].join(" ");
+        if (joined.includes("after_move:filepath")) {
+          fs.writeFileSync(downloadedVideo, Uint8Array.from([7, 8, 9]));
+          return `${downloadedVideo}\n`;
+        }
+        if (joined.includes("-show_entries")) {
+          const target = args.at(-1);
+          if (target === staleAudio) {
+            return JSON.stringify({ streams: [] });
+          }
+          return JSON.stringify({ streams: [{ codec_name: "h264" }] });
+        }
+        return "";
+      },
+    );
+
+    const document = {
+      items: [
+        {
+          index: 4,
+          source: "youtube",
+          url: "https://www.youtube.com/watch?v=abc123",
+          author: {},
+          media: [
+            {
+              src: "https://example.com/cover.jpg",
+              href: "https://www.youtube.com/watch?v=abc123",
+              media_kind: "video",
+            },
+          ],
+          cards: [],
+        },
+      ],
+    };
+
+    const downloadedDocument = await downloadDocumentAssets(
+      document,
+      assetsDir,
+    );
+
+    expect(fs.existsSync(staleAudio)).toBe(false);
+    expect(downloadedDocument.items[0].media[0].local_video_src).toBe(
+      downloadedVideo,
+    );
+  });
+
   test("transcodes unsupported downloaded video codecs for browser playback", async () => {
     const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-assets-"));
     tempDirs.push(assetsDir);

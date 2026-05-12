@@ -1,0 +1,93 @@
+#!/usr/bin/env node
+// @ts-check
+
+import fs from "node:fs";
+import path from "node:path";
+
+const rootDir = path.resolve(import.meta.dirname, "..");
+const localBin = path.join(rootDir, ".local", "bin");
+const release = process.env.FFMPEG_BINARY_RELEASE || "b6.1.2-rc.1";
+const baseUrl =
+  process.env.FFMPEG_FFPROBE_STATIC_BASE_URL ||
+  "https://github.com/descriptinc/ffmpeg-ffprobe-static/releases/download";
+
+function usage() {
+  console.log(
+    "Usage: feed-setup-ffmpeg\n\nInstalls ffmpeg and ffprobe into ./.local/bin for video capture.",
+  );
+}
+
+function commandExists(command) {
+  const pathEntries = String(process.env.PATH || "")
+    .split(path.delimiter)
+    .filter(Boolean);
+  for (const entry of pathEntries) {
+    const candidate = path.join(entry, command);
+    if (fs.existsSync(candidate)) return true;
+  }
+  return false;
+}
+
+function supportedPlatform() {
+  const platform = process.platform;
+  const arch = process.arch;
+  const supported = {
+    darwin: new Set(["x64", "arm64"]),
+    linux: new Set(["x64", "ia32", "arm64", "arm"]),
+    win32: new Set(["x64", "ia32"]),
+  };
+  return supported[platform]?.has(arch) ? { platform, arch } : null;
+}
+
+async function downloadTool(name, platform, arch) {
+  const executable = process.platform === "win32" ? `${name}.exe` : name;
+  const target = path.join(localBin, executable);
+  const url = `${baseUrl.replace(/\/$/, "")}/${release}/${name}-${platform}-${arch}`;
+  console.log(`Downloading ${name} from ${url}`);
+  const response = await fetch(url, { redirect: "follow" });
+  if (!response.ok) {
+    throw new Error(`Failed to download ${name}: ${response.status} ${response.statusText}`);
+  }
+  const temporary = `${target}.tmp`;
+  await fs.promises.writeFile(
+    temporary,
+    Buffer.from(await response.arrayBuffer()),
+  );
+  if (process.platform !== "win32") {
+    await fs.promises.chmod(temporary, 0o755);
+  }
+  await fs.promises.rename(temporary, target);
+}
+
+async function main() {
+  if (process.argv.includes("-h") || process.argv.includes("--help")) {
+    usage();
+    return;
+  }
+
+  if (commandExists("ffmpeg") && commandExists("ffprobe")) {
+    console.log("ffmpeg and ffprobe are already available on PATH.");
+    return;
+  }
+
+  const platform = supportedPlatform();
+  if (!platform) {
+    throw new Error(
+      `No static ffmpeg/ffprobe build is configured for ${process.platform}/${process.arch}. Install ffmpeg and ffprobe manually and put them on PATH.`,
+    );
+  }
+
+  fs.mkdirSync(localBin, { recursive: true });
+  await downloadTool("ffmpeg", platform.platform, platform.arch);
+  await downloadTool("ffprobe", platform.platform, platform.arch);
+  console.log(`Installed ffmpeg and ffprobe into ${localBin}`);
+  console.log(`Run: source ${path.join(rootDir, "source-env.sh")}`);
+}
+
+try {
+  await main();
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`Error: ${message}\n`);
+  process.exitCode = 1;
+}

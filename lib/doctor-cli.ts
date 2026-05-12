@@ -414,6 +414,18 @@ function checkSandboxDependencies(): CheckResult[] {
       ["--version"],
       "Run pnpm setup:yt-dlp before capturing video sources.",
     ),
+    checkCommand(
+      "ffmpeg",
+      "ffmpeg",
+      ["-version"],
+      "Run pnpm setup:ffmpeg before capturing video sources.",
+    ),
+    checkCommand(
+      "ffprobe",
+      "ffprobe",
+      ["-version"],
+      "Run pnpm setup:ffmpeg before capturing video sources.",
+    ),
     checkWorkspaceChrome(),
     checkGitRemote(),
   ];
