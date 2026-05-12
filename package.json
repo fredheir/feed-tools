@@ -10,8 +10,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
     "lint": "pnpm run typecheck && eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "biome format --write . && prettier --write \"**/*.{md,yml,yaml}\"",
+    "format:check": "biome format . && prettier --check \"**/*.{md,yml,yaml}\"",
     "test": "vitest run",
     "doctor": "./bin/feed-doctor",
     "setup:sandbox": "./bin/feed-setup-sandbox",
@@ -49,6 +49,7 @@
     ]
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.15",
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@eslint/js": "^10.0.1",
