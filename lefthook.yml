@@ -1,12 +1,20 @@
 pre-commit:
   parallel: true
   commands:
+    biome-root:
+      glob: "*.{js,jsx,cjs,mjs,ts,tsx,cts,mts,json,jsonc,css,html}"
+      run: pnpm exec biome format --write {staged_files}
+      stage_fixed: true
+    biome-nested:
+      glob: "**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts,json,jsonc,css,html}"
+      run: pnpm exec biome format --write {staged_files}
+      stage_fixed: true
     prettier-root:
-      glob: "*.{js,jsx,ts,tsx,json,jsonc,css,md,yml,yaml}"
+      glob: "*.{md,yml,yaml}"
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
     prettier-nested:
-      glob: "**/*.{js,jsx,ts,tsx,json,jsonc,css,md,yml,yaml}"
+      glob: "**/*.{md,yml,yaml}"
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
     eslint-root:

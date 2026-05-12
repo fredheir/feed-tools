@@ -19,19 +19,18 @@ const scripts = {
 };
 
 describe("generated browser extraction scripts", () => {
-  test.each(Object.entries(scripts))(
-    "%s script is a self-invoking browser expression",
-    (_source, buildScript) => {
-      const script = buildScript(2);
+  test.each(
+    Object.entries(scripts),
+  )("%s script is a self-invoking browser expression", (_source, buildScript) => {
+    const script = buildScript(2);
 
-      expect(script).toContain("(() => {");
-      expect(script).toContain("const limit = 2;");
-      expect(script).toContain("return JSON.stringify");
-      expect(script).not.toContain("[native code]");
-      expect(script).not.toContain("undefined(");
-      expect(script).not.toContain("__name(");
-    },
-  );
+    expect(script).toContain("(() => {");
+    expect(script).toContain("const limit = 2;");
+    expect(script).toContain("return JSON.stringify");
+    expect(script).not.toContain("[native code]");
+    expect(script).not.toContain("undefined(");
+    expect(script).not.toContain("__name(");
+  });
 
   test("tiktok script reads universal data and visible feed articles", () => {
     const script = buildTikTokScript(2);

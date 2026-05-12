@@ -215,8 +215,8 @@ async function runSourceCapture(
   const normalizedBrowserOptions = normalizeBrowserOptions(browserOptions);
   const shouldResetSession: boolean = Boolean(
     normalizedBrowserOptions.session &&
-    normalizedBrowserOptions.autoConnect === false &&
-    (normalizedBrowserOptions.statePath || normalizedBrowserOptions.profile),
+      normalizedBrowserOptions.autoConnect === false &&
+      (normalizedBrowserOptions.statePath || normalizedBrowserOptions.profile),
   );
 
   if (shouldResetSession) {
