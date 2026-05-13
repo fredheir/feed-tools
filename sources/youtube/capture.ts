@@ -130,6 +130,7 @@ function normalizeYouTubeCardsToItems(
               href: cleanText(card.url) || null,
               alt: cleanText(card.title) || null,
               media_kind: "video" as const,
+              download_video: false,
               duration: parseDurationSeconds(card.durationText),
               source: "youtube",
             },
@@ -232,20 +233,28 @@ function buildExtractionScript(limit: number): string {
 
     function buildVideoCard(root) {
       const rootText = normalizeText(textOf(root));
+      if (/\bSponsored\b/i.test(rootText)) return null;
       const url = findHref(root, [
         'a.ytLockupMetadataViewModelTitle[href]',
+        'a#video-title-link[href]',
+        'a#thumbnail[href]',
         'a[href*="/watch"]',
       ]);
-      const titleNode = root.querySelector('a.ytLockupMetadataViewModelTitle[href]');
+      const titleNode = root.querySelector('a.ytLockupMetadataViewModelTitle[href]')
+        || root.querySelector('a#video-title-link[href]')
+        || root.querySelector('a[aria-label][href*="/watch"]');
       const titleLabel = normalizeText(titleNode?.getAttribute("aria-label"));
       const title = normalizeText(titleNode?.getAttribute("title") || textOf(titleNode));
       if (!url || !title) return null;
 
       const authorLink = root.querySelector('yt-lockup-metadata-view-model a[href^="/@"]')
         || root.querySelector('yt-lockup-metadata-view-model a[href*="/channel/"]')
-        || root.querySelector('yt-lockup-metadata-view-model a[href*="/c/"]');
+        || root.querySelector('yt-lockup-metadata-view-model a[href*="/c/"]')
+        || root.querySelector('ytd-channel-name a[href^="/@"]')
+        || root.querySelector('ytd-channel-name a[href*="/channel/"]')
+        || root.querySelector('a[href^="/@"]');
       const metadataItems = Array.from(
-        root.querySelectorAll('yt-content-metadata-view-model .yt-content-metadata-view-model-wiz__metadata-text')
+        root.querySelectorAll('yt-content-metadata-view-model .yt-content-metadata-view-model-wiz__metadata-text, #metadata-line span')
       )
         .map((node) => normalizeText(textOf(node)))
         .filter(Boolean);
@@ -258,10 +267,12 @@ function buildExtractionScript(limit: number): string {
       const authorImage = findImage(root, [
         '.ytLockupMetadataViewModelAvatar img',
         'yt-avatar-shape img',
+        'yt-img-shadow img',
       ]);
       const thumbnailUrl = findImage(root, [
         'a.ytLockupViewModelContentImage img',
         'yt-thumbnail-view-model img',
+        'a#thumbnail img',
         'img[src*="ytimg.com/vi/"]',
       ]);
       const fallbackViewText =
@@ -288,7 +299,7 @@ function buildExtractionScript(limit: number): string {
         durationText: normalizeText(textOf(durationNode)) || fallbackDurationText,
         thumbnailUrl,
         profileImageUrl: authorImage,
-        sponsored: /\bSponsored\b/i.test(normalizeText(textOf(root))),
+        sponsored: false,
       };
     }
 
@@ -333,13 +344,13 @@ function buildExtractionScript(limit: number): string {
     }
 
     const roots = Array.from(document.querySelectorAll(
-      'div.ytLockupViewModelHost, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2'
+      'div.ytLockupViewModelHost, ytd-rich-item-renderer, ytd-video-renderer, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2'
     ));
     const seen = new Set();
     const cards = [];
 
     for (const root of roots) {
-      const card = root.matches('div.ytLockupViewModelHost')
+      const card = root.matches('div.ytLockupViewModelHost, ytd-rich-item-renderer, ytd-video-renderer')
         ? buildVideoCard(root)
         : buildShortCard(root.matches('ytm-shorts-lockup-view-model') ? root : root.querySelector('ytm-shorts-lockup-view-model') || root);
       if (!card || !card.url || seen.has(card.url)) continue;
@@ -407,7 +418,7 @@ function prepareYouTubeFeed(browser: BrowserSession): void {
   browser.tryWaitForFunction(
     `(() => {
       const hasFeedTabs = document.querySelectorAll('[role="tab"]').length > 0;
-      const hasVideoCards = document.querySelectorAll('div.ytLockupViewModelHost').length > 0;
+      const hasVideoCards = document.querySelectorAll('div.ytLockupViewModelHost, ytd-rich-item-renderer, ytd-video-renderer').length > 0;
       const hasShortsCards = document.querySelectorAll('ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length > 0;
       return hasFeedTabs && (hasVideoCards || hasShortsCards);
     })()`,
@@ -470,7 +481,7 @@ async function captureDocument({
       return JSON.stringify({ ok: true, y: window.scrollY });
     })()`);
     browser.tryWaitForFunction(
-      `(() => document.querySelectorAll('div.ytLockupViewModelHost, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length > ${collectedItems.length})()`,
+      `(() => document.querySelectorAll('div.ytLockupViewModelHost, ytd-rich-item-renderer, ytd-video-renderer, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length > ${collectedItems.length})()`,
       2500,
     );
     mergeBatch(

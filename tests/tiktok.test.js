@@ -102,8 +102,8 @@ describe("tiktok fixture contract", () => {
     });
     expect(items[0].media[0]).toMatchObject({
       media_kind: "video",
+      download_video: false,
       src: "https://example.invalid/video-one-origin.jpg",
-      video_src: "https://example.invalid/video-one-download.mp4",
     });
     expect(items[1].embedded_links).toEqual([
       {

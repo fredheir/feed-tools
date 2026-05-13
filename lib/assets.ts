@@ -108,6 +108,7 @@ function hashUrl(url: string): string {
 
 function shouldUseYtDlpForVideo(item: FeedItem, media: FeedMedia): boolean {
   if (media?.media_kind !== "video") return false;
+  if (media?.download_video === false) return false;
   return Boolean(resolveVideoUrl(item, media));
 }
 
@@ -452,7 +453,7 @@ async function downloadDocumentAssets(
     }
     const mediaItems = Array.isArray(item.media) ? item.media : [];
     for (const [index, media] of mediaItems.entries()) {
-      if (media?.media_kind === "video") {
+      if (media?.media_kind === "video" && media.download_video !== false) {
         jobs.push(
           Promise.resolve()
             .then(() =>
