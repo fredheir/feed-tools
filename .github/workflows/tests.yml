@@ -44,6 +44,7 @@ jobs:
   test:
     runs-on: ${{ fromJSON(vars.MARKOLO_CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     env:
+      MARKOLO_SHARED_STANDARDS_REF: codex/safe-chain-setup-action
       SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -60,6 +61,6 @@ jobs:
       - name: Install Safe Chain
         run: |
           set -euo pipefail
-          curl -fsSL https://github.com/AikidoSec/safe-chain/releases/download/1.5.3/install-safe-chain.sh | sh -s -- --ci
+          scripts/guards/_repo-standards safe-chain-install
       - run: pnpm install --frozen-lockfile
       - run: pnpm run test
