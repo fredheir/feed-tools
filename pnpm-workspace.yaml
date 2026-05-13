@@ -1,7 +1,7 @@
 packages:
   - .
 
-minimumReleaseAge: 10080
+minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@markolo-research/*"
   - "@markolo/*"
