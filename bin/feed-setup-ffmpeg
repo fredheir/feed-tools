@@ -6,6 +6,7 @@ import path from "node:path";
 
 const rootDir = path.resolve(import.meta.dirname, "..");
 const localBin = path.join(rootDir, ".local", "bin");
+const sourceEnvPath = path.join(rootDir, "source-env.sh");
 const release = process.env.FFMPEG_BINARY_RELEASE || "b6.1.2-rc.1";
 const baseUrl =
   process.env.FFMPEG_FFPROBE_STATIC_BASE_URL ||
@@ -59,6 +60,13 @@ async function downloadTool(name, platform, arch) {
   await fs.promises.rename(temporary, target);
 }
 
+function writeSourceEnv() {
+  fs.writeFileSync(
+    sourceEnvPath,
+    `export PATH=${JSON.stringify(`${localBin}:$PATH`)}\n`,
+  );
+}
+
 async function main() {
   if (process.argv.includes("-h") || process.argv.includes("--help")) {
     usage();
@@ -80,8 +88,9 @@ async function main() {
   fs.mkdirSync(localBin, { recursive: true });
   await downloadTool("ffmpeg", platform.platform, platform.arch);
   await downloadTool("ffprobe", platform.platform, platform.arch);
+  writeSourceEnv();
   console.log(`Installed ffmpeg and ffprobe into ${localBin}`);
-  console.log(`Run: source ${path.join(rootDir, "source-env.sh")}`);
+  console.log(`Run: source ${sourceEnvPath}`);
 }
 
 try {
