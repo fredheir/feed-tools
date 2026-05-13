@@ -10,4 +10,8 @@ trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 10080
 
 onlyBuiltDependencies:
+  - agent-browser
+  - esbuild
   - slop-scan
+ignoredBuiltDependencies:
+  - lefthook
