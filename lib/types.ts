@@ -53,6 +53,7 @@ export interface FeedMedia {
   href?: string | null;
   alt?: string | null;
   media_kind?: FeedMediaKind | null;
+  download_video?: boolean | null;
   width?: number | string | null;
   height?: number | string | null;
   duration?: number | string | null;

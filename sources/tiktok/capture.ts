@@ -134,15 +134,15 @@ function buildTikTokItemsFromUniversalData(
               item.video?.cover ||
               item.video?.dynamicCover ||
               null,
-            video_src: item.video?.downloadAddr || item.video?.playAddr || null,
             href: postUrl,
             alt: String(item.desc || "").trim() || handle || "TikTok video",
             media_kind: "video" as const,
+            download_video: false,
             width: item.video?.width || null,
             height: item.video?.height || null,
             duration: item.video?.duration || null,
           },
-        ].filter((media) => media.src || media.video_src),
+        ].filter((media) => media.src),
         cards: [],
         thread: {
           has_thread_line: false,
@@ -229,6 +229,7 @@ function buildTikTokItemsFromDom(limit: number): FeedItem[] {
             href: url,
             alt: cover.alt || `TikTok video by @${handleText}`,
             media_kind: "video",
+            download_video: false,
           },
         ]
       : [];

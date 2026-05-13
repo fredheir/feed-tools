@@ -577,6 +577,8 @@ export function buildExtractionScript(limit: number): string {
       if (/^Suggested for you/i.test(text)) return true;
       if (/^Friend requests/i.test(text)) return true;
       if (/^Stories/i.test(text)) return true;
+      if (/^Reels\b/i.test(text)) return true;
+      if (!root.querySelector('h2, h3, h4, strong a[href]')) return true;
       return false;
     }
 
@@ -656,8 +658,21 @@ export function buildExtractionScript(limit: number): string {
       return out;
     }
 
-    const items = Array.from(document.querySelectorAll('[role="article"]'))
-      .filter((node) => !node.parentElement?.closest('[role="article"]'))
+    function candidateRoots() {
+      const seen = new Set();
+      const roots = [];
+      for (const selector of ['[role="article"]', '[aria-posinset]']) {
+        for (const node of Array.from(document.querySelectorAll(selector))) {
+          if (seen.has(node)) continue;
+          if (selector === '[role="article"]' && node.parentElement?.closest('[role="article"]')) continue;
+          seen.add(node);
+          roots.push(node);
+        }
+      }
+      return roots;
+    }
+
+    const items = candidateRoots()
       .slice(0, limit * 3)
       .map((root) => {
         if (isNoiseRoot(root)) return null;
