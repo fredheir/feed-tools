@@ -33,8 +33,8 @@ function supportedPlatform() {
   const arch = process.arch;
   const supported = {
     darwin: new Set(["x64", "arm64"]),
-    linux: new Set(["x64", "ia32", "arm64", "arm"]),
-    win32: new Set(["x64", "ia32"]),
+    linux: new Set(["x64", "arm64"]),
+    win32: new Set(["x64"]),
   };
   return supported[platform]?.has(arch) ? { platform, arch } : null;
 }
