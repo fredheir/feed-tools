@@ -51,7 +51,7 @@ describe("runSourceCapture", () => {
       saveDir,
       browserOptions: {
         session: "demo-session",
-        autoConnect: false,
+        autoConnect: true,
         profile: "./profiles/demo",
         statePath: "./state/demo.json",
         headed: true,
@@ -63,7 +63,7 @@ describe("runSourceCapture", () => {
       limit: 12,
       browserOptions: {
         session: "demo-session",
-        autoConnect: false,
+        autoConnect: true,
         profile: path.join(repoRoot, "profiles/demo"),
         statePath: path.join(repoRoot, "state/demo.json"),
         headed: true,
