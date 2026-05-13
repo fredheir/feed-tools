@@ -236,6 +236,38 @@ function ensureBrowserPlayableVideo(
   return { ok: true, filePath: target };
 }
 
+function removeStaleVideoDownload(pathToRemove: string): void {
+  try {
+    fs.rmSync(pathToRemove, { force: true });
+  } catch {
+    // Best effort cleanup: the fresh yt-dlp run below is the important part.
+  }
+}
+
+function findReusableVideoDownload(
+  assetsDir: string,
+  prefix: string,
+  hash: string,
+): string | null {
+  const needle = `${prefix}-${hash}.`;
+  const candidates = fs
+    .readdirSync(assetsDir)
+    .filter((name) => name.startsWith(needle))
+    .map((name) => path.join(assetsDir, name))
+    .sort((left, right) => left.localeCompare(right));
+
+  for (const candidate of candidates) {
+    const probed = probeVideoCodec(candidate);
+    if (probed.ok) return candidate;
+    if (probed.reason.includes("no video codec")) {
+      removeStaleVideoDownload(candidate);
+      continue;
+    }
+    return candidate;
+  }
+  return null;
+}
+
 async function downloadMediaVideo(
   item: FeedItem,
   media: FeedMedia,
@@ -253,7 +285,6 @@ async function downloadMediaVideo(
       videoUrl,
       `video-${item.index}`,
       assetsDir,
-      existingFiles,
       { useCookies: shouldUseCookiesForVideo(item) },
     );
     const preparedVideo = ensureBrowserPlayableVideo(downloadedVideo);
@@ -285,13 +316,11 @@ function downloadVideoWithYtDlp(
   url: string,
   prefix: string,
   assetsDir: string,
-  existingFiles: string[],
   options: { useCookies?: boolean } = {},
 ): string {
   const hash = hashUrl(url);
-  const needle = `${prefix}-${hash}.`;
-  const existing = existingFiles.find((name) => name.startsWith(needle));
-  if (existing) return path.join(assetsDir, existing);
+  const existing = findReusableVideoDownload(assetsDir, prefix, hash);
+  if (existing) return existing;
 
   const targetTemplate = path.join(assetsDir, `${prefix}-${hash}.%(ext)s`);
   const tool = getYtDlpCommand();

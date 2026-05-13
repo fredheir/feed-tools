@@ -14,4 +14,4 @@ if [ ! -d node_modules ]; then
 fi
 
 jq -e '.packageManager | test("^pnpm@10\\.")' package.json >/dev/null
-yq -e '.minimumReleaseAge == 10080' pnpm-workspace.yaml >/dev/null
+yq -e '.minimumReleaseAge == 4320' pnpm-workspace.yaml >/dev/null

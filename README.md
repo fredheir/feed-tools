@@ -49,6 +49,7 @@ After the initial run, offer to render a feed about a particular topic (see Topi
 - Read [AGENTS.md](./AGENTS.md) before doing anything else
 - If `config.json` is missing, commands fall back to `config.json.example` for bootstrap only; create a tailored `config.json` before live capture
 - Run `./bin/feed-doctor` to choose the capture path before the first capture
+- For video-heavy sources such as YouTube, TikTok, X, and Instagram, run `pnpm setup:yt-dlp` and `pnpm setup:ffmpeg` before capture
 - Keep generated state and output under `./var`
 - Expect the main working files to be `./var/feed.json`, `./var/feed.html`, and `./var/feed-archive/feed.sqlite`
 - Validate CDP before using port `9222`: `curl -sf http://127.0.0.1:9222/json/version`. If another app owns that port, launch the feed browser on `9223` or another free port and set `capture.browser.cdp` accordingly.

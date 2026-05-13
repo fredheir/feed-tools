@@ -36,7 +36,7 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 5. If using CDP, confirm the port exposes Chrome DevTools Protocol with `curl -sf http://127.0.0.1:<port>/json/version || curl -sf http://localhost:<port>/json/version || curl -sf http://[::1]:<port>/json/version`.
 6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`.
 7. Default `capture.browser.args` to `["--no-sandbox"]` only when launching a dedicated browser, not when reusing an existing daemon.
-8. For video sources (tiktok, x, instagram), install yt-dlp with curl_cffi impersonation: `pnpm setup:yt-dlp` (requires `uv`)
+8. For video sources (youtube, tiktok, x, instagram), install yt-dlp with curl_cffi impersonation and local media tools: `pnpm setup:yt-dlp` (requires `uv`) and `pnpm setup:ffmpeg`
 9. Access each platform specified in `config.json`
 
 ## Setup gotchas
