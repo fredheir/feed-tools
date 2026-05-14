@@ -72,12 +72,16 @@ describe("generated browser extraction scripts", () => {
 
     expect(script).toContain("function pickPlainAuthorLink(root)");
     expect(script).toContain("function isPlainProfileHref(href)");
+    expect(script).toContain("function hasPlainAuthorFallbackEvidence(root)");
+    expect(script).toContain(
+      "return Boolean(pickPlainAuthorLink(root) && pickPermalink(root));",
+    );
     expect(script).toContain("RESERVED_PLAIN_PROFILE_SLUGS.has(slug)");
     expect(script).toContain("'events'");
     expect(script).toContain("'watch'");
     expect(script).toContain("return pickPlainAuthorLink(root);");
     expect(script).toContain(
-      "if (!root.querySelector('h2, h3, h4, strong a[href]') && !pickPlainAuthorLink(root)) return true;",
+      "if (!root.querySelector('h2, h3, h4, strong a[href]') && !hasPlainAuthorFallbackEvidence(root)) return true;",
     );
     expect(script).not.toContain(
       "if (!root.querySelector('h2, h3, h4, strong a[href]')) return true;",

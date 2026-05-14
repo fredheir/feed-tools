@@ -581,6 +581,10 @@ export function buildExtractionScript(limit: number): string {
       return fallback || null;
     }
 
+    function hasPlainAuthorFallbackEvidence(root) {
+      return Boolean(pickPlainAuthorLink(root) && pickPermalink(root));
+    }
+
     function isPlainProfileHref(href) {
       const match = String(href || '').match(/^\\/([A-Za-z0-9._-]+)\\/?(?:$|[?#])/);
       if (!match) return false;
@@ -609,7 +613,7 @@ export function buildExtractionScript(limit: number): string {
       if (/^Friend requests/i.test(text)) return true;
       if (/^Stories/i.test(text)) return true;
       if (/^Reels\b/i.test(text)) return true;
-      if (!root.querySelector('h2, h3, h4, strong a[href]') && !pickPlainAuthorLink(root)) return true;
+      if (!root.querySelector('h2, h3, h4, strong a[href]') && !hasPlainAuthorFallbackEvidence(root)) return true;
       return false;
     }
 
