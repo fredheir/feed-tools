@@ -548,6 +548,10 @@ export function buildExtractionScript(limit: number): string {
         const text = textOf(link);
         if (text && text.length > 1) return link;
       }
+      return pickPlainAuthorLink(root);
+    }
+
+    function pickPlainAuthorLink(root) {
       // Fallback: first profile/page link with non-empty text.
       const fallback = Array.from(root.querySelectorAll('a[href]')).find((link) => {
         const href = link.getAttribute('href') || '';
@@ -578,7 +582,7 @@ export function buildExtractionScript(limit: number): string {
       if (/^Friend requests/i.test(text)) return true;
       if (/^Stories/i.test(text)) return true;
       if (/^Reels\b/i.test(text)) return true;
-      if (!root.querySelector('h2, h3, h4, strong a[href]')) return true;
+      if (!root.querySelector('h2, h3, h4, strong a[href]') && !pickPlainAuthorLink(root)) return true;
       return false;
     }
 
