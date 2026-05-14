@@ -71,6 +71,10 @@ describe("generated browser extraction scripts", () => {
     const script = buildFacebookScript(2);
 
     expect(script).toContain("function pickPlainAuthorLink(root)");
+    expect(script).toContain("function isPlainProfileHref(href)");
+    expect(script).toContain("RESERVED_PLAIN_PROFILE_SLUGS.has(slug)");
+    expect(script).toContain("'events'");
+    expect(script).toContain("'watch'");
     expect(script).toContain("return pickPlainAuthorLink(root);");
     expect(script).toContain(
       "if (!root.querySelector('h2, h3, h4, strong a[href]') && !pickPlainAuthorLink(root)) return true;",
