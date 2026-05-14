@@ -72,6 +72,7 @@ describe("generated browser extraction scripts", () => {
 
     expect(script).toContain("function pickPlainAuthorLink(root)");
     expect(script).toContain("function isPlainProfileHref(href)");
+    expect(script).toContain("if (absolute && isPostPermalink(absolute))");
     expect(script).toContain("function hasPlainAuthorFallbackEvidence(root)");
     expect(script).toContain(
       "return Boolean(pickPlainAuthorLink(root) && pickPermalink(root));",

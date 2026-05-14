@@ -586,7 +586,10 @@ export function buildExtractionScript(limit: number): string {
     }
 
     function isPlainProfileHref(href) {
-      const match = String(href || '').match(/^\\/([A-Za-z0-9._-]+)\\/?(?:$|[?#])/);
+      const value = String(href || '');
+      const absolute = makeAbsoluteUrl(value, FB_BASE);
+      if (absolute && isPostPermalink(absolute)) return false;
+      const match = value.match(/^\\/([A-Za-z0-9._-]+)\\/?(?:$|[?#])/);
       if (!match) return false;
       const slug = match[1].toLowerCase();
       return !RESERVED_PLAIN_PROFILE_SLUGS.has(slug);
