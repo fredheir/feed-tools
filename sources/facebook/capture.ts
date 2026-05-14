@@ -507,6 +507,26 @@ export function buildExtractionScript(limit: number): string {
     limit,
     `
     const FB_BASE = "https://www.facebook.com";
+    const RESERVED_PLAIN_PROFILE_SLUGS = new Set([
+      'ads',
+      'events',
+      'friends',
+      'gaming',
+      'groups',
+      'home',
+      'login',
+      'marketplace',
+      'messages',
+      'notifications',
+      'pages',
+      'plugins',
+      'reel',
+      'reels',
+      'search',
+      'sharer',
+      'stories',
+      'watch',
+    ]);
 
     function isPostPermalink(url) {
       try {
@@ -548,13 +568,31 @@ export function buildExtractionScript(limit: number): string {
         const text = textOf(link);
         if (text && text.length > 1) return link;
       }
+      return pickPlainAuthorLink(root);
+    }
+
+    function pickPlainAuthorLink(root) {
       // Fallback: first profile/page link with non-empty text.
       const fallback = Array.from(root.querySelectorAll('a[href]')).find((link) => {
         const href = link.getAttribute('href') || '';
         const text = textOf(link);
-        return text.length > 1 && /^\\/(?!plugins|sharer|home|login)[A-Za-z0-9._-]+\\/?($|\\?)/.test(href);
+        return text.length > 1 && isPlainProfileHref(href);
       });
       return fallback || null;
+    }
+
+    function hasPlainAuthorFallbackEvidence(root) {
+      return Boolean(pickPlainAuthorLink(root) && pickPermalink(root));
+    }
+
+    function isPlainProfileHref(href) {
+      const value = String(href || '');
+      const absolute = makeAbsoluteUrl(value, FB_BASE);
+      if (absolute && isPostPermalink(absolute)) return false;
+      const match = value.match(/^\\/([A-Za-z0-9._-]+)\\/?(?:$|[?#])/);
+      if (!match) return false;
+      const slug = match[1].toLowerCase();
+      return !RESERVED_PLAIN_PROFILE_SLUGS.has(slug);
     }
 
     function pickAuthorImage(root, authorName) {
@@ -578,7 +616,7 @@ export function buildExtractionScript(limit: number): string {
       if (/^Friend requests/i.test(text)) return true;
       if (/^Stories/i.test(text)) return true;
       if (/^Reels\b/i.test(text)) return true;
-      if (!root.querySelector('h2, h3, h4, strong a[href]')) return true;
+      if (!root.querySelector('h2, h3, h4, strong a[href]') && !hasPlainAuthorFallbackEvidence(root)) return true;
       return false;
     }
 

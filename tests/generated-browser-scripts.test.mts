@@ -67,6 +67,28 @@ describe("generated browser extraction scripts", () => {
     expect(script).toContain("path === '/permalink.php'");
   });
 
+  test("facebook script keeps roots that only expose the plain author-link fallback", () => {
+    const script = buildFacebookScript(2);
+
+    expect(script).toContain("function pickPlainAuthorLink(root)");
+    expect(script).toContain("function isPlainProfileHref(href)");
+    expect(script).toContain("if (absolute && isPostPermalink(absolute))");
+    expect(script).toContain("function hasPlainAuthorFallbackEvidence(root)");
+    expect(script).toContain(
+      "return Boolean(pickPlainAuthorLink(root) && pickPermalink(root));",
+    );
+    expect(script).toContain("RESERVED_PLAIN_PROFILE_SLUGS.has(slug)");
+    expect(script).toContain("'events'");
+    expect(script).toContain("'watch'");
+    expect(script).toContain("return pickPlainAuthorLink(root);");
+    expect(script).toContain(
+      "if (!root.querySelector('h2, h3, h4, strong a[href]') && !hasPlainAuthorFallbackEvidence(root)) return true;",
+    );
+    expect(script).not.toContain(
+      "if (!root.querySelector('h2, h3, h4, strong a[href]')) return true;",
+    );
+  });
+
   test("x script can recover avatars from React fiber props", () => {
     const script = buildXScript(2);
 
