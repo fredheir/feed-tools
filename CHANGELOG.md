@@ -7,6 +7,12 @@ All notable changes to this repo will be documented in this file.
 ### Changed
 
 - Updated the GitHub Actions `pnpm/action-setup` pin to 6.0.5 and recorded the current `fast-uri` advisory deferral in the dependency-scan baseline, keeping CI and dependency review state current while the patched transitive release ages through policy (PR [#47](https://github.com/fredheir/feed-tools/pull/47), [e926490](https://github.com/fredheir/feed-tools/commit/e92649023d9cf0663ee04ccf2d8d0acbb63492df)).
+- Added a local `feed-setup-ffmpeg` installer, wired sandbox setup and doctor checks to require `ffmpeg`/`ffprobe`, and made stale audio-only yt-dlp downloads get replaced before rendering, so video-heavy captures have a repeatable setup path and avoid reusing unusable media files (PR [#49](https://github.com/fredheir/feed-tools/pull/49)).
+
+### Fixed
+
+- Hardened video feed capture by treating YouTube and TikTok cards as externally linked video posts instead of forcing every captured card through local video download, while expanding YouTube selectors to cover more feed layouts and filtering sponsored cards earlier (PR [#51](https://github.com/fredheir/feed-tools/pull/51)).
+- Fixed Facebook capture filtering so posts that expose only a plain author profile link are retained when they also have permalink evidence, while reserved navigation slugs and permalink URLs are rejected as author fallbacks (PR [#52](https://github.com/fredheir/feed-tools/pull/52)).
 
 ## [0.4.0] - 2026-05-10
 
