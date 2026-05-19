@@ -7,12 +7,16 @@ All notable changes to this repo will be documented in this file.
 ### Changed
 
 - Updated the GitHub Actions `pnpm/action-setup` pin to 6.0.5 and recorded the current `fast-uri` advisory deferral in the dependency-scan baseline, keeping CI and dependency review state current while the patched transitive release ages through policy (PR [#47](https://github.com/fredheir/feed-tools/pull/47), [e926490](https://github.com/fredheir/feed-tools/commit/e92649023d9cf0663ee04ccf2d8d0acbb63492df)).
+- Added Safe Chain to the test workflow and aligned the dependency-age guard to a 72-hour minimum, so CI installs now enforce the same package-age policy that operators see during dependency review (PR [#50](https://github.com/fredheir/feed-tools/pull/50)).
 - Added a local `feed-setup-ffmpeg` installer, wired sandbox setup and doctor checks to require `ffmpeg`/`ffprobe`, and made stale audio-only yt-dlp downloads get replaced before rendering, so video-heavy captures have a repeatable setup path and avoid reusing unusable media files (PR [#49](https://github.com/fredheir/feed-tools/pull/49)).
+- Configured `pnpm install` for noninteractive agent and sandbox environments by allowlisting the required `agent-browser` and `esbuild` builds while leaving maintainer hook installation disabled, reducing first-run setup friction for feed operators (PR [#53](https://github.com/fredheir/feed-tools/pull/53)).
+- Switched the actions-hygiene workflow to the shared repo-standards guard and skipped forked pull requests that cannot access the private standards token, so workflow hardening now follows the maintained standard path without failing external PRs for missing credentials (PR [#55](https://github.com/fredheir/feed-tools/pull/55)).
 
 ### Fixed
 
 - Hardened video feed capture by treating YouTube and TikTok cards as externally linked video posts instead of forcing every captured card through local video download, while expanding YouTube selectors to cover more feed layouts and filtering sponsored cards earlier (PR [#51](https://github.com/fredheir/feed-tools/pull/51)).
 - Fixed Facebook capture filtering so posts that expose only a plain author profile link are retained when they also have permalink evidence, while reserved navigation slugs and permalink URLs are rejected as author fallbacks (PR [#52](https://github.com/fredheir/feed-tools/pull/52)).
+- Cleared the deferred `fast-uri` advisories by adding a pnpm override for `fast-uri >=3.1.2`, refreshing the lockfile, and recording a clean dependency-scan baseline (PR [#54](https://github.com/fredheir/feed-tools/pull/54)).
 
 ## [0.4.0] - 2026-05-10
 
