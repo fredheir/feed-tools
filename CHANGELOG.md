@@ -4,6 +4,8 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-19
+
 ### Changed
 
 - Updated the GitHub Actions `pnpm/action-setup` pin to 6.0.5 and recorded the current `fast-uri` advisory deferral in the dependency-scan baseline, keeping CI and dependency review state current while the patched transitive release ages through policy (PR [#47](https://github.com/fredheir/feed-tools/pull/47), [e926490](https://github.com/fredheir/feed-tools/commit/e92649023d9cf0663ee04ccf2d8d0acbb63492df)).
