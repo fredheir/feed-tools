@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { findCookieStores, hasAuthCookie } from "../lib/signin-cli.ts";
+import { findCookieStores, hasAuthCookie } from "../lib/signin-service.ts";
 
 function createCookieStore(
   cookies: Array<{ host: string; name: string }>,
