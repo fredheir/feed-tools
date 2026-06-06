@@ -126,5 +126,3 @@ export async function main(): Promise<void> {
     closeChrome(child);
   }
 }
-
-await main();
