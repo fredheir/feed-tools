@@ -2,6 +2,7 @@
 import path from "node:path";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
+const STRIP_TYPES_FLAG = "--experimental-strip-types";
 
 interface ParsedArgs {
   client: string;
@@ -71,7 +72,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 function serverConfig(args: ParsedArgs): Record<string, unknown> {
   return {
     command: process.execPath,
-    args: [path.join(args.workdir, "bin", "feed-mcp")],
+    args: [STRIP_TYPES_FLAG, path.join(args.workdir, "bin", "feed-mcp")],
     env: {
       FEED_TOOLS_WORKDIR: args.workdir,
       FEED_TOOLS_CDP: args.cdp,
