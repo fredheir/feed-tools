@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { listMcpTools } from "../lib/mcp/server.ts";
 
 describe("feed-tools MCP server", () => {
-  test("registers setup and status tools", () => {
+  test("registers setup, status, and pipeline tools", () => {
     expect(listMcpTools().map((tool) => tool.name)).toEqual([
       "feed_doctor",
       "feed_browser_status",
@@ -12,6 +12,12 @@ describe("feed-tools MCP server", () => {
       "feed_signin_status",
       "feed_config_read",
       "feed_config_write",
+      "feed_capture",
+      "feed_curate",
+      "feed_classify",
+      "feed_render",
+      "feed_open",
+      "feed_pipeline",
     ]);
   });
 
