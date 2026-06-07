@@ -1,13 +1,13 @@
 # MCP Agent Runbook
 
-Use this runbook when an agent is setting up or operating feed-tools through the local MCP server.
+This is target-interface documentation for the planned local feed-tools MCP server. The runnable `bin/feed-mcp` entrypoint and MCP tool definitions land in later implementation PRs in this stack. Until those PRs are present, use the existing CLI flow in `AGENTS.md`.
 
-## Rules
+## Rules once MCP is available
 
-- Use the feed-tools MCP tools for setup, capture, curation, classification, and rendering.
+- Use feed-tools MCP tools for setup, capture, curation, classification, and rendering.
 - Do not drive the browser through Claude in Chrome, Cowork browser tools, or generic browser automation unless the MCP/CDP path is unavailable.
 - Do not ask the user to perform shell steps that the agent can perform itself.
-- Do ask the user to complete platform login, 2FA, or anti-bot checks in the opened Chrome profile.
+- Do ask the user to complete platform login in the opened Chrome profile.
 - Keep full feed documents on disk unless the user explicitly needs the JSON payload.
 - Treat classification-required state as a normal workflow step, not a fatal error.
 
@@ -21,7 +21,7 @@ agent
         -> sqlite + feed.json + feed.html
 ```
 
-Claude in Chrome is fallback-only. Prefer MCP/CDP.
+Claude in Chrome is fallback-only. Prefer MCP/CDP once available.
 
 ## Initial setup
 
@@ -97,39 +97,7 @@ When `cdp` is set, do not also set `headed` or `autoConnect`.
 
 ## Authentication
 
-### 1. Check auth status
-
-Call:
-
-```text
-feed_signin_status
-```
-
-Pass the sources you intend to capture.
-
-### 2. Open login pages
-
-For missing sources, call:
-
-```text
-feed_signin_open
-```
-
-Then tell the user to complete login in the opened Chrome window.
-
-Do not try to automate passwords, 2FA, passkeys, or anti-bot checks.
-
-### 3. Poll until ready
-
-Call:
-
-```text
-feed_signin_status
-```
-
-Repeat until the required sources are authenticated or the user says to continue without them.
-
-If a source remains unauthenticated, either skip it or continue knowing capture may fail.
+Call `feed_signin_status` for the sources you intend to capture. For missing sources, call `feed_signin_open`, ask the user to complete login in the opened Chrome window, then poll `feed_signin_status` until the required sources are ready.
 
 ## Capture flow
 
@@ -145,23 +113,13 @@ Recommended input:
 {
   "sources": ["x"],
   "limit": 30,
-  "require_auth": true,
   "include_document": false
 }
 ```
 
 For multiple sources, either pass all sources at once or capture one source at a time if the host has short tool timeouts.
 
-Expected result:
-
-- item counts per source
-- sqlite path
-- latest/current snapshot paths
-- whether classification is required
-
-If the result is `login_required`, return to the authentication flow.
-
-If the result is `capture_empty`, report the source and relevant next actions. Do not render an empty feed.
+If the result is `login_required`, return to the authentication flow. If the result is `capture_empty`, report the source and relevant next actions. Do not render an empty feed.
 
 ## Curation flow
 
@@ -181,15 +139,7 @@ Common inputs:
 }
 ```
 
-For a topic feed, pass a keyword battery:
-
-```json
-{
-  "matches": ["ukraine", "russia", "nato", "sanctions"]
-}
-```
-
-Use several adjacent terms. Do not rely on one keyword when the topic has obvious synonyms or related names.
+For a topic feed, pass a keyword battery rather than one term.
 
 ## Classification flow
 
@@ -206,7 +156,7 @@ Example:
 ```json
 {
   "assignments": [
-    { "category": "Politics", "rows": "1-4,8" },
+    { "category": "News", "rows": "1-4,8" },
     { "category": "Coding", "rows": "5-7" },
     { "category": "Other", "rows": "9-12" }
   ]
@@ -232,23 +182,9 @@ Recommended default:
 }
 ```
 
-If the user asked for a summary, pass it explicitly:
+If the user asked for a summary, pass it explicitly.
 
-```json
-{
-  "summary": "...",
-  "tab": true,
-  "open": false
-}
-```
-
-Return the `html_path` to the user.
-
-If the user wants the file opened in the controlled browser, call:
-
-```text
-feed_open
-```
+Return the `html_path` to the user. If the user wants the file opened in the controlled browser, call `feed_open`.
 
 ## Full normal workflow
 
@@ -271,37 +207,14 @@ feed_open                   # optional
 
 ## Failure handling
 
-### `cdp_unavailable`
-
-Start Chrome with `feed_browser_start`, or choose another CDP port.
-
-### `cdp_invalid`
-
-The port is occupied by something that is not Chrome DevTools Protocol. Do not use it. Try `9223` or another free port.
-
-### `chrome_not_found`
-
-Install Chrome/Chromium or set `FEED_TOOLS_CHROME_BIN`.
-
-### `chrome_profile_locked`
-
-Use a dedicated feed-tools profile or close the Chrome process that owns the profile.
-
-### `login_required`
-
-Call `feed_signin_open`, ask the user to log in, then poll `feed_signin_status`.
-
-### `capture_empty`
-
-Do not render. Check auth, selectors, blocked page state, and source-specific access.
-
-### `classification_required`
-
-Classify returned rows with `feed_classify`, then rerun `feed_curate`.
-
-### `tool_timeout`
-
-Retry per source with a lower limit. Avoid multi-source capture if the MCP host has short tool limits.
+- `cdp_unavailable`: start Chrome with `feed_browser_start`, or choose another CDP port.
+- `cdp_invalid`: the port is occupied by something that is not Chrome DevTools Protocol. Try `9223` or another free port.
+- `chrome_not_found`: install Chrome/Chromium or set `FEED_TOOLS_CHROME_BIN`.
+- `chrome_profile_locked`: use a dedicated feed-tools profile or close the Chrome process that owns the profile.
+- `login_required`: call `feed_signin_open`, ask the user to log in, then poll `feed_signin_status`.
+- `capture_empty`: do not render. Check auth, selectors, blocked page state, and source-specific access.
+- `classification_required`: classify returned rows with `feed_classify`, then rerun `feed_curate`.
+- `tool_timeout`: retry per source with a lower limit. Avoid multi-source capture if the MCP host has short tool limits.
 
 ## When to use Claude in Chrome
 
@@ -309,6 +222,6 @@ Use Claude in Chrome only when all are true:
 
 - the MCP/CDP path is unavailable
 - the host has a working Chrome connector
-- the user's authenticated browser is only reachable through that connector
+- the user's signed-in browser is only reachable through that connector
 
 When using Claude in Chrome, follow the existing CiC documentation. Do not mix CiC with the MCP/CDP normal path in the same run unless deliberately recovering from a CDP failure.
