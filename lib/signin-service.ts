@@ -256,7 +256,9 @@ function getSigninStatus(
   };
 }
 
-function formatStatus(status: Partial<Record<FeedSourceName, boolean>>): string {
+function formatStatus(
+  status: Partial<Record<FeedSourceName, boolean>>,
+): string {
   return Object.entries(status)
     .map(([source, ok]) => `${source} ${ok ? "ok" : "pending"}`)
     .join(" | ");
