@@ -128,7 +128,7 @@ export function buildCaptureArgs(options: CaptureSourcesOptions): string[] {
   if (options.sources.length === 0) {
     throw new Error("Provide at least one source");
   }
-  const args = [...options.sources];
+  const args: string[] = [...options.sources];
   if (typeof options.limit === "number") args.push(String(options.limit));
   pushOptionalFlag(args, "--assets-dir", options.assetsDir);
   pushOptionalFlag(args, "--save-dir", options.saveDir);

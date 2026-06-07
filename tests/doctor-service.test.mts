@@ -51,14 +51,15 @@ describe("doctor service helpers", () => {
       },
     });
 
-    expect(JSON.parse(applyBrowserConfigToPayload(payload, { cdp: "9223" })))
-      .toMatchObject({
-        user_preferences: {
-          sources: [
-            { capture: { browser: { cdp: "9223" } } },
-            { capture: { browser: { cdp: "9223" } } },
-          ],
-        },
-      });
+    expect(
+      JSON.parse(applyBrowserConfigToPayload(payload, { cdp: "9223" })),
+    ).toMatchObject({
+      user_preferences: {
+        sources: [
+          { capture: { browser: { cdp: "9223" } } },
+          { capture: { browser: { cdp: "9223" } } },
+        ],
+      },
+    });
   });
 });
