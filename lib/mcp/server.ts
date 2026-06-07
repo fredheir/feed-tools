@@ -732,7 +732,7 @@ export function framedMessage(
   };
 }
 
-export async function main(): Promise<void> {
+async function main(): Promise<void> {
   let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   process.stdin.on("data", (chunk) => {
     buffer = Buffer.concat([
@@ -765,4 +765,8 @@ export async function main(): Promise<void> {
       dispatchJson(line);
     }
   });
+}
+
+if (path.basename(process.argv[1] || "") === "feed-mcp") {
+  await main();
 }

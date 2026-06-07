@@ -36,6 +36,7 @@
       "bin/feed-setup-ffmpeg",
       "bin/feed-setup-sandbox",
       "bin/feed-render",
+      "lib/mcp/config-snippet-cli.ts",
       "lib/*-cli.ts",
       "tests/**/*.{js,mts}"
     ],

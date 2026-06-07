@@ -96,6 +96,10 @@ function printConfig(args: ParsedArgs): void {
   process.stdout.write(`${JSON.stringify(config, null, 2)}\n`);
 }
 
-export function main(): void {
+function main(): void {
   printConfig(parseArgs(process.argv));
+}
+
+if (path.basename(process.argv[1] || "") === "feed-mcp-config") {
+  main();
 }
