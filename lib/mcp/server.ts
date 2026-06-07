@@ -39,6 +39,7 @@ type JsonValue =
 type JsonObject = { [key: string]: JsonValue };
 type JsonRecord = Record<string, unknown>;
 type ToolHandler = (args: JsonRecord) => JsonValue | Promise<JsonValue>;
+type OutputMode = "jsonl" | "framed";
 
 interface McpToolDefinition {
   name: string;
@@ -129,6 +130,16 @@ function readJsonFile(filePath: string): JsonValue {
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonValue;
 }
 
+function enabledSourceNames(sources: unknown[]): string[] {
+  const names: string[] = [];
+  for (const source of sources) {
+    if (!isRecord(source) || source.enabled === false) continue;
+    const name = stringValue(source.name);
+    if (name) names.push(name);
+  }
+  return names;
+}
+
 function writeConfig(args: JsonRecord): JsonValue {
   const targetPath = configPath(args);
   const overwrite = booleanValue(args.overwrite) === true;
@@ -193,11 +204,7 @@ function writeConfig(args: JsonRecord): JsonValue {
     ok: true,
     written: true,
     path: targetPath,
-    sources_enabled: sources
-      .filter((source): source is JsonRecord => isRecord(source))
-      .filter((source) => source.enabled !== false)
-      .map((source) => String(source.name || ""))
-      .filter(Boolean),
+    sources_enabled: enabledSourceNames(sources),
     browser: asJson(browser || {}),
   };
 }
