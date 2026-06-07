@@ -54,6 +54,9 @@ interface JsonRpcMessage {
   params?: unknown;
 }
 
+type JsonRpcId = string | number | null;
+
+let outputMode: OutputMode = "jsonl";
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -533,7 +536,8 @@ const TOOLS: McpToolDefinition[] = [
   },
   {
     name: "feed_open",
-    description: "Open a rendered feed HTML file or URL in the controlled browser.",
+    description:
+      "Open a rendered feed HTML file or URL in the controlled browser.",
     inputSchema: {
       type: "object",
       properties: {
@@ -576,7 +580,9 @@ const TOOLS: McpToolDefinition[] = [
         curate: curateResult(curate),
         blocked_on: curate.requiresClassification ? "classification" : "none",
         next_actions: curate.requiresClassification
-          ? ["Call feed_classify with category assignments, then rerun feed_curate."]
+          ? [
+              "Call feed_classify with category assignments, then rerun feed_curate.",
+            ]
           : ["Call feed_render to write the HTML feed."],
       };
     },
@@ -600,18 +606,23 @@ async function callTool(params: unknown): Promise<JsonObject> {
   }
 }
 
-function success(id: JsonRpcMessage["id"], result: JsonObject): void {
-  process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, result })}\n`);
+function writeRpcMessage(payload: JsonObject): void {
+  const text = JSON.stringify(payload);
+  if (outputMode === "framed") {
+    process.stdout.write(
+      `Content-Length: ${Buffer.byteLength(text, "utf8")}\r\n\r\n${text}`,
+    );
+    return;
+  }
+  process.stdout.write(`${text}\n`);
 }
 
-function failure(
-  id: JsonRpcMessage["id"],
-  code: number,
-  message: string,
-): void {
-  process.stdout.write(
-    `${JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } })}\n`,
-  );
+function success(id: JsonRpcId, result: JsonObject): void {
+  writeRpcMessage({ jsonrpc: "2.0", id, result });
+}
+
+function failure(id: JsonRpcId, code: number, message: string): void {
+  writeRpcMessage({ jsonrpc: "2.0", id, error: { code, message } });
 }
 
 async function handleMessage(message: JsonRpcMessage): Promise<void> {
@@ -656,27 +667,80 @@ async function handleMessage(message: JsonRpcMessage): Promise<void> {
   }
 }
 
+function contentLengthFromHeader(header: string): number | null {
+  const line = header
+    .split(/\r?\n/)
+    .find((entry) => /^content-length:/i.test(entry));
+  const match = line?.match(/^content-length:\s*(\d+)\s*$/i);
+  if (!match) return null;
+  const length = Number.parseInt(match[1], 10);
+  return Number.isInteger(length) && length >= 0 ? length : null;
+}
+
+export function dispatchJson(payload: string): void {
+  try {
+    void handleMessage(JSON.parse(payload) as JsonRpcMessage);
+  } catch (error) {
+    process.stderr.write(
+      `Invalid MCP JSON-RPC payload: ${
+        error instanceof Error ? error.message : String(error)
+      }\n`,
+    );
+  }
+}
+
+export function framedMessage(
+  buffer: Buffer<ArrayBufferLike>,
+): { payload: string; rest: Buffer<ArrayBufferLike> } | null {
+  const crlfHeaderEnd = buffer.indexOf("\r\n\r\n");
+  const lfHeaderEnd = buffer.indexOf("\n\n");
+  const hasCrlf = crlfHeaderEnd >= 0;
+  const headerEnd = hasCrlf ? crlfHeaderEnd : lfHeaderEnd;
+  if (headerEnd < 0) return null;
+  const separatorLength = hasCrlf ? 4 : 2;
+  const header = buffer.subarray(0, headerEnd).toString("ascii");
+  const length = contentLengthFromHeader(header);
+  if (length === null) return null;
+  const bodyStart = headerEnd + separatorLength;
+  const bodyEnd = bodyStart + length;
+  if (buffer.length < bodyEnd) return null;
+  return {
+    payload: buffer.subarray(bodyStart, bodyEnd).toString("utf8"),
+    rest: buffer.subarray(bodyEnd),
+  };
+}
+
 export async function main(): Promise<void> {
-  process.stdin.setEncoding("utf8");
-  let buffer = "";
+  let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   process.stdin.on("data", (chunk) => {
-    buffer += chunk;
-    let newlineIndex = buffer.indexOf("\n");
-    while (newlineIndex >= 0) {
-      const line = buffer.slice(0, newlineIndex).trim();
-      buffer = buffer.slice(newlineIndex + 1);
-      if (line) {
-        try {
-          void handleMessage(JSON.parse(line) as JsonRpcMessage);
-        } catch (error) {
-          process.stderr.write(
-            `Invalid MCP JSON-RPC payload: ${
-              error instanceof Error ? error.message : String(error)
-            }\n`,
-          );
-        }
+    buffer = Buffer.concat([
+      buffer,
+      Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), "utf8"),
+    ]);
+    while (buffer.length > 0) {
+      const framed = framedMessage(buffer);
+      if (framed) {
+        outputMode = "framed";
+        buffer = framed.rest;
+        dispatchJson(framed.payload);
+        continue;
       }
-      newlineIndex = buffer.indexOf("\n");
+
+      const bufferText = buffer.toString("utf8");
+      if (
+        /^content-length:/i.test(bufferText) &&
+        !bufferText.includes("\n\n")
+      ) {
+        return;
+      }
+
+      const newlineIndex = buffer.indexOf("\n");
+      if (newlineIndex < 0) return;
+      const line = buffer.subarray(0, newlineIndex).toString("utf8").trim();
+      buffer = buffer.subarray(newlineIndex + 1);
+      if (!line) continue;
+      outputMode = "jsonl";
+      dispatchJson(line);
     }
   });
 }

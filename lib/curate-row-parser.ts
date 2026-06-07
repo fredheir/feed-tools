@@ -27,7 +27,11 @@ function parseHits(columns: string[]): number | null {
   return Number.isInteger(value) ? value : null;
 }
 
-function parseNormalRow(row: number, columns: string[], raw: string): CurateRow {
+function parseNormalRow(
+  row: number,
+  columns: string[],
+  raw: string,
+): CurateRow {
   return {
     row,
     source: null,

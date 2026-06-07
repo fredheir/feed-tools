@@ -286,7 +286,9 @@ function maybeWriteConfig(
   };
 }
 
-function recommendedPath(results: CheckResult[]): DoctorResult["recommendedPath"] {
+function recommendedPath(
+  results: CheckResult[],
+): DoctorResult["recommendedPath"] {
   if (results.find((result) => result.name.startsWith("cdp:") && result.ok)) {
     return "cdp";
   }
@@ -294,7 +296,8 @@ function recommendedPath(results: CheckResult[]): DoctorResult["recommendedPath"
     return "agent-browser";
   }
   if (isSandbox(results)) return "workspace-chrome";
-  if (results.find((result) => result.name === "cic")?.ok) return "cic-fallback";
+  if (results.find((result) => result.name === "cic")?.ok)
+    return "cic-fallback";
   return "none";
 }
 
@@ -308,13 +311,15 @@ function nextActions(results: CheckResult[], config: ConfigResult): string[] {
   if (path === "cdp") {
     return ["Set capture.browser.cdp to the detected CDP endpoint."];
   }
-  if (path === "agent-browser") return ["Use the existing agent-browser capture path."];
+  if (path === "agent-browser")
+    return ["Use the existing agent-browser capture path."];
   if (path === "workspace-chrome") {
     return [
       "Run ./bin/feed-setup-sandbox, launch workspace Chrome, then rerun doctor.",
     ];
   }
-  if (path === "cic-fallback") return ["Use CiC only if MCP/CDP remains unavailable."];
+  if (path === "cic-fallback")
+    return ["Use CiC only if MCP/CDP remains unavailable."];
   return ["Install dependencies and launch a dedicated Chrome CDP profile."];
 }
 
