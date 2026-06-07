@@ -43,6 +43,8 @@ interface JsonRpcMessage {
   params?: unknown;
 }
 
+type JsonRpcId = string | number | null;
+
 let outputMode: OutputMode = "jsonl";
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -398,15 +400,11 @@ function writeRpcMessage(payload: JsonObject): void {
   process.stdout.write(`${text}\n`);
 }
 
-function success(id: JsonRpcMessage["id"], result: JsonObject): void {
+function success(id: JsonRpcId, result: JsonObject): void {
   writeRpcMessage({ jsonrpc: "2.0", id, result });
 }
 
-function failure(
-  id: JsonRpcMessage["id"],
-  code: number,
-  message: string,
-): void {
+function failure(id: JsonRpcId, code: number, message: string): void {
   writeRpcMessage({ jsonrpc: "2.0", id, error: { code, message } });
 }
 
@@ -462,7 +460,7 @@ function contentLengthFromHeader(header: string): number | null {
   return Number.isInteger(length) && length >= 0 ? length : null;
 }
 
-function dispatchJson(payload: string): void {
+export function dispatchJson(payload: string): void {
   try {
     void handleMessage(JSON.parse(payload) as JsonRpcMessage);
   } catch (error) {
@@ -474,30 +472,34 @@ function dispatchJson(payload: string): void {
   }
 }
 
-function framedMessage(buffer: string): { payload: string; rest: string } | null {
+export function framedMessage(
+  buffer: Buffer<ArrayBufferLike>,
+): { payload: string; rest: Buffer<ArrayBufferLike> } | null {
   const crlfHeaderEnd = buffer.indexOf("\r\n\r\n");
   const lfHeaderEnd = buffer.indexOf("\n\n");
   const hasCrlf = crlfHeaderEnd >= 0;
   const headerEnd = hasCrlf ? crlfHeaderEnd : lfHeaderEnd;
   if (headerEnd < 0) return null;
   const separatorLength = hasCrlf ? 4 : 2;
-  const header = buffer.slice(0, headerEnd);
+  const header = buffer.subarray(0, headerEnd).toString("ascii");
   const length = contentLengthFromHeader(header);
   if (length === null) return null;
   const bodyStart = headerEnd + separatorLength;
   const bodyEnd = bodyStart + length;
   if (buffer.length < bodyEnd) return null;
   return {
-    payload: buffer.slice(bodyStart, bodyEnd),
-    rest: buffer.slice(bodyEnd),
+    payload: buffer.subarray(bodyStart, bodyEnd).toString("utf8"),
+    rest: buffer.subarray(bodyEnd),
   };
 }
 
 export async function main(): Promise<void> {
-  process.stdin.setEncoding("utf8");
-  let buffer = "";
+  let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   process.stdin.on("data", (chunk) => {
-    buffer += chunk;
+    buffer = Buffer.concat([
+      buffer,
+      Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), "utf8"),
+    ]);
     while (buffer.length > 0) {
       const framed = framedMessage(buffer);
       if (framed) {
@@ -507,14 +509,18 @@ export async function main(): Promise<void> {
         continue;
       }
 
-      if (/^content-length:/i.test(buffer) && !buffer.includes("\n\n")) {
+      const bufferText = buffer.toString("utf8");
+      if (
+        /^content-length:/i.test(bufferText) &&
+        !bufferText.includes("\n\n")
+      ) {
         return;
       }
 
       const newlineIndex = buffer.indexOf("\n");
       if (newlineIndex < 0) return;
-      const line = buffer.slice(0, newlineIndex).trim();
-      buffer = buffer.slice(newlineIndex + 1);
+      const line = buffer.subarray(0, newlineIndex).toString("utf8").trim();
+      buffer = buffer.subarray(newlineIndex + 1);
       if (!line) continue;
       outputMode = "jsonl";
       dispatchJson(line);
