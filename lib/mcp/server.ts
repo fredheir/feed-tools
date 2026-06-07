@@ -108,7 +108,8 @@ function sourceList(value: unknown): FeedSourceName[] {
     }
     sources.push(entry as FeedSourceName);
   }
-  if (invalid.length > 0) throw new Error(`Unsupported source: ${invalid.join(", ")}`);
+  if (invalid.length > 0)
+    throw new Error(`Unsupported source: ${invalid.join(", ")}`);
   return sources;
 }
 
@@ -414,7 +415,10 @@ const TOOLS: McpToolDefinition[] = [
   {
     name: "feed_config_read",
     description: "Read the active feed-tools config file, if present.",
-    inputSchema: { type: "object", properties: { config_path: { type: "string" } } },
+    inputSchema: {
+      type: "object",
+      properties: { config_path: { type: "string" } },
+    },
     handler: (args) => {
       const pathToRead = configPath(args);
       return {
@@ -552,7 +556,8 @@ const TOOLS: McpToolDefinition[] = [
   },
   {
     name: "feed_open",
-    description: "Open a rendered feed HTML file or URL in the controlled browser.",
+    description:
+      "Open a rendered feed HTML file or URL in the controlled browser.",
     inputSchema: {
       type: "object",
       properties: {
@@ -595,7 +600,9 @@ const TOOLS: McpToolDefinition[] = [
         curate: curateResult(curate),
         blocked_on: curate.requiresClassification ? "classification" : "none",
         next_actions: curate.requiresClassification
-          ? ["Call feed_classify with category assignments, then rerun feed_curate."]
+          ? [
+              "Call feed_classify with category assignments, then rerun feed_curate.",
+            ]
           : ["Call feed_render to write the HTML feed."],
       };
     },

@@ -43,9 +43,12 @@ describe("parseCurateRows", () => {
 
   test("parses classification-required rows", () => {
     expect(
-      parseCurateRows("3\tx\tid-3\t@c\tNeeds category\tlikes=5 shares=1 views=9\thttps://example.test/3", {
-        classificationRequired: true,
-      }),
+      parseCurateRows(
+        "3\tx\tid-3\t@c\tNeeds category\tlikes=5 shares=1 views=9\thttps://example.test/3",
+        {
+          classificationRequired: true,
+        },
+      ),
     ).toEqual([
       {
         row: 3,

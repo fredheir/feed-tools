@@ -208,9 +208,7 @@ export function buildClassifyArgs(options: ClassifyRowsOptions): string[] {
   return args;
 }
 
-export function classifyRows(
-  options: ClassifyRowsOptions,
-): ClassifyRowsResult {
+export function classifyRows(options: ClassifyRowsOptions): ClassifyRowsResult {
   const result = runBin("feed-classify", buildClassifyArgs(options), {
     timeoutMs: options.timeoutMs,
   });
