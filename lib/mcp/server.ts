@@ -27,6 +27,7 @@ type JsonValue =
 type JsonObject = { [key: string]: JsonValue };
 type JsonRecord = Record<string, unknown>;
 type ToolHandler = (args: JsonRecord) => JsonValue | Promise<JsonValue>;
+type OutputMode = "jsonl" | "framed";
 
 interface McpToolDefinition {
   name: string;
@@ -41,6 +42,8 @@ interface JsonRpcMessage {
   method?: string;
   params?: unknown;
 }
+
+let outputMode: OutputMode = "jsonl";
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -384,8 +387,19 @@ async function callTool(params: unknown): Promise<JsonObject> {
   }
 }
 
+function writeRpcMessage(payload: JsonObject): void {
+  const text = JSON.stringify(payload);
+  if (outputMode === "framed") {
+    process.stdout.write(
+      `Content-Length: ${Buffer.byteLength(text, "utf8")}\r\n\r\n${text}`,
+    );
+    return;
+  }
+  process.stdout.write(`${text}\n`);
+}
+
 function success(id: JsonRpcMessage["id"], result: JsonObject): void {
-  process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, result })}\n`);
+  writeRpcMessage({ jsonrpc: "2.0", id, result });
 }
 
 function failure(
@@ -393,9 +407,7 @@ function failure(
   code: number,
   message: string,
 ): void {
-  process.stdout.write(
-    `${JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } })}\n`,
-  );
+  writeRpcMessage({ jsonrpc: "2.0", id, error: { code, message } });
 }
 
 async function handleMessage(message: JsonRpcMessage): Promise<void> {
@@ -440,27 +452,72 @@ async function handleMessage(message: JsonRpcMessage): Promise<void> {
   }
 }
 
+function contentLengthFromHeader(header: string): number | null {
+  const line = header
+    .split(/\r?\n/)
+    .find((entry) => /^content-length:/i.test(entry));
+  const match = line?.match(/^content-length:\s*(\d+)\s*$/i);
+  if (!match) return null;
+  const length = Number.parseInt(match[1], 10);
+  return Number.isInteger(length) && length >= 0 ? length : null;
+}
+
+function dispatchJson(payload: string): void {
+  try {
+    void handleMessage(JSON.parse(payload) as JsonRpcMessage);
+  } catch (error) {
+    process.stderr.write(
+      `Invalid MCP JSON-RPC payload: ${
+        error instanceof Error ? error.message : String(error)
+      }\n`,
+    );
+  }
+}
+
+function framedMessage(buffer: string): { payload: string; rest: string } | null {
+  const crlfHeaderEnd = buffer.indexOf("\r\n\r\n");
+  const lfHeaderEnd = buffer.indexOf("\n\n");
+  const hasCrlf = crlfHeaderEnd >= 0;
+  const headerEnd = hasCrlf ? crlfHeaderEnd : lfHeaderEnd;
+  if (headerEnd < 0) return null;
+  const separatorLength = hasCrlf ? 4 : 2;
+  const header = buffer.slice(0, headerEnd);
+  const length = contentLengthFromHeader(header);
+  if (length === null) return null;
+  const bodyStart = headerEnd + separatorLength;
+  const bodyEnd = bodyStart + length;
+  if (buffer.length < bodyEnd) return null;
+  return {
+    payload: buffer.slice(bodyStart, bodyEnd),
+    rest: buffer.slice(bodyEnd),
+  };
+}
+
 export async function main(): Promise<void> {
   process.stdin.setEncoding("utf8");
   let buffer = "";
   process.stdin.on("data", (chunk) => {
     buffer += chunk;
-    let newlineIndex = buffer.indexOf("\n");
-    while (newlineIndex >= 0) {
+    while (buffer.length > 0) {
+      const framed = framedMessage(buffer);
+      if (framed) {
+        outputMode = "framed";
+        buffer = framed.rest;
+        dispatchJson(framed.payload);
+        continue;
+      }
+
+      if (/^content-length:/i.test(buffer) && !buffer.includes("\n\n")) {
+        return;
+      }
+
+      const newlineIndex = buffer.indexOf("\n");
+      if (newlineIndex < 0) return;
       const line = buffer.slice(0, newlineIndex).trim();
       buffer = buffer.slice(newlineIndex + 1);
-      if (line) {
-        try {
-          void handleMessage(JSON.parse(line) as JsonRpcMessage);
-        } catch (error) {
-          process.stderr.write(
-            `Invalid MCP JSON-RPC payload: ${
-              error instanceof Error ? error.message : String(error)
-            }\n`,
-          );
-        }
-      }
-      newlineIndex = buffer.indexOf("\n");
+      if (!line) continue;
+      outputMode = "jsonl";
+      dispatchJson(line);
     }
   });
 }
