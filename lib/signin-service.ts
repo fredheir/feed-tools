@@ -12,7 +12,7 @@ import { listSupportedSources } from "./source-catalog.ts";
 import type { FeedSourceName } from "./types.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-export const CHROME_BIN = path.join(
+const CHROME_BIN = path.join(
   REPO_ROOT,
   "chrome-install",
   "opt",
@@ -20,8 +20,8 @@ export const CHROME_BIN = path.join(
   "chrome",
   "google-chrome",
 );
-export const CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
-export const CHROME_LOG = path.join(REPO_ROOT, "chrome.log");
+const CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
+const CHROME_LOG = path.join(REPO_ROOT, "chrome.log");
 export const DEFAULT_CDP_PORT = "9222";
 export const DEFAULT_INTERVAL_MS = 30_000;
 export const DEFAULT_TIMEOUT_MS = 20 * 60_000;
@@ -38,12 +38,12 @@ export interface SigninStatusResult {
   missing: FeedSourceName[];
 }
 
-export type FeedSigninChromeProcess = ChildProcess & {
+type FeedSigninChromeProcess = ChildProcess & {
   logPath: string;
   profileDir: string;
 };
 
-export const SOURCE_TARGETS: Record<FeedSourceName, SourceSigninTarget> = {
+const SOURCE_TARGETS: Record<FeedSourceName, SourceSigninTarget> = {
   x: {
     url: "https://x.com/home",
     authCookies: [{ domains: ["x.com", "twitter.com"], names: ["auth_token"] }],
@@ -84,7 +84,9 @@ export const SOURCE_TARGETS: Record<FeedSourceName, SourceSigninTarget> = {
 };
 
 export function listSupportedSigninSources(): FeedSourceName[] {
-  return listSupportedSources().filter((source) => Boolean(SOURCE_TARGETS[source]));
+  return listSupportedSources().filter((source) =>
+    Boolean(SOURCE_TARGETS[source]),
+  );
 }
 
 function commandExists(command: string): boolean {
@@ -101,7 +103,7 @@ function findPythonCommand(): string | null {
   return null;
 }
 
-export function assertPythonSqliteAvailable(): void {
+function assertPythonSqliteAvailable(): void {
   const python = findPythonCommand();
   if (!python) {
     throw new Error(
@@ -123,7 +125,7 @@ export function assertPythonSqliteAvailable(): void {
   }
 }
 
-export function readCdpVersion(cdpPort: string): string | null {
+function readCdpVersion(cdpPort: string): string | null {
   const script = `
 const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), 1000);
@@ -237,7 +239,7 @@ sys.exit(1)
   return result.status === 0;
 }
 
-export function getSigninStatus(
+function getSigninStatus(
   sources: FeedSourceName[],
   profileDir = CHROME_PROFILE,
 ): SigninStatusResult {
@@ -254,7 +256,7 @@ export function getSigninStatus(
   };
 }
 
-export function formatStatus(status: Partial<Record<FeedSourceName, boolean>>): string {
+function formatStatus(status: Partial<Record<FeedSourceName, boolean>>): string {
   return Object.entries(status)
     .map(([source, ok]) => `${source} ${ok ? "ok" : "pending"}`)
     .join(" | ");
