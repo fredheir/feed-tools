@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The MCP server is the preferred agent interface for feed-tools. It lets an agent call feed workflow tools directly instead of driving a browser through Claude in Chrome or Cowork browser tools.
+The MCP server is the planned preferred agent interface for feed-tools. It lets an agent call feed workflow tools directly instead of driving a browser through Claude in Chrome or Cowork browser tools.
 
 The normal path is:
 
@@ -14,14 +14,16 @@ agent / MCP host
         -> sqlite, JSON snapshots, feed.json, feed.html
 ```
 
-Claude in Chrome remains a fallback for hosted environments where the user's authenticated browser is available through a Chrome connector but no usable CDP browser is available.
+This first documentation PR describes the target interface. The runnable `bin/feed-mcp` entrypoint lands in the follow-up implementation PRs. Until that entrypoint is present, use the existing CLI flow in `AGENTS.md`.
+
+Claude in Chrome remains a fallback for hosted environments where the user's signed-in browser is available through a Chrome connector but no usable CDP browser is available.
 
 ## Goals
 
 - expose feed workflow operations as MCP tools
 - keep browser operation inside feed-tools code
 - reuse the existing CDP and `agent-browser` capture path
-- keep the user's authenticated Chrome profile local
+- keep the user's signed-in Chrome profile local
 - return compact structured results and file paths to the agent
 - avoid Cowork download mounts, console-message transport, and browser-extension settings
 
@@ -35,9 +37,9 @@ Claude in Chrome remains a fallback for hosted environments where the user's aut
 
 ## Local MCP model
 
-The first implementation should use a local stdio MCP server. The MCP host starts a local command and communicates with it over stdin/stdout. Because stdout is protocol traffic, the MCP server must not write normal logs to stdout. Logs should go to stderr or files, and child-process stdout should be captured and returned as tool data.
+The implementation should use a local stdio MCP server. The MCP host starts a local command and communicates with it over stdin/stdout. Because stdout is protocol traffic, the MCP server must not write normal logs to stdout. Logs should go to stderr or files, and child-process stdout should be captured and returned as tool data.
 
-Example MCP host configuration for a checked-out repo:
+Future MCP host configuration for a checked-out repo:
 
 ```json
 {
@@ -109,145 +111,21 @@ The MCP server must validate CDP by requesting `/json/version` and checking for 
 
 Checks local readiness and returns structured next actions.
 
-Input:
-
-```ts
-{
-  cdp_ports?: number[];
-  write_config?: boolean;
-  config_path?: string;
-}
-```
-
-Output:
-
-```ts
-{
-  ok: boolean;
-  recommended_path: "cdp" | "agent-browser" | "workspace-chrome" | "cic-fallback" | "none";
-  checks: Array<{
-    name: string;
-    ok: boolean;
-    detail: string;
-    recommendation?: string;
-  }>;
-  config?: {
-    status: "exists" | "created" | "skipped" | "unavailable";
-    path?: string;
-    detail: string;
-  };
-  next_actions: string[];
-}
-```
-
 ### `feed_browser_start`
 
 Starts or reuses a dedicated Chrome CDP browser.
-
-Input:
-
-```ts
-{
-  cdp_port?: number;
-  profile_dir?: string;
-  chrome_bin?: string;
-  urls?: string[];
-  reuse_existing?: boolean;
-  no_sandbox?: boolean;
-}
-```
-
-Output:
-
-```ts
-{
-  ok: boolean;
-  cdp: string;
-  profile_dir: string;
-  chrome_bin: string;
-  log_path: string;
-  launched: boolean;
-  pid?: number;
-  version?: string;
-}
-```
 
 ### `feed_browser_status`
 
 Checks whether a CDP endpoint is usable.
 
-Input:
-
-```ts
-{
-  cdp?: string;
-}
-```
-
-Output:
-
-```ts
-{
-  ok: boolean;
-  cdp: string;
-  version_url?: string;
-  browser?: string;
-  web_socket_debugger_url_present: boolean;
-  detail: string;
-}
-```
-
 ### `feed_signin_open`
 
 Opens source login/feed pages in the dedicated Chrome profile and returns immediately.
 
-Input:
-
-```ts
-{
-  sources: FeedSourceName[];
-  cdp_port?: number;
-  profile_dir?: string;
-  reuse_existing?: boolean;
-}
-```
-
-Output:
-
-```ts
-{
-  ok: boolean;
-  cdp: string;
-  profile_dir: string;
-  opened_urls: Record<FeedSourceName, string>;
-  auth_status: Record<FeedSourceName, boolean>;
-  instructions: string;
-}
-```
-
 ### `feed_signin_status`
 
 Checks source-specific auth cookies in the Chrome profile.
-
-Input:
-
-```ts
-{
-  sources?: FeedSourceName[];
-  profile_dir?: string;
-}
-```
-
-Output:
-
-```ts
-{
-  profile_dir: string;
-  status: Record<FeedSourceName, boolean>;
-  cookie_stores_found: number;
-  missing: FeedSourceName[];
-}
-```
 
 ### `feed_config_read`
 
@@ -260,37 +138,6 @@ Creates or updates `config.json` from structured source, browser, render, curati
 ### `feed_capture`
 
 Captures one or more sources through the existing source adapters.
-
-Input:
-
-```ts
-{
-  sources: FeedSourceName[];
-  limit?: number;
-  assets_dir?: string;
-  save_dir?: string;
-  browser?: FeedBrowserConfig;
-  require_auth?: boolean;
-  include_document?: boolean;
-}
-```
-
-Output:
-
-```ts
-{
-  ok: boolean;
-  source_counts: Record<FeedSourceName, number>;
-  captured_at: string;
-  save_dir: string;
-  assets_dir: string;
-  sqlite_path: string;
-  latest_paths: Record<FeedSourceName, string>;
-  current_paths: Record<FeedSourceName, string>;
-  requires_classification: boolean;
-  document?: FeedDocument;
-}
-```
 
 ### `feed_curate`
 
