@@ -87,10 +87,26 @@ function stringList(value: unknown): string[] {
 }
 
 function sourceList(value: unknown): FeedSourceName[] {
+  if (value == null) return [];
+  if (!Array.isArray(value)) throw new Error("sources must be an array");
   const supported = new Set(listSupportedSources());
-  return stringList(value).filter((source): source is FeedSourceName =>
-    supported.has(source as FeedSourceName),
-  );
+  const sources: FeedSourceName[] = [];
+  const invalid: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string" || !entry.trim()) {
+      invalid.push(String(entry));
+      continue;
+    }
+    if (!supported.has(entry as FeedSourceName)) {
+      invalid.push(entry);
+      continue;
+    }
+    sources.push(entry as FeedSourceName);
+  }
+  if (invalid.length > 0) {
+    throw new Error(`Unsupported source: ${invalid.join(", ")}`);
+  }
+  return sources;
 }
 
 function requiredSources(value: unknown): FeedSourceName[] {
@@ -109,6 +125,16 @@ function configPath(args: JsonRecord): string {
 
 function readJsonFile(filePath: string): JsonValue {
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonValue;
+}
+
+function enabledSourceNames(sources: unknown[]): string[] {
+  const names: string[] = [];
+  for (const source of sources) {
+    if (!isRecord(source) || source.enabled === false) continue;
+    const name = stringValue(source.name);
+    if (name) names.push(name);
+  }
+  return names;
 }
 
 function writeConfig(args: JsonRecord): JsonValue {
@@ -175,11 +201,7 @@ function writeConfig(args: JsonRecord): JsonValue {
     ok: true,
     written: true,
     path: targetPath,
-    sources_enabled: sources
-      .filter((source): source is JsonRecord => isRecord(source))
-      .filter((source) => source.enabled !== false)
-      .map((source) => String(source.name || ""))
-      .filter(Boolean),
+    sources_enabled: enabledSourceNames(sources),
     browser: asJson(browser || {}),
   };
 }
