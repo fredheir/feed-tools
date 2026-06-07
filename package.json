@@ -14,7 +14,7 @@
     "format:check": "biome format . && prettier --check \"**/*.{md,yml,yaml}\"",
     "test": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --disable-warning=ExperimentalWarning\" vitest run",
     "doctor": "./bin/feed-doctor",
-    "mcp": "node ./bin/feed-mcp",
+    "mcp": "node --experimental-strip-types ./bin/feed-mcp",
     "mcp:config": "node ./bin/feed-mcp-config",
     "setup:sandbox": "./bin/feed-setup-sandbox",
     "deadcode": "knip",
