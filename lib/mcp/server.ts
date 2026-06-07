@@ -1,9 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { createBrowserSession } from "../browser.ts";
 import { getBrowserStatus } from "../browser-status.ts";
 import { startBrowser } from "../browser-launch-service.ts";
+import { parseCurateRows } from "../curate-row-parser.ts";
 import { runDoctor } from "../doctor-service.ts";
+import {
+  captureSources,
+  classifyRows,
+  curateWorkset,
+  renderFeed,
+  type CaptureSourcesResult,
+  type CategoryAssignmentInput,
+  type CurateWorksetResult,
+} from "../pipeline-service.ts";
 import {
   CHROME_PROFILE,
   SOURCE_TARGETS,
@@ -15,6 +26,7 @@ import type { FeedSourceName } from "../types.ts";
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
+const DEFAULT_HTML_PATH = path.join(REPO_ROOT, "var", "feed.html");
 
 type JsonValue =
   | null
@@ -79,6 +91,12 @@ function sourceList(value: unknown): FeedSourceName[] {
   return stringList(value).filter((source): source is FeedSourceName =>
     supported.has(source as FeedSourceName),
   );
+}
+
+function requiredSources(value: unknown): FeedSourceName[] {
+  const sources = sourceList(value);
+  if (sources.length === 0) throw new Error("Provide at least one source");
+  return sources;
 }
 
 function configPath(args: JsonRecord): string {
@@ -164,6 +182,50 @@ function writeConfig(args: JsonRecord): JsonValue {
       .filter(Boolean),
     browser: asJson(browser || {}),
   };
+}
+
+function assignments(value: unknown): CategoryAssignmentInput[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): CategoryAssignmentInput[] => {
+    if (!isRecord(entry)) return [];
+    const category = stringValue(entry.category);
+    const rows = stringValue(entry.rows);
+    if (!category || !rows) return [];
+    return [{ category, rows }];
+  });
+}
+
+function compactCaptureResult(result: CaptureSourcesResult): JsonObject {
+  return {
+    ok: result.ok,
+    item_count: result.itemCount,
+    source_counts: result.sourceCounts,
+    source: result.document.source,
+    captured_at: result.document.captured_at,
+    stderr: result.stderr,
+  };
+}
+
+function curateResult(value: CurateWorksetResult): JsonObject {
+  return {
+    ok: value.ok,
+    requires_classification: value.requiresClassification,
+    output_path: value.outputPath,
+    rows: asJson(
+      parseCurateRows(value.stdout, {
+        classificationRequired: value.requiresClassification,
+      }),
+    ),
+    stdout: value.stdout,
+    stderr: value.stderr,
+  };
+}
+
+function openTarget(args: JsonRecord): JsonObject {
+  const target = stringValue(args.path) || DEFAULT_HTML_PATH;
+  const browser = createBrowserSession({ cdp: stringValue(args.cdp) });
+  browser.openPathOrUrl(target.includes("://") ? target : path.resolve(target));
+  return { ok: true, opened: true, target };
 }
 
 function toolResult(value: JsonValue): JsonObject {
@@ -277,8 +339,7 @@ const TOOLS: McpToolDefinition[] = [
       },
     },
     handler: (args) => {
-      const sources = sourceList(args.sources);
-      if (sources.length === 0) throw new Error("Provide at least one source");
+      const sources = requiredSources(args.sources);
       const profileDir = path.resolve(
         stringValue(args.profile_dir) ||
           process.env.FEED_TOOLS_CHROME_PROFILE ||
@@ -358,6 +419,167 @@ const TOOLS: McpToolDefinition[] = [
       },
     },
     handler: writeConfig,
+  },
+  {
+    name: "feed_capture",
+    description: "Capture one or more configured feed sources.",
+    inputSchema: {
+      type: "object",
+      required: ["sources"],
+      properties: {
+        sources: { type: "array", items: { type: "string" } },
+        limit: { type: "number" },
+        assets_dir: { type: "string" },
+        save_dir: { type: "string" },
+        include_document: { type: "boolean" },
+        timeout_ms: { type: "number" },
+      },
+    },
+    handler: (args) => {
+      const result = captureSources({
+        sources: requiredSources(args.sources),
+        limit: numberValue(args.limit),
+        assetsDir: stringValue(args.assets_dir),
+        saveDir: stringValue(args.save_dir),
+        timeoutMs: numberValue(args.timeout_ms),
+      });
+      const summary = compactCaptureResult(result);
+      if (booleanValue(args.include_document) === true) {
+        summary.document = asJson(result.document);
+      }
+      return summary;
+    },
+  },
+  {
+    name: "feed_curate",
+    description: "Export a sqlite-backed workset and compact parsed rows.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        output_path: { type: "string" },
+        sources: { type: "array", items: { type: "string" } },
+        save_dir: { type: "string" },
+        limit: { type: "number" },
+        exclude_seen: { type: "boolean" },
+        exclude_completed: { type: "boolean" },
+        matches: { type: "array", items: { type: "string" } },
+        timeout_ms: { type: "number" },
+      },
+    },
+    handler: (args) =>
+      curateResult(
+        curateWorkset({
+          outputPath: stringValue(args.output_path),
+          sources: sourceList(args.sources),
+          saveDir: stringValue(args.save_dir),
+          limit: numberValue(args.limit),
+          excludeSeen: booleanValue(args.exclude_seen),
+          excludeCompleted: booleanValue(args.exclude_completed),
+          matches: stringList(args.matches),
+          timeoutMs: numberValue(args.timeout_ms),
+        }),
+      ),
+  },
+  {
+    name: "feed_classify",
+    description: "Assign categories to curated feed rows.",
+    inputSchema: {
+      type: "object",
+      required: ["assignments"],
+      properties: {
+        input_path: { type: "string" },
+        save_dir: { type: "string" },
+        assignments: { type: "array", items: { type: "object" } },
+        timeout_ms: { type: "number" },
+      },
+    },
+    handler: (args) =>
+      asJson(
+        classifyRows({
+          inputPath: stringValue(args.input_path),
+          saveDir: stringValue(args.save_dir),
+          assignments: assignments(args.assignments),
+          timeoutMs: numberValue(args.timeout_ms),
+        }),
+      ),
+  },
+  {
+    name: "feed_render",
+    description: "Render a curated feed document to local HTML.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        input_path: { type: "string" },
+        output_path: { type: "string" },
+        pick: { type: "string" },
+        tab: { type: "boolean" },
+        summary: { type: "string" },
+        open: { type: "boolean" },
+        timeout_ms: { type: "number" },
+      },
+    },
+    handler: (args) =>
+      asJson(
+        renderFeed({
+          inputPath: stringValue(args.input_path),
+          outputPath: stringValue(args.output_path),
+          pick: stringValue(args.pick),
+          tab: booleanValue(args.tab),
+          summary: stringValue(args.summary),
+          open: booleanValue(args.open),
+          timeoutMs: numberValue(args.timeout_ms),
+        }),
+      ),
+  },
+  {
+    name: "feed_open",
+    description: "Open a rendered feed HTML file or URL in the controlled browser.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        cdp: { type: "string" },
+      },
+    },
+    handler: openTarget,
+  },
+  {
+    name: "feed_pipeline",
+    description:
+      "Capture sources and curate a workset, stopping before render if classification is required.",
+    inputSchema: {
+      type: "object",
+      required: ["sources"],
+      properties: {
+        sources: { type: "array", items: { type: "string" } },
+        limit: { type: "number" },
+        matches: { type: "array", items: { type: "string" } },
+        exclude_completed: { type: "boolean" },
+        timeout_ms: { type: "number" },
+      },
+    },
+    handler: (args) => {
+      const sources = requiredSources(args.sources);
+      const capture = captureSources({
+        sources,
+        limit: numberValue(args.limit),
+        timeoutMs: numberValue(args.timeout_ms),
+      });
+      const curate = curateWorkset({
+        sources,
+        matches: stringList(args.matches),
+        excludeCompleted: booleanValue(args.exclude_completed),
+        timeoutMs: numberValue(args.timeout_ms),
+      });
+      return {
+        capture: compactCaptureResult(capture),
+        curate: curateResult(curate),
+        blocked_on: curate.requiresClassification ? "classification" : "none",
+        next_actions: curate.requiresClassification
+          ? ["Call feed_classify with category assignments, then rerun feed_curate."]
+          : ["Call feed_render to write the HTML feed."],
+      };
+    },
   },
 ];
 
