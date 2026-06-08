@@ -137,6 +137,11 @@ export function startBrowser(
       detail: `Reusing existing CDP endpoint ${cdp}.`,
     };
   }
+  if (existing.ok) {
+    throw new Error(
+      `CDP port ${cdp} is already occupied by ${existing.browser || "a Chrome DevTools Protocol endpoint"}. Set reuse_existing=true to reuse it or choose another cdp_port.`,
+    );
+  }
 
   if (!chromeBin) {
     throw new Error(

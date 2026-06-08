@@ -167,6 +167,7 @@ const timeout = setTimeout(() => controller.abort(), timeoutMs);
 `;
   return execFileSync(process.execPath, ["-e", script, url, "2000"], {
     encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
     timeout: CDP_PROBE_TIMEOUT_MS + 1000,
   });
 }

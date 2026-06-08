@@ -1,3 +1,6 @@
 #!/usr/bin/env node
 
-import "../lib/mcp/server.ts";
+import { runTsEntry } from "./run-ts-entry.mjs";
+
+process.env.FEED_TOOLS_MCP_MAIN = "1";
+await runTsEntry("../lib/mcp/server.ts");
