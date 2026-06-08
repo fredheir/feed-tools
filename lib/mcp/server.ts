@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { getBrowserStatus } from "../browser-status.ts";
 import { startBrowser } from "../browser-launch-service.ts";
-import { runDoctor } from "../doctor-service.ts";
+import { type DoctorResult, runDoctor } from "../doctor-service.ts";
 import {
   CHROME_PROFILE,
   SOURCE_TARGETS,
@@ -212,6 +212,16 @@ function toolError(error: unknown): JsonObject {
   };
 }
 
+function doctorMcpResult(result: DoctorResult): JsonObject {
+  return {
+    ok: true,
+    recommended_path: result.recommendedPath,
+    checks: asJson(result.results),
+    config: asJson(result.config),
+    next_actions: asJson(result.nextActions),
+  };
+}
+
 const TOOLS: McpToolDefinition[] = [
   {
     name: "feed_doctor",
@@ -226,7 +236,7 @@ const TOOLS: McpToolDefinition[] = [
       },
     },
     handler: (args) =>
-      asJson(
+      doctorMcpResult(
         runDoctor({
           cdpPorts: Array.isArray(args.cdp_ports)
             ? args.cdp_ports.filter(
