@@ -48,6 +48,7 @@ export interface DoctorOptions {
   cdpPorts?: number[];
   configure?: boolean;
   forceConfig?: boolean;
+  configPath?: string;
 }
 
 export interface DoctorResult {
@@ -254,17 +255,25 @@ export function applyBrowserConfigToPayload(
 function maybeWriteConfig(
   results: CheckResult[],
   forceConfig: boolean,
+  configPath = DEFAULT_CONFIG_PATH,
 ): ConfigResult {
-  if (fs.existsSync(DEFAULT_CONFIG_PATH) && !forceConfig) {
+  const targetConfigPath = path.resolve(configPath);
+  if (fs.existsSync(targetConfigPath) && !forceConfig) {
     return {
       status: "exists",
       detail: "config.json already exists; left unchanged.",
-      path: DEFAULT_CONFIG_PATH,
+      path: targetConfigPath,
     };
   }
+  const targetExamplePath = path.join(
+    path.dirname(targetConfigPath),
+    "config.json.example",
+  );
   const examplePath = fs.existsSync(WORKDIR_CONFIG_EXAMPLE_PATH)
     ? WORKDIR_CONFIG_EXAMPLE_PATH
-    : PACKAGE_CONFIG_EXAMPLE_PATH;
+    : fs.existsSync(targetExamplePath)
+      ? targetExamplePath
+      : PACKAGE_CONFIG_EXAMPLE_PATH;
   if (!fs.existsSync(examplePath)) {
     return {
       status: "unavailable",
@@ -283,14 +292,15 @@ function maybeWriteConfig(
     fs.readFileSync(examplePath, "utf8"),
     browser,
   );
-  fs.writeFileSync(DEFAULT_CONFIG_PATH, payload);
+  fs.mkdirSync(path.dirname(targetConfigPath), { recursive: true });
+  fs.writeFileSync(targetConfigPath, payload);
   return {
     status: "created",
     detail:
       Object.keys(browser).length === 0
         ? "Created config.json using agent-browser auto-connect."
         : `Created config.json using CDP port ${browser.cdp}.`,
-    path: DEFAULT_CONFIG_PATH,
+    path: targetConfigPath,
   };
 }
 
@@ -336,6 +346,7 @@ export function runDoctor(options: DoctorOptions = {}): DoctorResult {
     cdpPorts = DEFAULT_CDP_PORTS,
     configure = true,
     forceConfig = false,
+    configPath = DEFAULT_CONFIG_PATH,
   } = options;
   const results = [
     checkAgentBrowser(),
@@ -347,7 +358,7 @@ export function runDoctor(options: DoctorOptions = {}): DoctorResult {
     results.push(checkWorkspaceChrome());
   }
   const config = configure
-    ? maybeWriteConfig(results, forceConfig)
+    ? maybeWriteConfig(results, forceConfig, configPath)
     : {
         status: "skipped" as const,
         detail: "config write disabled.",
