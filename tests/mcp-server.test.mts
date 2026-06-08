@@ -18,6 +18,7 @@ describe("feed-tools MCP server", () => {
       "feed_render",
       "feed_open",
       "feed_pipeline",
+      "feed_pipeline_render",
     ]);
   });
 
