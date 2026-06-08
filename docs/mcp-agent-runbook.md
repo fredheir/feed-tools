@@ -171,6 +171,8 @@ Call:
 feed_curate
 ```
 
+`feed_curate` returns compact parsed rows by default. Use `include_stdout: true` only when you need the raw CLI listing for debugging.
+
 Common inputs:
 
 ```json
@@ -243,6 +245,16 @@ If the user asked for a summary, pass it explicitly:
 ```
 
 Return the `html_path` to the user.
+
+## One-shot pipeline flow
+
+When auth and config are already ready, prefer:
+
+```text
+feed_pipeline_render
+```
+
+Use it for the normal capture -> curate -> render path. It stops before render if classification is required and returns parsed rows for classification. After calling `feed_classify`, call `feed_pipeline_render` with `capture: false` or call `feed_curate` then `feed_render` if you do not want to capture again.
 
 If the user wants the file opened in the controlled browser, call:
 

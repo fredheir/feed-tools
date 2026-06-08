@@ -5,7 +5,7 @@ import { createBrowserSession } from "../browser.ts";
 import { getBrowserStatus } from "../browser-status.ts";
 import { startBrowser } from "../browser-launch-service.ts";
 import { parseCurateRows } from "../curate-row-parser.ts";
-import { runDoctor } from "../doctor-service.ts";
+import { type DoctorResult, runDoctor } from "../doctor-service.ts";
 import {
   captureSources,
   classifyRows,
@@ -58,6 +58,8 @@ interface JsonRpcMessage {
 type JsonRpcId = string | number | null;
 
 let outputMode: OutputMode = "jsonl";
+let messageQueue: Promise<void> = Promise.resolve();
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -231,8 +233,11 @@ function compactCaptureResult(result: CaptureSourcesResult): JsonObject {
   };
 }
 
-function curateResult(value: CurateWorksetResult): JsonObject {
-  return {
+function curateResult(
+  value: CurateWorksetResult,
+  options: { includeStdout?: boolean } = {},
+): JsonObject {
+  const result: JsonObject = {
     ok: value.ok,
     requires_classification: value.requiresClassification,
     output_path: value.outputPath,
@@ -241,9 +246,56 @@ function curateResult(value: CurateWorksetResult): JsonObject {
         classificationRequired: value.requiresClassification,
       }),
     ),
-    stdout: value.stdout,
     stderr: value.stderr,
   };
+  if (options.includeStdout) result.stdout = value.stdout;
+  return result;
+}
+
+function nextActionsForError(message: string): string[] {
+  if (/unsupported source/i.test(message)) {
+    return [
+      "Call tools/list or use feed_config_read to inspect supported sources.",
+    ];
+  }
+  if (/provide at least one source/i.test(message)) {
+    return ["Retry with sources set to one or more supported source names."];
+  }
+  if (/category assignment|--category/i.test(message)) {
+    return [
+      "Call feed_curate, inspect returned rows, then call feed_classify with explicit category assignments.",
+    ];
+  }
+  if (/feed-curate failed/i.test(message)) {
+    return [
+      "Call feed_capture first if sqlite has no items, or retry feed_curate with a narrower source/matches filter.",
+    ];
+  }
+  if (/feed-render failed/i.test(message)) {
+    return [
+      "Call feed_curate and resolve classification before rendering, then retry feed_render.",
+    ];
+  }
+  if (/cdp|browser/i.test(message)) {
+    return [
+      "Call feed_doctor and feed_browser_status, then start or configure a usable CDP browser.",
+    ];
+  }
+  return [
+    "Call feed_doctor for environment status, then retry with narrower inputs or inspect stderr in the tool result.",
+  ];
+}
+
+function pipelineNextActions(requiresClassification: boolean): string[] {
+  return requiresClassification
+    ? ["Call feed_classify with category assignments, then rerun feed_curate."]
+    : ["Call feed_render to write the HTML feed."];
+}
+
+function renderedPipelineNextActions(opened: boolean): string[] {
+  return opened
+    ? ["Review the opened rendered feed."]
+    : ["Call feed_open if the rendered feed should be opened in a browser."];
 }
 
 function openTarget(args: JsonRecord): JsonObject {
@@ -277,7 +329,7 @@ function toolError(error: unknown): JsonObject {
             error: {
               code: "unexpected",
               message,
-              next_actions: [],
+              next_actions: nextActionsForError(message),
             },
           },
           null,
@@ -285,6 +337,16 @@ function toolError(error: unknown): JsonObject {
         )}\n`,
       },
     ],
+  };
+}
+
+function doctorMcpResult(result: DoctorResult): JsonObject {
+  return {
+    ok: true,
+    recommended_path: result.recommendedPath,
+    checks: asJson(result.results),
+    config: asJson(result.config),
+    next_actions: asJson(result.nextActions),
   };
 }
 
@@ -302,7 +364,7 @@ const TOOLS: McpToolDefinition[] = [
       },
     },
     handler: (args) =>
-      asJson(
+      doctorMcpResult(
         runDoctor({
           cdpPorts: Array.isArray(args.cdp_ports)
             ? args.cdp_ports.filter(
@@ -317,10 +379,7 @@ const TOOLS: McpToolDefinition[] = [
   {
     name: "feed_browser_status",
     description: "Check whether a CDP endpoint is usable for feed capture.",
-    inputSchema: {
-      type: "object",
-      properties: { cdp: { type: "string" } },
-    },
+    inputSchema: { type: "object", properties: { cdp: { type: "string" } } },
     handler: (args) => asJson(getBrowserStatus(stringValue(args.cdp))),
   },
   {
@@ -488,6 +547,7 @@ const TOOLS: McpToolDefinition[] = [
         exclude_seen: { type: "boolean" },
         exclude_completed: { type: "boolean" },
         matches: { type: "array", items: { type: "string" } },
+        include_stdout: { type: "boolean" },
         timeout_ms: { type: "number" },
       },
     },
@@ -503,6 +563,7 @@ const TOOLS: McpToolDefinition[] = [
           matches: stringList(args.matches),
           timeoutMs: numberValue(args.timeout_ms),
         }),
+        { includeStdout: booleanValue(args.include_stdout) === true },
       ),
   },
   {
@@ -579,8 +640,10 @@ const TOOLS: McpToolDefinition[] = [
       properties: {
         sources: { type: "array", items: { type: "string" } },
         limit: { type: "number" },
+        save_dir: { type: "string" },
         matches: { type: "array", items: { type: "string" } },
         exclude_completed: { type: "boolean" },
+        include_stdout: { type: "boolean" },
         timeout_ms: { type: "number" },
       },
     },
@@ -589,23 +652,103 @@ const TOOLS: McpToolDefinition[] = [
       const capture = captureSources({
         sources,
         limit: numberValue(args.limit),
+        saveDir: stringValue(args.save_dir),
         timeoutMs: numberValue(args.timeout_ms),
       });
       const curate = curateWorkset({
         sources,
+        saveDir: stringValue(args.save_dir),
         matches: stringList(args.matches),
         excludeCompleted: booleanValue(args.exclude_completed),
         timeoutMs: numberValue(args.timeout_ms),
       });
       return {
         capture: compactCaptureResult(capture),
-        curate: curateResult(curate),
+        curate: curateResult(curate, {
+          includeStdout: booleanValue(args.include_stdout) === true,
+        }),
         blocked_on: curate.requiresClassification ? "classification" : "none",
-        next_actions: curate.requiresClassification
-          ? [
-              "Call feed_classify with category assignments, then rerun feed_curate.",
-            ]
-          : ["Call feed_render to write the HTML feed."],
+        next_actions: pipelineNextActions(curate.requiresClassification),
+      };
+    },
+  },
+  {
+    name: "feed_pipeline_render",
+    description:
+      "Capture sources, curate a workset, and render HTML when classification is already complete.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sources: { type: "array", items: { type: "string" } },
+        capture: { type: "boolean" },
+        limit: { type: "number" },
+        save_dir: { type: "string" },
+        matches: { type: "array", items: { type: "string" } },
+        exclude_completed: { type: "boolean" },
+        curate_output_path: { type: "string" },
+        render_output_path: { type: "string" },
+        pick: { type: "string" },
+        tab: { type: "boolean" },
+        summary: { type: "string" },
+        open: { type: "boolean" },
+        include_stdout: { type: "boolean" },
+        timeout_ms: { type: "number" },
+      },
+    },
+    handler: (args) => {
+      const shouldCapture = booleanValue(args.capture) !== false;
+      const sources = shouldCapture
+        ? requiredSources(args.sources)
+        : sourceList(args.sources);
+      const timeoutMs = numberValue(args.timeout_ms);
+      const capture = shouldCapture
+        ? captureSources({
+            sources,
+            limit: numberValue(args.limit),
+            saveDir: stringValue(args.save_dir),
+            timeoutMs,
+          })
+        : null;
+      const curate = curateWorkset({
+        outputPath: stringValue(args.curate_output_path),
+        sources,
+        saveDir: stringValue(args.save_dir),
+        matches: stringList(args.matches),
+        excludeCompleted: booleanValue(args.exclude_completed),
+        timeoutMs,
+      });
+      const compactCurate = curateResult(curate, {
+        includeStdout: booleanValue(args.include_stdout) === true,
+      });
+      if (curate.requiresClassification) {
+        return {
+          capture: capture ? compactCaptureResult(capture) : null,
+          curate: compactCurate,
+          render: null,
+          blocked_on: "classification",
+          next_actions: pipelineNextActions(true),
+        };
+      }
+      const render = renderFeed({
+        inputPath:
+          stringValue(args.curate_output_path) ||
+          curate.outputPath ||
+          undefined,
+        outputPath: stringValue(args.render_output_path),
+        pick: stringValue(args.pick),
+        tab: booleanValue(args.tab),
+        summary: stringValue(args.summary),
+        open: booleanValue(args.open),
+        timeoutMs,
+      });
+      return {
+        capture: capture ? compactCaptureResult(capture) : null,
+        curate: compactCurate,
+        render: asJson(render),
+        blocked_on: "none",
+        next_actions: renderedPipelineNextActions(
+          booleanValue(args.open) === true,
+        ),
       };
     },
   },
@@ -701,7 +844,16 @@ function contentLengthFromHeader(header: string): number | null {
 
 export function dispatchJson(payload: string): void {
   try {
-    void handleMessage(JSON.parse(payload) as JsonRpcMessage);
+    const message = JSON.parse(payload) as JsonRpcMessage;
+    messageQueue = messageQueue
+      .then(() => handleMessage(message))
+      .catch((error: unknown) => {
+        process.stderr.write(
+          `MCP dispatch failed: ${
+            error instanceof Error ? error.message : String(error)
+          }\n`,
+        );
+      });
   } catch (error) {
     process.stderr.write(
       `Invalid MCP JSON-RPC payload: ${
@@ -767,6 +919,9 @@ async function main(): Promise<void> {
   });
 }
 
-if (path.basename(process.argv[1] || "") === "feed-mcp") {
+if (
+  process.env.FEED_TOOLS_MCP_MAIN === "1" ||
+  path.basename(process.argv[1] || "") === "feed-mcp"
+) {
   await main();
 }

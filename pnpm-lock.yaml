@@ -50,6 +50,9 @@ importers:
       slop-scan:
         specifier: github:modem-dev/slop-scan#v0.4.0
         version: https://codeload.github.com/modem-dev/slop-scan/tar.gz/4923281d79bd21e9057f98e26cf3618974ff9ba5
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 
-import { main } from "../lib/signin-cli.ts";
+import { runTsEntry } from "./run-ts-entry.mjs";
 
-await main();
+await runTsEntry("../lib/signin-cli.ts", "main");

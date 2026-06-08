@@ -296,6 +296,8 @@ Output:
 
 Exports a sqlite-backed workset and row listing. Classification-required state should be represented as data, not as a failed MCP call.
 
+By default, the response includes compact parsed `rows` and omits raw CLI stdout. Pass `include_stdout: true` only when debugging the CLI transcript.
+
 ### `feed_classify`
 
 Writes category assignments back into sqlite.
@@ -311,6 +313,24 @@ Opens a local file or URL in the controlled browser.
 ### `feed_pipeline`
 
 Convenience wrapper for capture plus curate. It should stop before render when classification is required.
+
+### `feed_pipeline_render`
+
+Convenience wrapper for capture, curate, and render. It renders only when curation is not blocked by classification. If classification is required, it returns `blocked_on: "classification"` with parsed rows and no render output.
+
+Typical input:
+
+```json
+{
+  "sources": ["x", "bluesky"],
+  "capture": true,
+  "limit": 30,
+  "tab": true,
+  "open": false
+}
+```
+
+Set `capture: false` to run curate -> render against existing sqlite state, for example after `feed_classify` or in a local smoke test.
 
 ## Error model
 

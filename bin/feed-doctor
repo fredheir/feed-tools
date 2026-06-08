@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 
-import { main } from "../lib/doctor-cli.ts";
+import { runTsEntry } from "./run-ts-entry.mjs";
 
-await main();
+await runTsEntry("../lib/doctor-cli.ts", "main");

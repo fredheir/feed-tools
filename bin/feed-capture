@@ -1,3 +1,5 @@
 #!/usr/bin/env node
 
-import "../lib/capture-cli.ts";
+import { runTsEntry } from "./run-ts-entry.mjs";
+
+await runTsEntry("../lib/capture-cli.ts");
