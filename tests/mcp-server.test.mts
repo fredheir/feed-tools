@@ -120,6 +120,38 @@ describe("feed-tools MCP server", () => {
     });
   });
 
+  test("feed_config_write accepts preference sections", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-config-"));
+    const configPath = path.join(workdir, "config.json");
+
+    const payload = callMcpTool(
+      "feed_config_write",
+      {
+        overwrite: true,
+        render: { show_tabs: false },
+        curation: { target_items_per_tab: 4 },
+        summary: { custom_instructions: "Prefer short bullets." },
+      },
+      {
+        FEED_TOOLS_WORKDIR: workdir,
+        FEED_TOOLS_CONFIG: "",
+      },
+    );
+
+    expect(payload).toMatchObject({
+      ok: true,
+      written: true,
+      preference_sections_written: 3,
+    });
+    expect(JSON.parse(fs.readFileSync(configPath, "utf8"))).toMatchObject({
+      user_preferences: {
+        render: { show_tabs: false },
+        curation: { target_items_per_tab: 4 },
+        summary: { custom_instructions: "Prefer short bullets." },
+      },
+    });
+  });
+
   test("feed_doctor writes config under FEED_TOOLS_WORKDIR", () => {
     const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-doctor-"));
     const configPath = path.join(workdir, "config.json");

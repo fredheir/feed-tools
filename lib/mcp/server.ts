@@ -157,6 +157,17 @@ function enabledSourceNames(sources: unknown[]): string[] {
   return names;
 }
 
+function mergePreferenceSection(
+  userPreferences: JsonRecord,
+  key: "render" | "curation" | "summary",
+  value: unknown,
+): boolean {
+  if (!isRecord(value)) return false;
+  const existing = isRecord(userPreferences[key]) ? userPreferences[key] : {};
+  userPreferences[key] = asJson({ ...existing, ...value });
+  return true;
+}
+
 function writeConfig(args: JsonRecord): JsonValue {
   const targetPath = configPath(args);
   const overwrite = booleanValue(args.overwrite) === true;
@@ -196,6 +207,11 @@ function writeConfig(args: JsonRecord): JsonValue {
   }
   const requestedSources = new Set(sourceSpecByName.keys());
   const browser = isRecord(args.browser) ? args.browser : null;
+  const preferenceSectionsWritten = [
+    mergePreferenceSection(userPreferences, "render", args.render),
+    mergePreferenceSection(userPreferences, "curation", args.curation),
+    mergePreferenceSection(userPreferences, "summary", args.summary),
+  ].filter(Boolean).length;
 
   for (const source of sources) {
     if (!isRecord(source)) continue;
@@ -222,6 +238,7 @@ function writeConfig(args: JsonRecord): JsonValue {
     written: true,
     path: targetPath,
     sources_enabled: enabledSourceNames(sources),
+    preference_sections_written: preferenceSectionsWritten,
     browser: asJson(browser || {}),
   };
 }
@@ -421,6 +438,9 @@ const TOOLS: McpToolDefinition[] = [
         config_path: { type: "string" },
         sources: { type: "array", items: { type: "object" } },
         browser: { type: "object" },
+        render: { type: "object" },
+        curation: { type: "object" },
+        summary: { type: "object" },
         overwrite: { type: "boolean" },
       },
     },
