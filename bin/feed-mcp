@@ -1,5 +1,3 @@
 #!/usr/bin/env node
 
-import { main } from "../lib/mcp/server.ts";
-
-await main();
+import "../lib/mcp/server.ts";

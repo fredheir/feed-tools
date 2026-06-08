@@ -20,7 +20,7 @@ const CHROME_BIN = path.join(
   "chrome",
   "google-chrome",
 );
-const CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
+export const CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
 const CHROME_LOG = path.join(REPO_ROOT, "chrome.log");
 export const DEFAULT_CDP_PORT = "9222";
 export const DEFAULT_INTERVAL_MS = 30_000;
@@ -43,7 +43,7 @@ type FeedSigninChromeProcess = ChildProcess & {
   profileDir: string;
 };
 
-const SOURCE_TARGETS: Record<FeedSourceName, SourceSigninTarget> = {
+export const SOURCE_TARGETS: Record<FeedSourceName, SourceSigninTarget> = {
   x: {
     url: "https://x.com/home",
     authCookies: [{ domains: ["x.com", "twitter.com"], names: ["auth_token"] }],
@@ -239,7 +239,7 @@ sys.exit(1)
   return result.status === 0;
 }
 
-function getSigninStatus(
+export function getSigninStatus(
   sources: FeedSourceName[],
   profileDir = CHROME_PROFILE,
 ): SigninStatusResult {
@@ -256,7 +256,9 @@ function getSigninStatus(
   };
 }
 
-function formatStatus(status: Partial<Record<FeedSourceName, boolean>>): string {
+function formatStatus(
+  status: Partial<Record<FeedSourceName, boolean>>,
+): string {
   return Object.entries(status)
     .map(([source, ok]) => `${source} ${ok ? "ok" : "pending"}`)
     .join(" | ");

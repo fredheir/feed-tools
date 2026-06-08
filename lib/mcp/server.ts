@@ -175,11 +175,11 @@ function writeConfig(args: JsonRecord): JsonValue {
     ok: true,
     written: true,
     path: targetPath,
-    sources_enabled: sources
-      .filter((source): source is JsonRecord => isRecord(source))
-      .filter((source) => source.enabled !== false)
-      .map((source) => String(source.name || ""))
-      .filter(Boolean),
+    sources_enabled: sources.flatMap((source) => {
+      if (!isRecord(source) || source.enabled === false) return [];
+      const name = stringValue(source.name);
+      return name ? [name] : [];
+    }),
     browser: asJson(browser || {}),
   };
 }
@@ -533,7 +533,8 @@ const TOOLS: McpToolDefinition[] = [
   },
   {
     name: "feed_open",
-    description: "Open a rendered feed HTML file or URL in the controlled browser.",
+    description:
+      "Open a rendered feed HTML file or URL in the controlled browser.",
     inputSchema: {
       type: "object",
       properties: {
@@ -576,7 +577,9 @@ const TOOLS: McpToolDefinition[] = [
         curate: curateResult(curate),
         blocked_on: curate.requiresClassification ? "classification" : "none",
         next_actions: curate.requiresClassification
-          ? ["Call feed_classify with category assignments, then rerun feed_curate."]
+          ? [
+              "Call feed_classify with category assignments, then rerun feed_curate.",
+            ]
           : ["Call feed_render to write the HTML feed."],
       };
     },
@@ -656,7 +659,7 @@ async function handleMessage(message: JsonRpcMessage): Promise<void> {
   }
 }
 
-export async function main(): Promise<void> {
+async function main(): Promise<void> {
   process.stdin.setEncoding("utf8");
   let buffer = "";
   process.stdin.on("data", (chunk) => {
@@ -679,4 +682,8 @@ export async function main(): Promise<void> {
       newlineIndex = buffer.indexOf("\n");
     }
   });
+}
+
+if (path.basename(process.argv[1] || "") === "feed-mcp") {
+  await main();
 }
