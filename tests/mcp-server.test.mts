@@ -1,6 +1,11 @@
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+
 import { describe, expect, test } from "vitest";
 
 import { framedMessage, listMcpTools } from "../lib/mcp/server.ts";
+
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
 describe("feed-tools MCP server", () => {
   test("registers setup, status, and pipeline tools", () => {
@@ -57,5 +62,37 @@ describe("feed-tools MCP server", () => {
     expect(framedMessage(first?.rest ?? Buffer.alloc(0))?.payload).toBe(
       nextPayload,
     );
+  });
+
+  test("feed_doctor returns documented MCP field names", () => {
+    const input = `${JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "feed_doctor",
+        arguments: { write_config: false, cdp_ports: [] },
+      },
+    })}\n`;
+
+    const result = spawnSync(process.execPath, ["./bin/feed-mcp"], {
+      cwd: REPO_ROOT,
+      input,
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    const response = JSON.parse(result.stdout.trim());
+    const payload = JSON.parse(response.result.content[0].text);
+    expect(payload).toMatchObject({
+      ok: true,
+      recommended_path: expect.any(String),
+      checks: expect.any(Array),
+      config: expect.any(Object),
+      next_actions: expect.any(Array),
+    });
+    expect(payload).not.toHaveProperty("recommendedPath");
+    expect(payload).not.toHaveProperty("results");
+    expect(payload).not.toHaveProperty("nextActions");
   });
 });
