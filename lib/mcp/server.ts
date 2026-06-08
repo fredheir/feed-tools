@@ -427,6 +427,7 @@ const TOOLS: McpToolDefinition[] = [
         cdp_ports: { type: "array", items: { type: "number" } },
         write_config: { type: "boolean" },
         force_config: { type: "boolean" },
+        config_path: { type: "string" },
       },
     },
     handler: (args) =>
@@ -439,6 +440,7 @@ const TOOLS: McpToolDefinition[] = [
             : undefined,
           configure: booleanValue(args.write_config) === true,
           forceConfig: booleanValue(args.force_config) === true,
+          configPath: stringValue(args.config_path),
         }),
       ),
   },
@@ -954,6 +956,20 @@ export function framedMessage(
   };
 }
 
+function isIncompleteFrame(buffer: Buffer<ArrayBufferLike>): boolean {
+  const crlfHeaderEnd = buffer.indexOf("\r\n\r\n");
+  const lfHeaderEnd = buffer.indexOf("\n\n");
+  const hasCrlf = crlfHeaderEnd >= 0;
+  const headerEnd = hasCrlf ? crlfHeaderEnd : lfHeaderEnd;
+  if (headerEnd < 0) return /^content-length:/i.test(buffer.toString("ascii"));
+  const separatorLength = hasCrlf ? 4 : 2;
+  const header = buffer.subarray(0, headerEnd).toString("ascii");
+  const length = contentLengthFromHeader(header);
+  return (
+    length !== null && buffer.length < headerEnd + separatorLength + length
+  );
+}
+
 async function main(): Promise<void> {
   let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   process.stdin.on("data", (chunk) => {
@@ -970,13 +986,7 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const bufferText = buffer.toString("utf8");
-      if (
-        /^content-length:/i.test(bufferText) &&
-        !bufferText.includes("\n\n")
-      ) {
-        return;
-      }
+      if (isIncompleteFrame(buffer)) return;
 
       const newlineIndex = buffer.indexOf("\n");
       if (newlineIndex < 0) return;
