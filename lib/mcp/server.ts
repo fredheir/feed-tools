@@ -15,18 +15,19 @@ import {
   type CategoryAssignmentInput,
   type CurateWorksetResult,
 } from "../pipeline-service.ts";
-import {
-  CHROME_PROFILE,
-  SOURCE_TARGETS,
-  getSigninStatus,
-} from "../signin-service.ts";
+import { SOURCE_TARGETS, getSigninStatus } from "../signin-service.ts";
 import { listSupportedSources } from "../source-catalog.ts";
 import type { FeedSourceName } from "../types.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
-const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
+const DEFAULT_WORKDIR = path.resolve(
+  process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
+);
+const DEFAULT_CONFIG_PATH = path.join(DEFAULT_WORKDIR, "config.json");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
 const DEFAULT_HTML_PATH = path.join(REPO_ROOT, "var", "feed.html");
+const DEFAULT_CHROME_PROFILE = path.join(DEFAULT_WORKDIR, "chrome-profile");
+const DEFAULT_CHROME_LOG = path.join(DEFAULT_WORKDIR, "chrome.log");
 
 type JsonValue =
   | null
@@ -130,6 +131,54 @@ function configPath(args: JsonRecord): string {
 
 function readJsonFile(filePath: string): JsonValue {
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonValue;
+}
+
+function profileDir(args: JsonRecord): string {
+  return path.resolve(
+    stringValue(args.profile_dir) ||
+      process.env.FEED_TOOLS_CHROME_PROFILE ||
+      DEFAULT_CHROME_PROFILE,
+  );
+}
+
+function browserStatusMcpResult(
+  result: ReturnType<typeof getBrowserStatus>,
+): JsonObject {
+  return {
+    ok: result.ok,
+    cdp: result.cdp,
+    version_url: result.versionUrl,
+    browser: result.browser,
+    web_socket_debugger_url_present: result.webSocketDebuggerUrlPresent,
+    detail: result.detail,
+  };
+}
+
+function browserStartMcpResult(
+  result: ReturnType<typeof startBrowser>,
+): JsonObject {
+  return {
+    ok: result.ok,
+    cdp: result.cdp,
+    profile_dir: result.profileDir,
+    chrome_bin: result.chromeBin,
+    log_path: result.logPath,
+    launched: result.launched,
+    pid: result.pid ?? null,
+    version: result.version ?? null,
+    detail: result.detail,
+  };
+}
+
+function signinStatusMcpResult(
+  result: ReturnType<typeof getSigninStatus>,
+): JsonObject {
+  return {
+    profile_dir: result.profileDir,
+    cookie_stores_found: result.cookieStoresFound,
+    status: asJson(result.status),
+    missing: asJson(result.missing),
+  };
 }
 
 function enabledSourceNames(sources: unknown[]): string[] {
@@ -379,8 +428,12 @@ const TOOLS: McpToolDefinition[] = [
   {
     name: "feed_browser_status",
     description: "Check whether a CDP endpoint is usable for feed capture.",
-    inputSchema: { type: "object", properties: { cdp: { type: "string" } } },
-    handler: (args) => asJson(getBrowserStatus(stringValue(args.cdp))),
+    inputSchema: {
+      type: "object",
+      properties: { cdp: { type: "string" } },
+    },
+    handler: (args) =>
+      browserStatusMcpResult(getBrowserStatus(stringValue(args.cdp))),
   },
   {
     name: "feed_browser_start",
@@ -397,11 +450,12 @@ const TOOLS: McpToolDefinition[] = [
       },
     },
     handler: (args) =>
-      asJson(
+      browserStartMcpResult(
         startBrowser({
           cdpPort: numberValue(args.cdp_port),
-          profileDir: stringValue(args.profile_dir),
+          profileDir: profileDir(args),
           chromeBin: stringValue(args.chrome_bin),
+          logPath: DEFAULT_CHROME_LOG,
           urls: stringList(args.urls),
           reuseExisting: booleanValue(args.reuse_existing),
           noSandbox: booleanValue(args.no_sandbox),
@@ -423,29 +477,27 @@ const TOOLS: McpToolDefinition[] = [
       },
     },
     handler: (args) => {
-      const sources = requiredSources(args.sources);
-      const profileDir = path.resolve(
-        stringValue(args.profile_dir) ||
-          process.env.FEED_TOOLS_CHROME_PROFILE ||
-          CHROME_PROFILE,
-      );
+      const sources = sourceList(args.sources);
+      if (sources.length === 0) throw new Error("Provide at least one source");
+      const resolvedProfileDir = profileDir(args);
       const openedUrls = Object.fromEntries(
         sources.map((source) => [source, SOURCE_TARGETS[source].url]),
       );
       const browser = startBrowser({
         cdpPort: numberValue(args.cdp_port),
-        profileDir,
+        profileDir: resolvedProfileDir,
+        logPath: DEFAULT_CHROME_LOG,
         urls: Object.values(openedUrls),
         reuseExisting: booleanValue(args.reuse_existing),
         noSandbox: booleanValue(args.no_sandbox),
       });
-      const auth = getSigninStatus(sources, profileDir);
+      const auth = getSigninStatus(sources, resolvedProfileDir);
       return {
         ok: true,
         cdp: browser.cdp,
-        profile_dir: profileDir,
+        profile_dir: resolvedProfileDir,
         opened_urls: openedUrls,
-        auth_status: auth.status,
+        auth_status: asJson(auth.status),
         instructions:
           "Complete login in the opened Chrome window, then call feed_signin_status.",
       };
@@ -463,12 +515,10 @@ const TOOLS: McpToolDefinition[] = [
     },
     handler: (args) => {
       const sources = sourceList(args.sources);
-      return asJson(
+      return signinStatusMcpResult(
         getSigninStatus(
           sources.length > 0 ? sources : listSupportedSources(),
-          stringValue(args.profile_dir) ||
-            process.env.FEED_TOOLS_CHROME_PROFILE ||
-            CHROME_PROFILE,
+          profileDir(args),
         ),
       );
     },
