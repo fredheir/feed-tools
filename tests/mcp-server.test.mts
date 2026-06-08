@@ -120,6 +120,30 @@ describe("feed-tools MCP server", () => {
     });
   });
 
+  test("feed_doctor writes config under FEED_TOOLS_WORKDIR", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-doctor-"));
+    const configPath = path.join(workdir, "config.json");
+    fs.writeFileSync(
+      path.join(workdir, "config.json.example"),
+      `${JSON.stringify({ user_preferences: { sources: [{ name: "x" }] } })}\n`,
+    );
+
+    const payload = callMcpTool(
+      "feed_doctor",
+      { write_config: true, force_config: true, cdp_ports: [] },
+      {
+        FEED_TOOLS_WORKDIR: workdir,
+        FEED_TOOLS_CONFIG: "",
+      },
+    );
+
+    expect(payload.config).toMatchObject({
+      status: "created",
+      path: configPath,
+    });
+    expect(fs.existsSync(configPath)).toBe(true);
+  });
+
   test("status tools return documented snake_case fields", () => {
     const browserStatus = callMcpTool("feed_browser_status", { cdp: "1" });
     expect(browserStatus).toMatchObject({

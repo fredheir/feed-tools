@@ -5,11 +5,16 @@ import path from "node:path";
 import { getBrowserStatus } from "./browser-status.ts";
 import { listCicSources } from "./cic/source-config.ts";
 
-const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
-const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
+const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..");
+const WORKDIR = path.resolve(process.env.FEED_TOOLS_WORKDIR || PACKAGE_ROOT);
+const DEFAULT_CONFIG_PATH = path.join(WORKDIR, "config.json");
+const WORKDIR_CONFIG_EXAMPLE_PATH = path.join(WORKDIR, "config.json.example");
+const PACKAGE_CONFIG_EXAMPLE_PATH = path.join(
+  PACKAGE_ROOT,
+  "config.json.example",
+);
 const WORKSPACE_CHROME_BIN = path.join(
-  REPO_ROOT,
+  WORKDIR,
   "chrome-install",
   "opt",
   "google",
@@ -68,7 +73,7 @@ function commandResponds(command: string, args: string[]): string | null {
 
 function localAgentBrowserBinary(): string {
   return path.join(
-    REPO_ROOT,
+    PACKAGE_ROOT,
     "node_modules",
     ".bin",
     process.platform === "win32" ? "agent-browser.cmd" : "agent-browser",
@@ -139,7 +144,7 @@ export function detectSandboxSignals(env = process.env): SandboxSignal[] {
       detail: "/run/.containerenv is present",
     });
   }
-  if (/\/sessions\/[^/]+\/mnt\//.test(REPO_ROOT)) {
+  if (/\/sessions\/[^/]+\/mnt\//.test(WORKDIR)) {
     signals.push({
       name: "session-mount",
       detail: "repo is under an ephemeral session mount",
@@ -257,7 +262,10 @@ function maybeWriteConfig(
       path: DEFAULT_CONFIG_PATH,
     };
   }
-  if (!fs.existsSync(EXAMPLE_CONFIG_PATH)) {
+  const examplePath = fs.existsSync(WORKDIR_CONFIG_EXAMPLE_PATH)
+    ? WORKDIR_CONFIG_EXAMPLE_PATH
+    : PACKAGE_CONFIG_EXAMPLE_PATH;
+  if (!fs.existsSync(examplePath)) {
     return {
       status: "unavailable",
       detail: "config.json.example is missing; could not create config.json.",
@@ -272,7 +280,7 @@ function maybeWriteConfig(
     };
   }
   const payload = applyBrowserConfigToPayload(
-    fs.readFileSync(EXAMPLE_CONFIG_PATH, "utf8"),
+    fs.readFileSync(examplePath, "utf8"),
     browser,
   );
   fs.writeFileSync(DEFAULT_CONFIG_PATH, payload);
