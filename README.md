@@ -26,12 +26,10 @@ Configure the MCP host with the local server:
 {
   "mcpServers": {
     "feed-tools": {
-      "command": "node",
-      "args": [
-        "--experimental-strip-types",
-        "/absolute/path/to/feed-tools/bin/feed-mcp"
-      ],
+      "command": "pnpm",
+      "args": ["--dir", "/absolute/path/to/feed-tools", "mcp"],
       "env": {
+        "FEED_TOOLS_WORKDIR": "/absolute/path/to/feed-tools",
         "FEED_TOOLS_CDP": "9223",
         "FEED_TOOLS_CHROME_PROFILE": "/absolute/path/to/feed-tools/chrome-profile"
       }
@@ -44,12 +42,12 @@ Then have the agent follow [docs/mcp-agent-runbook.md](./docs/mcp-agent-runbook.
 
 1. `feed_doctor`
 2. `feed_browser_status` or `feed_browser_start`
-3. `feed_config_read` or `feed_config_write`
+3. `feed_config_read` or `feed_config_write` with `browser: { "cdp": "9223" }`
 4. `feed_signin_status` and `feed_signin_open` for missing platform logins
 5. `feed_capture`
 6. `feed_curate`
 7. `feed_classify` if required
-8. `feed_render` with `open: true` if the user wants the rendered feed opened in Chrome
+8. `feed_render`, then `feed_open` if the user wants the rendered feed opened in Chrome
 
 The user still completes platform login in the opened Chrome profile.
 

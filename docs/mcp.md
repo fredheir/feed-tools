@@ -43,9 +43,10 @@ Example MCP host configuration for a checked-out repo:
 {
   "mcpServers": {
     "feed-tools": {
-      "command": "node",
-      "args": ["/absolute/path/to/feed-tools/bin/feed-mcp"],
+      "command": "pnpm",
+      "args": ["--dir", "/absolute/path/to/feed-tools", "mcp"],
       "env": {
+        "FEED_TOOLS_WORKDIR": "/absolute/path/to/feed-tools",
         "FEED_TOOLS_CDP": "9223",
         "FEED_TOOLS_CHROME_PROFILE": "/absolute/path/to/feed-tools/chrome-profile"
       }
