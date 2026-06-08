@@ -1,5 +1,7 @@
 import path from "node:path";
-import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import { spawn, spawnSync } from "node:child_process";
 import { describe, expect, test } from "vitest";
 import {
   assertCdpEndpoint,
@@ -9,6 +11,7 @@ import {
   getRuntimeBrowserOptions,
   readCdpVersionPayload,
 } from "../lib/browser.ts";
+import { startBrowser } from "../lib/browser-launch-service.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
@@ -112,6 +115,43 @@ describe("buildAgentBrowserArgs", () => {
     ]);
   });
 
+  test("resolves workspace Chrome under FEED_TOOLS_WORKDIR", () => {
+    const workdir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "feed-browser-workdir-"),
+    );
+    const chromeBin = path.join(
+      workdir,
+      "chrome-install",
+      "opt",
+      "google",
+      "chrome",
+      "google-chrome",
+    );
+    fs.mkdirSync(path.dirname(chromeBin), { recursive: true });
+    fs.writeFileSync(chromeBin, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "import { resolveChromeBin } from './lib/browser-launch-service.ts'; process.stdout.write(resolveChromeBin() || '');",
+      ],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          FEED_TOOLS_WORKDIR: workdir,
+          FEED_TOOLS_CHROME_BIN: "",
+        },
+      },
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toBe(chromeBin);
+  });
+
   test("normalizes cdp config to disable headed and auto-connect", () => {
     const runtime = getRuntimeBrowserOptions({
       cdp: "9222",
@@ -158,14 +198,19 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
     ]);
     const port = await new Promise((resolve, reject) => {
       let payload = "";
+      let stderr = "";
       server.stdout.on("data", (chunk) => {
         payload += String(chunk);
         const line = payload.split("\n")[0]?.trim();
         if (line) resolve(line);
       });
+      server.stderr.on("data", (chunk) => {
+        stderr += String(chunk);
+      });
       server.once("error", reject);
       server.once("exit", (code) => {
-        if (code) reject(new Error(`probe server exited with ${code}`));
+        if (code)
+          reject(new Error(`probe server exited with ${code}: ${stderr}`));
       });
     });
     try {
@@ -205,10 +250,52 @@ nonCdpServer.listen(0, "127.0.0.1", () => {
     ]);
     const port = await new Promise((resolve, reject) => {
       let payload = "";
+      let stderr = "";
       server.stdout.on("data", (chunk) => {
         payload += String(chunk);
         const line = payload.split("\n")[0]?.trim();
         if (line) resolve(line);
+      });
+      server.stderr.on("data", (chunk) => {
+        stderr += String(chunk);
+      });
+      server.once("error", reject);
+      server.once("exit", (code) => {
+        if (code)
+          reject(new Error(`probe server exited with ${code}: ${stderr}`));
+      });
+    });
+
+    try {
+      expect(assertCdpEndpoint(String(port))).toMatch(
+        new RegExp(`^http://(localhost|\\[::1\\]):${port}$`),
+      );
+    } finally {
+      server.kill("SIGTERM");
+    }
+  });
+
+  test("rejects an occupied CDP port when reuse is disabled", async () => {
+    const server = spawn(process.execPath, [
+      "-e",
+      `
+import http from "node:http";
+const server = http.createServer((_request, response) => {
+  response.setHeader("content-type", "application/json");
+  response.end('{"Browser":"Fixture Chrome","webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');
+});
+server.listen(0, "127.0.0.1", () => {
+  process.stdout.write(String(server.address().port) + "\\n");
+});
+process.on("SIGTERM", () => server.close(() => process.exit(0)));
+`,
+    ]);
+    const port = await new Promise((resolve, reject) => {
+      let payload = "";
+      server.stdout.on("data", (chunk) => {
+        payload += String(chunk);
+        const line = payload.split("\n")[0]?.trim();
+        if (line) resolve(Number(line));
       });
       server.once("error", reject);
       server.once("exit", (code) => {
@@ -217,9 +304,13 @@ nonCdpServer.listen(0, "127.0.0.1", () => {
     });
 
     try {
-      expect(assertCdpEndpoint(String(port))).toMatch(
-        new RegExp(`^http://(localhost|\\[::1\\]):${port}$`),
-      );
+      expect(() =>
+        startBrowser({
+          cdpPort: port,
+          chromeBin: process.execPath,
+          reuseExisting: false,
+        }),
+      ).toThrow(/already occupied/);
     } finally {
       server.kill("SIGTERM");
     }
