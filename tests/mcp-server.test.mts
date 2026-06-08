@@ -83,6 +83,21 @@ describe("feed-tools MCP server", () => {
     );
   });
 
+  test("waits for split framed MCP bodies", () => {
+    const payload = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "ping",
+    });
+    const frame = Buffer.from(
+      `Content-Length: ${Buffer.byteLength(payload, "utf8")}\r\n\r\n${payload}`,
+      "utf8",
+    );
+
+    expect(framedMessage(frame.subarray(0, frame.length - 3))).toBeNull();
+    expect(framedMessage(frame)?.payload).toBe(payload);
+  });
+
   test("feed_doctor returns documented MCP field names", () => {
     const payload = callMcpTool("feed_doctor", {
       write_config: false,
@@ -168,6 +183,29 @@ describe("feed-tools MCP server", () => {
         FEED_TOOLS_CONFIG: "",
       },
     );
+
+    expect(payload.config).toMatchObject({
+      status: "created",
+      path: configPath,
+    });
+    expect(fs.existsSync(configPath)).toBe(true);
+  });
+
+  test("feed_doctor honors explicit config_path", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-doctor-"));
+    const configPath = path.join(workdir, "nested", "custom-config.json");
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(
+      path.join(path.dirname(configPath), "config.json.example"),
+      `${JSON.stringify({ user_preferences: { sources: [{ name: "x" }] } })}\n`,
+    );
+
+    const payload = callMcpTool("feed_doctor", {
+      write_config: true,
+      force_config: true,
+      config_path: configPath,
+      cdp_ports: [],
+    });
 
     expect(payload.config).toMatchObject({
       status: "created",
