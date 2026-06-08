@@ -1,5 +1,7 @@
 import path from "node:path";
-import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import { spawn, spawnSync } from "node:child_process";
 import { describe, expect, test } from "vitest";
 import {
   assertCdpEndpoint,
@@ -111,6 +113,43 @@ describe("buildAgentBrowserArgs", () => {
       "--no-sandbox",
       "snapshot",
     ]);
+  });
+
+  test("resolves workspace Chrome under FEED_TOOLS_WORKDIR", () => {
+    const workdir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "feed-browser-workdir-"),
+    );
+    const chromeBin = path.join(
+      workdir,
+      "chrome-install",
+      "opt",
+      "google",
+      "chrome",
+      "google-chrome",
+    );
+    fs.mkdirSync(path.dirname(chromeBin), { recursive: true });
+    fs.writeFileSync(chromeBin, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "import { resolveChromeBin } from './lib/browser-launch-service.ts'; process.stdout.write(resolveChromeBin() || '');",
+      ],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          FEED_TOOLS_WORKDIR: workdir,
+          FEED_TOOLS_CHROME_BIN: "",
+        },
+      },
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toBe(chromeBin);
   });
 
   test("normalizes cdp config to disable headed and auto-connect", () => {

@@ -5,11 +5,13 @@ import path from "node:path";
 import { createBrowserSession } from "./browser.ts";
 import { getBrowserStatus } from "./browser-status.ts";
 
-const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-const DEFAULT_CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
-const DEFAULT_CHROME_LOG = path.join(REPO_ROOT, "chrome.log");
+const WORKDIR = path.resolve(
+  process.env.FEED_TOOLS_WORKDIR || path.resolve(import.meta.dirname, ".."),
+);
+const DEFAULT_CHROME_PROFILE = path.join(WORKDIR, "chrome-profile");
+const DEFAULT_CHROME_LOG = path.join(WORKDIR, "chrome.log");
 const WORKSPACE_CHROME_BIN = path.join(
-  REPO_ROOT,
+  WORKDIR,
   "chrome-install",
   "opt",
   "google",
