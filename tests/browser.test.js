@@ -11,7 +11,10 @@ import {
   getRuntimeBrowserOptions,
   readCdpVersionPayload,
 } from "../lib/browser.ts";
-import { startBrowser } from "../lib/browser-launch-service.ts";
+import {
+  resolveChromeBin,
+  startBrowser,
+} from "../lib/browser-launch-service.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
@@ -162,6 +165,34 @@ describe("buildAgentBrowserArgs", () => {
     expect(() =>
       startBrowser({
         chromeBin: missingChromeBin,
+      }),
+    ).toThrow(/Chrome binary not found/);
+  });
+
+  test("treats explicit Chrome directories as unavailable", () => {
+    const chromeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "feed-chrome-dir-"),
+    );
+
+    expect(resolveChromeBin(chromeDir)).toBeNull();
+    expect(() =>
+      startBrowser({
+        chromeBin: chromeDir,
+      }),
+    ).toThrow(/Chrome binary not found/);
+  });
+
+  test("treats explicit non-executable Chrome files as unavailable", () => {
+    const chromeBin = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), "feed-chrome-file-")),
+      "chrome",
+    );
+    fs.writeFileSync(chromeBin, "#!/bin/sh\nexit 0\n", { mode: 0o644 });
+
+    expect(resolveChromeBin(chromeBin)).toBeNull();
+    expect(() =>
+      startBrowser({
+        chromeBin,
       }),
     ).toThrow(/Chrome binary not found/);
   });

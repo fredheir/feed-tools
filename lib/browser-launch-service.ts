@@ -60,16 +60,21 @@ function commandPath(command: string): string | null {
   return result.stdout.trim() || null;
 }
 
+function isExecutableFile(candidate: string): boolean {
+  const stat = fs.statSync(candidate, { throwIfNoEntry: false });
+  return Boolean(stat?.isFile() && (stat.mode & 0o111) !== 0);
+}
+
 export function resolveChromeBin(explicit?: string | null): string | null {
   if (explicit) {
     const candidate = path.resolve(explicit);
-    return fs.existsSync(candidate) ? candidate : null;
+    return isExecutableFile(candidate) ? candidate : null;
   }
   if (process.env.FEED_TOOLS_CHROME_BIN) {
     const candidate = path.resolve(process.env.FEED_TOOLS_CHROME_BIN);
-    return fs.existsSync(candidate) ? candidate : null;
+    return isExecutableFile(candidate) ? candidate : null;
   }
-  if (fs.existsSync(WORKSPACE_CHROME_BIN)) return WORKSPACE_CHROME_BIN;
+  if (isExecutableFile(WORKSPACE_CHROME_BIN)) return WORKSPACE_CHROME_BIN;
   for (const command of [
     "google-chrome-stable",
     "google-chrome",
