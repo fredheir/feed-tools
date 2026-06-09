@@ -152,6 +152,20 @@ describe("buildAgentBrowserArgs", () => {
     expect(result.stdout).toBe(chromeBin);
   });
 
+  test("treats missing explicit Chrome binary paths as unavailable", () => {
+    const missingChromeBin = path.join(
+      os.tmpdir(),
+      "feed-missing-chrome",
+      "chrome",
+    );
+
+    expect(() =>
+      startBrowser({
+        chromeBin: missingChromeBin,
+      }),
+    ).toThrow(/Chrome binary not found/);
+  });
+
   test("normalizes cdp config to disable headed and auto-connect", () => {
     const runtime = getRuntimeBrowserOptions({
       cdp: "9222",

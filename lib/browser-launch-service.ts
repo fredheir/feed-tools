@@ -61,9 +61,13 @@ function commandPath(command: string): string | null {
 }
 
 export function resolveChromeBin(explicit?: string | null): string | null {
-  if (explicit) return path.resolve(explicit);
+  if (explicit) {
+    const candidate = path.resolve(explicit);
+    return fs.existsSync(candidate) ? candidate : null;
+  }
   if (process.env.FEED_TOOLS_CHROME_BIN) {
-    return path.resolve(process.env.FEED_TOOLS_CHROME_BIN);
+    const candidate = path.resolve(process.env.FEED_TOOLS_CHROME_BIN);
+    return fs.existsSync(candidate) ? candidate : null;
   }
   if (fs.existsSync(WORKSPACE_CHROME_BIN)) return WORKSPACE_CHROME_BIN;
   for (const command of [
