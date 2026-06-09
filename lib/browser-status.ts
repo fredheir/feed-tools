@@ -9,12 +9,12 @@ export interface BrowserStatusResult {
   detail: string;
 }
 
-function defaultCdp(): string {
-  return String(process.env.FEED_TOOLS_CDP || "9223").trim();
-}
+const DEFAULT_CDP = "9223";
 
-export function getBrowserStatus(cdp = defaultCdp()): BrowserStatusResult {
-  const value = String(cdp || "").trim() || defaultCdp();
+export function getBrowserStatus(cdp?: string): BrowserStatusResult {
+  const value =
+    String(cdp || process.env.FEED_TOOLS_CDP || DEFAULT_CDP).trim() ||
+    DEFAULT_CDP;
   const failures: string[] = [];
   const invalids: string[] = [];
 

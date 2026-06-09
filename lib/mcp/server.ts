@@ -255,7 +255,10 @@ function toolResult(value: JsonValue): JsonObject {
 }
 
 function toolError(error: unknown): JsonObject {
-  const message = error instanceof Error ? error.message : String(error);
+  const message =
+    error instanceof Error
+      ? error.message
+      : "Tool failed with a non-Error throw";
   return {
     isError: true,
     content: [
@@ -263,7 +266,6 @@ function toolError(error: unknown): JsonObject {
         type: "text",
         text: `${JSON.stringify(
           {
-            ok: false,
             error: {
               code: "unexpected",
               message,
@@ -523,7 +525,9 @@ async function handleMessage(message: JsonRpcMessage): Promise<void> {
     failure(
       message.id,
       -32603,
-      error instanceof Error ? error.message : String(error),
+      error instanceof Error
+        ? error.message
+        : "Non-Error thrown while handling MCP message",
     );
   }
 }
@@ -544,7 +548,9 @@ export function dispatchJson(payload: string): void {
   } catch (error) {
     process.stderr.write(
       `Invalid MCP JSON-RPC payload: ${
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error
+          ? error.message
+          : "parser threw a non-Error value"
       }\n`,
     );
   }

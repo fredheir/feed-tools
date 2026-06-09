@@ -210,8 +210,14 @@ export function startBrowser(
 
   try {
     if (child.pid) process.kill(child.pid, "SIGTERM");
-  } catch {
-    // Process already exited.
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !("code" in error) ||
+      error.code !== "ESRCH"
+    ) {
+      throw error;
+    }
   }
   throw new Error(`Chrome did not expose CDP on port ${cdp}; see ${logPath}`);
 }
