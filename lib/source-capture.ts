@@ -4,10 +4,9 @@ import { downloadDocumentAssets } from "./assets.ts";
 import { closeBrowserSession, normalizeBrowserOptions } from "./browser.ts";
 import { DEFAULT_SAVE_DIR } from "./config.ts";
 import { buildNormalizedFeedDocument } from "./feed-document-normalize.ts";
-import { getPreferredItemKey, normalizeItemShape } from "./item-shape.ts";
+import { normalizeItemShape } from "./item-shape.ts";
 import { mergeDocuments } from "./merge.ts";
 import {
-  loadAllocationFromDb,
   loadCurrentDocumentFromDb,
   persistSourceDocument,
 } from "./sqlite-store.ts";
@@ -312,61 +311,12 @@ function assertFeedUrlAccessible(
   }
 }
 
-function collectUniqueItems<T extends { index?: number | null }>(
-  items: unknown[],
-  {
-    seen,
-    sourceName,
-    target = [],
-    mapItem = (item: unknown) => item as T | null,
-    shouldInclude = () => true,
-  }: {
-    seen: Set<string>;
-    sourceName: string;
-    target?: T[];
-    mapItem?: (item: unknown) => T | null;
-    shouldInclude?: (item: T) => boolean;
-  },
-): T[] {
-  for (const rawItem of items || []) {
-    const item = mapItem(rawItem);
-    if (!item || !shouldInclude(item)) continue;
-    const key = getPreferredItemKey(item, {
-      source: sourceName,
-      index: item.index,
-    });
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    target.push(item);
-  }
-  return target;
-}
-
-function hasNewUnclassifiedItems(
-  document: FeedDocument,
-  saveDir: string,
-): boolean {
-  const allocation = loadAllocationFromDb(
-    saveDir || DEFAULT_SAVE_DIR,
-    document,
-  );
-  return document.items.some(
-    (item) =>
-      item.capture_count === 1 &&
-      item.last_seen_at === document.captured_at &&
-      Boolean(item.id) &&
-      !allocation?.items?.[item.id as string]?.category,
-  );
-}
-
 export {
   CaptureAccessError,
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
   assertFeedUrlAccessible,
   assertNonEmptyCapture,
-  collectUniqueItems,
-  hasNewUnclassifiedItems,
   normalizeDocument,
   persistCapturedDocument,
   runSourceCapture,

@@ -8,9 +8,9 @@ import {
 import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
-  collectUniqueItems,
 } from "../../lib/source-capture.ts";
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
+import { jitterTimeout } from "../../lib/browser.ts";
 import type { FacebookSnapshotLine } from "./parse.ts";
 import {
   cleanAuthorHeading,
@@ -421,77 +421,68 @@ async function captureDocument({
   limit?: number;
   browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
-  const browser = createBrowserSession(browserOptions);
-  prepareFacebookFeed(browser);
+  return captureBrowserFeed({
+    sourceName: "facebook",
+    limit,
+    browserOptions,
+    prepareFeed: prepareFacebookFeed,
+    captureBatch({ browser, limit, collectedItems, collectItems }) {
+      const mergeBatch = (snapshot: string): void => {
+        const document = parseSnapshotDocument(snapshot, limit * 2);
+        collectItems(document.items, {
+          mapItem: (rawItem: unknown) =>
+            enrichFacebookItem(rawItem as FacebookCaptureItem, browser),
+          shouldInclude: isFacebookItemWorthKeeping,
+        });
+      };
 
-  const collectedItems: FacebookCaptureItem[] = [];
-  const seen = new Set<string>();
+      mergeBatch(captureFacebookSnapshot(browser));
 
-  function mergeBatch(snapshot: string): void {
-    const document = parseSnapshotDocument(snapshot, limit * 2);
-    collectUniqueItems(document.items, {
-      seen,
-      sourceName: "facebook",
-      target: collectedItems,
-      mapItem: (rawItem: unknown) =>
-        enrichFacebookItem(rawItem as FacebookCaptureItem, browser),
-      shouldInclude: isFacebookItemWorthKeeping,
-    });
-  }
-
-  mergeBatch(captureFacebookSnapshot(browser));
-  if (collectedItems.length === 0) {
-    prepareFacebookFeed(browser);
-    mergeBatch(captureFacebookSnapshot(browser));
-  }
-
-  const scrollPasses = Math.max(3, Math.min(8, limit));
-  let stagnantPasses = 0;
-  for (
-    let index = 0;
-    index < scrollPasses && collectedItems.length < limit && stagnantPasses < 2;
-    index += 1
-  ) {
-    const beforeCount = collectedItems.length;
-    const { scrollHeight: beforeHeight } = browser.evalJson<{
-      scrollHeight: number;
-    }>(`(() => JSON.stringify({
-      scrollHeight: document.scrollingElement?.scrollHeight || document.body?.scrollHeight || 0
-    }))()`);
-    browser.evalText(`(() => {
-      window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
-      return JSON.stringify({ ok: true, y: window.scrollY });
-    })()`);
-    try {
-      browser.waitForFunction(
-        `(document.scrollingElement?.scrollHeight || document.body?.scrollHeight || 0) > ${beforeHeight}`,
-        2500,
-      );
-    } catch (err) {
-      void err;
-    }
-    mergeBatch(captureFacebookSnapshot(browser));
-    stagnantPasses =
-      collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
-  }
-
-  const document: FeedDocument = {
-    schema_version: 1,
-    source: "facebook",
-    captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit),
-  };
-  assertAuthenticatedCapture(
-    { sourceName: "facebook", browser, document },
-    {
-      blockedUrlPatterns: [/\/login/i],
-      blockedTextPatterns: [
-        /\blog in to facebook\b/i,
-        /\bforgotten password\b/i,
-      ],
+      const scrollPasses = Math.max(3, Math.min(8, limit));
+      let stagnantPasses = 0;
+      for (
+        let index = 0;
+        index < scrollPasses &&
+        collectedItems.length < limit &&
+        stagnantPasses < 2;
+        index += 1
+      ) {
+        const beforeCount = collectedItems.length;
+        const { scrollHeight: beforeHeight } = browser.evalJson<{
+          scrollHeight: number;
+        }>(`(() => JSON.stringify({
+          scrollHeight: document.scrollingElement?.scrollHeight || document.body?.scrollHeight || 0
+        }))()`);
+        browser.evalText(`(() => {
+          window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
+          return JSON.stringify({ ok: true, y: window.scrollY });
+        })()`);
+        try {
+          browser.waitForFunction(
+            `(document.scrollingElement?.scrollHeight || document.body?.scrollHeight || 0) > ${beforeHeight}`,
+            2500,
+          );
+        } catch (err) {
+          void err;
+        }
+        mergeBatch(captureFacebookSnapshot(browser));
+        stagnantPasses =
+          collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
+      }
     },
-  );
-  return document;
+    afterCapture({ browser, document }) {
+      assertAuthenticatedCapture(
+        { sourceName: "facebook", browser, document },
+        {
+          blockedUrlPatterns: [/\/login/i],
+          blockedTextPatterns: [
+            /\blog in to facebook\b/i,
+            /\bforgotten password\b/i,
+          ],
+        },
+      );
+    },
+  });
 }
 
 const source = {

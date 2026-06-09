@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
+import { captureBrowserFeed } from "../lib/browser-feed-capture.ts";
 import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
@@ -15,6 +16,62 @@ import { exportDocumentsFromDb, getDatabasePath } from "../lib/sqlite-store.ts";
 import { readFixture, repoRoot } from "./helpers/cli-config.mts";
 
 const tempDirs = [];
+
+function fakeBrowserSession(overrides = {}) {
+  return {
+    options: {},
+    run() {
+      return "";
+    },
+    getCurrentUrl() {
+      return "https://example.com/feed";
+    },
+    getTitle() {
+      return "Feed";
+    },
+    listTabs() {
+      return [];
+    },
+    switchToTab() {},
+    openNewTab() {},
+    openPathOrUrl() {},
+    reloadCurrentTab() {},
+    waitMilliseconds() {},
+    waitForLoad() {},
+    tryWaitForLoad() {
+      return true;
+    },
+    waitForUrl() {},
+    waitForText() {},
+    tryWaitForText() {
+      return true;
+    },
+    waitForFunction() {},
+    tryWaitForFunction() {
+      return true;
+    },
+    waitForSelector() {},
+    ensureTab() {
+      return "https://example.com/feed";
+    },
+    ensureUrl() {
+      return "https://example.com/feed";
+    },
+    evalJson() {
+      return {};
+    },
+    evalText() {
+      return "";
+    },
+    snapshotText() {
+      return "";
+    },
+    getHtml() {
+      return "";
+    },
+    ...overrides,
+  };
+}
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
@@ -276,5 +333,99 @@ describe("runSourceCapture", () => {
         },
       ),
     ).rejects.toThrow(/captured_at must be a non-empty string/);
+  });
+});
+
+describe("captureBrowserFeed", () => {
+  test("assembles a limited document from collected batches", async () => {
+    const browser = fakeBrowserSession();
+    const prepareCalls = [];
+
+    const document = await captureBrowserFeed({
+      sourceName: "demo",
+      limit: 2,
+      createSession(options) {
+        expect(options).toEqual({ session: "demo" });
+        return browser;
+      },
+      browserOptions: { session: "demo" },
+      prepareFeed(session) {
+        expect(session).toBe(browser);
+        prepareCalls.push("prepare");
+      },
+      captureBatch({ collectItems }) {
+        collectItems([
+          { source: "demo", source_item_id: "a", index: 1 },
+          { source: "demo", source_item_id: "b", index: 2 },
+          { source: "demo", source_item_id: "c", index: 3 },
+        ]);
+      },
+    });
+
+    expect(prepareCalls).toEqual(["prepare"]);
+    expect(document).toMatchObject({
+      schema_version: 1,
+      source: "demo",
+      items: [
+        { source_item_id: "a", index: 1 },
+        { source_item_id: "b", index: 2 },
+      ],
+    });
+    expect(document.captured_at).toEqual(expect.any(String));
+  });
+
+  test("re-prepares and retries once when the first batch is empty", async () => {
+    let captureCalls = 0;
+    const prepareCalls = [];
+
+    const document = await captureBrowserFeed({
+      sourceName: "demo",
+      createSession: () => fakeBrowserSession(),
+      prepareFeed() {
+        prepareCalls.push("prepare");
+      },
+      captureBatch({ collectItems }) {
+        captureCalls += 1;
+        if (captureCalls === 2) {
+          collectItems([{ source: "demo", source_item_id: "retry", index: 1 }]);
+        }
+      },
+    });
+
+    expect(prepareCalls).toEqual(["prepare", "prepare"]);
+    expect(captureCalls).toBe(2);
+    expect(document.items).toHaveLength(1);
+    expect(document.items[0].source_item_id).toBe("retry");
+  });
+
+  test("dedupes across batches and passes final document to afterCapture", async () => {
+    const afterCaptureCalls = [];
+
+    const document = await captureBrowserFeed({
+      sourceName: "demo",
+      createSession: () => fakeBrowserSession({ getTitle: () => "Demo Feed" }),
+      prepareFeed() {},
+      captureBatch({ collectItems }) {
+        collectItems([
+          { source: "demo", source_item_id: "same", index: 1 },
+          { source: "demo", source_item_id: "same", index: 2 },
+        ]);
+        collectItems([{ source: "demo", source_item_id: "next", index: 3 }]);
+      },
+      afterCapture({ browser, document }) {
+        afterCaptureCalls.push({
+          title: browser.getTitle(),
+          ids: document.items.map((item) => item.source_item_id),
+        });
+      },
+    });
+
+    expect(document.items.map((item) => item.source_item_id)).toEqual([
+      "same",
+      "next",
+    ]);
+    expect(afterCaptureCalls).toEqual([
+      { title: "Demo Feed", ids: ["same", "next"] },
+    ]);
   });
 });

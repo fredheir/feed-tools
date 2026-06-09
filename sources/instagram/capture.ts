@@ -3,9 +3,9 @@ import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
 import {
   assertAuthenticatedCapture,
   assertFeedUrlAccessible,
-  collectUniqueItems,
 } from "../../lib/source-capture.ts";
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
+import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
 import {
   extractInstagramSourceItemId,
@@ -338,70 +338,63 @@ async function captureDocument({
   limit?: number;
   browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
-  const browser = createBrowserSession(browserOptions);
-  prepareInstagramFeed(browser);
+  return captureBrowserFeed({
+    sourceName: "instagram",
+    limit,
+    browserOptions,
+    prepareFeed: prepareInstagramFeed,
+    captureBatch({ browser, limit, collectedItems, collectItems }) {
+      const extractionScript = buildExtractionScript(limit);
+      const mergeBatch = (payload: unknown): void => {
+        const document = normalizeInstagramExtractionDocument(payload);
+        collectItems(document.items, {
+          mapItem: normalizeInstagramCandidate,
+          shouldInclude: isInstagramItemWorthKeeping,
+        });
+      };
 
-  const collectedItems: FeedItem[] = [];
-  const seen = new Set<string>();
+      mergeBatch(browser.evalJson(extractionScript));
 
-  function mergeBatch(payload: unknown): void {
-    const document = normalizeInstagramExtractionDocument(payload);
-    collectUniqueItems(document.items, {
-      seen,
-      sourceName: "instagram",
-      target: collectedItems,
-      mapItem: normalizeInstagramCandidate,
-      shouldInclude: isInstagramItemWorthKeeping,
-    });
-  }
-
-  const extractionScript = buildExtractionScript(limit);
-  mergeBatch(browser.evalJson(extractionScript));
-
-  const scrollPasses = Math.max(4, Math.min(12, limit + 2));
-  let stagnantPasses = 0;
-  for (
-    let index = 0;
-    index < scrollPasses && collectedItems.length < limit && stagnantPasses < 3;
-    index += 1
-  ) {
-    const beforeCount = collectedItems.length;
-    const { beforeArticleCount } = browser.evalJson<{
-      beforeArticleCount: number;
-    }>(`(() => {
-      const beforeArticleCount = document.querySelectorAll('main article').length;
-      window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
-      return JSON.stringify({ beforeArticleCount });
-    })()`);
-    browser.tryWaitForFunction(
-      `document.querySelectorAll('main article').length > ${Number(beforeArticleCount) || 0}`,
-      3000,
-    );
-    mergeBatch(browser.evalJson(extractionScript));
-    stagnantPasses =
-      collectedItems.length === beforeCount ? stagnantPasses + 1 : 0;
-  }
-
-  const document: FeedDocument = {
-    schema_version: 1,
-    source: "instagram",
-    captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit),
-  };
-
-  assertAuthenticatedCapture(
-    { sourceName: "instagram", browser, document },
-    {
-      blockedUrlPatterns: [
-        /\/accounts\/login/i,
-        /\/challenge\//i,
-        /\/checkpoint\//i,
-      ],
-      blockedTextPatterns: [/\blog in\b/i],
+      const scrollPasses = Math.max(4, Math.min(12, limit + 2));
+      let stagnantPasses = 0;
+      for (
+        let index = 0;
+        index < scrollPasses &&
+        collectedItems.length < limit &&
+        stagnantPasses < 3;
+        index += 1
+      ) {
+        const beforeCount = collectedItems.length;
+        const { beforeArticleCount } = browser.evalJson<{
+          beforeArticleCount: number;
+        }>(`(() => {
+          const beforeArticleCount = document.querySelectorAll('main article').length;
+          window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
+          return JSON.stringify({ beforeArticleCount });
+        })()`);
+        browser.tryWaitForFunction(
+          `document.querySelectorAll('main article').length > ${Number(beforeArticleCount) || 0}`,
+          3000,
+        );
+        mergeBatch(browser.evalJson(extractionScript));
+        stagnantPasses =
+          collectedItems.length === beforeCount ? stagnantPasses + 1 : 0;
+      }
     },
-  );
-
-  return document;
+    afterCapture({ browser, document }) {
+      assertAuthenticatedCapture(
+        { sourceName: "instagram", browser, document },
+        {
+          blockedUrlPatterns: [
+            /\/accounts\/login/i,
+            /\/challenge\//i,
+            /\/checkpoint\//i,
+          ],
+          blockedTextPatterns: [/\blog in\b/i],
+        },
+      );
+    },
+  });
 }
 
 const source = {

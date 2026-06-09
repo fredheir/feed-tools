@@ -3,15 +3,14 @@ import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
 import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
-  collectUniqueItems,
 } from "../../lib/source-capture.ts";
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
+import { jitterTimeout } from "../../lib/browser.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
   FeedBrowserConfig,
   FeedDocument,
-  FeedItem,
 } from "../../lib/types.ts";
 
 type LinkedInScoredCandidate = {
@@ -524,76 +523,67 @@ async function captureDocument({
   limit?: number;
   browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
-  const browser = createBrowserSession(browserOptions);
-  prepareLinkedInFeed(browser);
+  return captureBrowserFeed({
+    sourceName: "linkedin",
+    limit,
+    browserOptions,
+    prepareFeed: prepareLinkedInFeed,
+    captureBatch({ browser, limit, collectedItems, collectItems }) {
+      const mergeBatch = (document: FeedDocument): void => {
+        collectItems(document.items, {
+          shouldInclude: isLinkedInItemWorthKeeping,
+        });
+      };
 
-  const collectedItems: FeedItem[] = [];
-  const seen = new Set<string>();
+      mergeBatch(browser.evalJson(buildExtractionScript(limit)));
 
-  function mergeBatch(document: FeedDocument): void {
-    collectUniqueItems(document.items, {
-      seen,
-      sourceName: "linkedin",
-      target: collectedItems,
-      shouldInclude: isLinkedInItemWorthKeeping,
-    });
-  }
-
-  mergeBatch(browser.evalJson(buildExtractionScript(limit)));
-  if (collectedItems.length === 0) {
-    prepareLinkedInFeed(browser);
-    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
-  }
-
-  const scrollPasses = Math.max(4, Math.min(14, limit + 2));
-  let stagnantPasses = 0;
-  for (
-    let index = 0;
-    index < scrollPasses && collectedItems.length < limit && stagnantPasses < 3;
-    index += 1
-  ) {
-    const beforeCount = collectedItems.length;
-    const beforeMetrics = browser.evalJson<{
-      scrollHeight: number;
-    }>(`(() => JSON.stringify({
-      scrollHeight: document.querySelector("main")?.scrollHeight || document.scrollingElement?.scrollHeight || 0
-    }))()`);
-    browser.evalText(`(() => {
-      const main = document.querySelector("main");
-      if (main) {
-        main.scrollBy({ top: Math.round(main.clientHeight * 0.75), behavior: "instant" });
-        return JSON.stringify({ ok: true, target: "main", y: main.scrollTop });
+      const scrollPasses = Math.max(4, Math.min(14, limit + 2));
+      let stagnantPasses = 0;
+      for (
+        let index = 0;
+        index < scrollPasses &&
+        collectedItems.length < limit &&
+        stagnantPasses < 3;
+        index += 1
+      ) {
+        const beforeCount = collectedItems.length;
+        const beforeMetrics = browser.evalJson<{
+          scrollHeight: number;
+        }>(`(() => JSON.stringify({
+          scrollHeight: document.querySelector("main")?.scrollHeight || document.scrollingElement?.scrollHeight || 0
+        }))()`);
+        browser.evalText(`(() => {
+          const main = document.querySelector("main");
+          if (main) {
+            main.scrollBy({ top: Math.round(main.clientHeight * 0.75), behavior: "instant" });
+            return JSON.stringify({ ok: true, target: "main", y: main.scrollTop });
+          }
+          window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
+          return JSON.stringify({ ok: true, target: "window", y: window.scrollY });
+        })()`);
+        try {
+          browser.waitForFunction(
+            `(document.querySelector("main")?.scrollHeight || document.scrollingElement?.scrollHeight || 0) > ${beforeMetrics.scrollHeight}`,
+            2500,
+          );
+        } catch (err) {
+          void err;
+        }
+        mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+        stagnantPasses =
+          collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
       }
-      window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
-      return JSON.stringify({ ok: true, target: "window", y: window.scrollY });
-    })()`);
-    try {
-      browser.waitForFunction(
-        `(document.querySelector("main")?.scrollHeight || document.scrollingElement?.scrollHeight || 0) > ${beforeMetrics.scrollHeight}`,
-        2500,
-      );
-    } catch (err) {
-      void err;
-    }
-    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
-    stagnantPasses =
-      collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
-  }
-
-  const document: FeedDocument = {
-    schema_version: 1,
-    source: "linkedin",
-    captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit),
-  };
-  assertAuthenticatedCapture(
-    { sourceName: "linkedin", browser, document },
-    {
-      blockedUrlPatterns: [/\/login/i, /\/authwall/i],
-      blockedTextPatterns: [/\bsign in\b/i, /\bjoin now\b/i],
     },
-  );
-  return document;
+    afterCapture({ browser, document }) {
+      assertAuthenticatedCapture(
+        { sourceName: "linkedin", browser, document },
+        {
+          blockedUrlPatterns: [/\/login/i, /\/authwall/i],
+          blockedTextPatterns: [/\bsign in\b/i, /\bjoin now\b/i],
+        },
+      );
+    },
+  });
 }
 
 const source = {

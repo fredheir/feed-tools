@@ -4,7 +4,7 @@ import {
   normalizeBlueskyExtractionDocument,
 } from "../sources/bluesky/capture.ts";
 import { renderItemCard } from "../lib/render/item.ts";
-import { getCaptureHandler } from "../lib/source-registry.ts";
+import { getCaptureHandler } from "../sources/registry.ts";
 import { isSupportedSource } from "../lib/source-catalog.ts";
 import { readFixture } from "./helpers/cli-config.mts";
 

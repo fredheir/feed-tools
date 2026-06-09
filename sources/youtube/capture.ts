@@ -3,9 +3,9 @@ import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
 import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
-  collectUniqueItems,
 } from "../../lib/source-capture.ts";
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
+import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
 import type {
   BrowserSession,
@@ -451,52 +451,46 @@ async function captureDocument({
   limit?: number;
   browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
-  const browser = createBrowserSession(browserOptions);
-  prepareYouTubeFeed(browser);
+  return captureBrowserFeed({
+    sourceName: "youtube",
+    limit,
+    browserOptions,
+    prepareFeed: prepareYouTubeFeed,
+    captureBatch({ browser, limit, collectedItems, collectItems }) {
+      const extractionScript = buildExtractionScript(limit);
+      const mergeBatch = (document: FeedDocument): void => {
+        collectItems(document.items);
+      };
 
-  const collectedItems: FeedItem[] = [];
-  const seen = new Set<string>();
-  const extractionScript = buildExtractionScript(limit);
+      mergeBatch(
+        normalizeYouTubeExtractionDocument(browser.evalJson(extractionScript)),
+      );
 
-  function mergeBatch(document: FeedDocument): void {
-    collectUniqueItems(document.items, {
-      seen,
-      sourceName: "youtube",
-      target: collectedItems,
-    });
-  }
-
-  mergeBatch(
-    normalizeYouTubeExtractionDocument(browser.evalJson(extractionScript)),
-  );
-
-  const scrollPasses = Math.max(2, Math.min(6, limit));
-  for (
-    let index = 0;
-    index < scrollPasses && collectedItems.length < limit;
-    index += 1
-  ) {
-    browser.evalText(`(() => {
-      window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: "instant" });
-      return JSON.stringify({ ok: true, y: window.scrollY });
-    })()`);
-    browser.tryWaitForFunction(
-      `(() => document.querySelectorAll('div.ytLockupViewModelHost, ytd-rich-item-renderer, ytd-video-renderer, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length > ${collectedItems.length})()`,
-      2500,
-    );
-    mergeBatch(
-      normalizeYouTubeExtractionDocument(browser.evalJson(extractionScript)),
-    );
-  }
-
-  const document = {
-    schema_version: 1,
-    source: "youtube",
-    captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit),
-  };
-  assertYouTubeCaptureReady(browser, document);
-  return document;
+      const scrollPasses = Math.max(2, Math.min(6, limit));
+      for (
+        let index = 0;
+        index < scrollPasses && collectedItems.length < limit;
+        index += 1
+      ) {
+        browser.evalText(`(() => {
+          window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: "instant" });
+          return JSON.stringify({ ok: true, y: window.scrollY });
+        })()`);
+        browser.tryWaitForFunction(
+          `(() => document.querySelectorAll('div.ytLockupViewModelHost, ytd-rich-item-renderer, ytd-video-renderer, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length > ${collectedItems.length})()`,
+          2500,
+        );
+        mergeBatch(
+          normalizeYouTubeExtractionDocument(
+            browser.evalJson(extractionScript),
+          ),
+        );
+      }
+    },
+    afterCapture({ browser, document }) {
+      assertYouTubeCaptureReady(browser, document);
+    },
+  });
 }
 
 const source = {

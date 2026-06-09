@@ -5,10 +5,7 @@ import {
   isSupportedSource,
   listSupportedSources,
 } from "../lib/source-catalog.ts";
-import {
-  getBootstrapHandler,
-  getCaptureHandler,
-} from "../lib/source-registry.ts";
+import { getBootstrapHandler, getCaptureHandler } from "../sources/registry.ts";
 
 describe("source registry", () => {
   test("lists the supported capture sources from the canonical registry", () => {
