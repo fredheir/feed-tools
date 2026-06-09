@@ -46,7 +46,10 @@ Future MCP host configuration for a checked-out repo:
   "mcpServers": {
     "feed-tools": {
       "command": "node",
-      "args": ["--experimental-strip-types", "/absolute/path/to/feed-tools/bin/feed-mcp"],
+      "args": [
+        "--experimental-strip-types",
+        "/absolute/path/to/feed-tools/bin/feed-mcp"
+      ],
       "env": {
         "FEED_TOOLS_CDP": "9223",
         "FEED_TOOLS_CHROME_PROFILE": "/absolute/path/to/feed-tools/chrome-profile"
