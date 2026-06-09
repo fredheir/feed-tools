@@ -6,10 +6,7 @@ import {
   normalizeDocument,
   persistCapturedDocument,
 } from "../source-capture.ts";
-
-import { normalizeFacebookExtractionDocument } from "../../sources/facebook/capture.ts";
-import { normalizeInstagramExtractionDocument } from "../../sources/instagram/capture.ts";
-import { normalizeYouTubeExtractionDocument } from "../../sources/youtube/capture.ts";
+import { getSourceManifest } from "../source-manifest.ts";
 
 /**
  * Per-source pre-normalisers convert the raw extraction payload (as emitted
@@ -17,14 +14,8 @@ import { normalizeYouTubeExtractionDocument } from "../../sources/youtube/captur
  * generic `normalizeDocument` expects.  Sources whose extraction already
  * emits canonical items can omit the entry.
  */
-const PRE_NORMALISERS: Record<string, (raw: unknown) => FeedDocument> = {
-  instagram: normalizeInstagramExtractionDocument,
-  youtube: normalizeYouTubeExtractionDocument,
-  facebook: normalizeFacebookExtractionDocument,
-};
-
 function preNormalise(rawDocument: unknown, sourceName: string): FeedDocument {
-  const fn = PRE_NORMALISERS[sourceName];
+  const fn = getSourceManifest(sourceName)?.cic.preNormalize;
   if (fn) return fn(rawDocument);
   return normalizeDocument(rawDocument, sourceName);
 }

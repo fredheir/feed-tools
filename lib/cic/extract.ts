@@ -1,37 +1,16 @@
-import { buildExtractionScript as buildBlueskyScript } from "../../sources/bluesky/capture.ts";
-import { buildExtractionScript as buildFacebookScript } from "../../sources/facebook/capture.ts";
-import { buildExtractionScript as buildInstagramScript } from "../../sources/instagram/capture.ts";
-import { buildExtractionScript as buildLinkedInScript } from "../../sources/linkedin/capture.ts";
-import { buildExtractionScript as buildTikTokScript } from "../../sources/tiktok/capture.ts";
-import { buildExtractionScript as buildXScript } from "../../sources/x/capture.ts";
-import { buildExtractionScript as buildYouTubeScript } from "../../sources/youtube/capture.ts";
-
-const EXTRACTION_SCRIPTS = {
-  x: buildXScript,
-  bluesky: buildBlueskyScript,
-  linkedin: buildLinkedInScript,
-  instagram: buildInstagramScript,
-  tiktok: buildTikTokScript,
-  youtube: buildYouTubeScript,
-  facebook: buildFacebookScript,
-};
-
-type CicSourceName = keyof typeof EXTRACTION_SCRIPTS;
-
-const hasOwnExtractionScript = (
-  sourceName: string,
-): sourceName is CicSourceName =>
-  Object.prototype.hasOwnProperty.call(EXTRACTION_SCRIPTS, sourceName);
+import { getSourceManifest, listSourceManifests } from "../source-manifest.ts";
 
 export function getExtractionScript(sourceName: string, limit = 12): string {
-  if (!hasOwnExtractionScript(sourceName)) {
+  const manifest = getSourceManifest(sourceName);
+  if (!manifest) {
     throw new Error(
       `No CiC extraction script for source "${sourceName}". ` +
-        `Supported: ${Object.keys(EXTRACTION_SCRIPTS).join(", ")}`,
+        `Supported: ${listSourceManifests()
+          .map((source) => source.name)
+          .join(", ")}`,
     );
   }
-  const builder = EXTRACTION_SCRIPTS[sourceName];
-  return builder(limit);
+  return manifest.cic.buildExtractionScript(limit);
 }
 
 /**

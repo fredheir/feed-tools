@@ -1,11 +1,6 @@
-export type FeedSourceName =
-  | "bluesky"
-  | "facebook"
-  | "instagram"
-  | "linkedin"
-  | "tiktok"
-  | "youtube"
-  | "x";
+import type { FeedSourceName as SourceName } from "./source-metadata.ts";
+
+export type FeedSourceName = SourceName;
 
 export type FeedStatValue = string | number | null;
 export type FeedMediaKind = "image" | "video";
