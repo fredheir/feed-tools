@@ -1,11 +1,11 @@
+import { runSourceCapture } from "../lib/source-capture.ts";
+import type { SourceManifest } from "../lib/source-manifest.ts";
 import type {
   FeedBrowserConfig,
   FeedDocument,
   FeedSourceName,
-} from "./types.ts";
-
-import { runSourceCapture } from "./source-capture.ts";
-import { getSourceManifest, type SourceManifest } from "./source-manifest.ts";
+} from "../lib/types.ts";
+import { getSourceManifest } from "./manifest.ts";
 
 type CaptureOptions = {
   limit?: number;

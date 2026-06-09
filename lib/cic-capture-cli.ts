@@ -31,9 +31,10 @@ import { getSourceConfig, listCicSources } from "./cic/source-config.ts";
 import {
   buildDownloadExtractionScript,
   getExtractionScript,
-} from "./cic/extract.ts";
+} from "../sources/cic-extract.ts";
 import { ingestDocument } from "./cic/ingest.ts";
-import { hasNewUnclassifiedItems } from "./source-capture.ts";
+import { hasNewUnclassifiedItems } from "./allocation.ts";
+import { getSourceManifest } from "../sources/manifest.ts";
 
 function usage(): never {
   console.log(`Usage:
@@ -149,6 +150,7 @@ async function cmdIngest(
     sourceName,
     assetsDir,
     saveDir,
+    preNormalize: getSourceManifest(sourceName)?.cic.preNormalize,
   });
 
   if (hasNewUnclassifiedItems(merged, saveDir)) {

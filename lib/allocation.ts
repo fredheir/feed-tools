@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { loadConfig, getSaveDir } from "./config.ts";
+import { DEFAULT_SAVE_DIR, loadConfig, getSaveDir } from "./config.ts";
 import { getDocumentSources } from "./document-sources.ts";
 import { loadAllocationFromDb, saveAllocationToDb } from "./sqlite-store.ts";
 import { resolveSelectionList } from "./selection.ts";
@@ -190,6 +190,23 @@ function saveAllocationToDocument(
   return Array.from(resolvedLocations).join("\n");
 }
 
+function hasNewUnclassifiedItems(
+  document: FeedDocument,
+  saveDir: string,
+): boolean {
+  const allocation = loadAllocationFromDb(
+    saveDir || DEFAULT_SAVE_DIR,
+    document,
+  );
+  return document.items.some(
+    (item) =>
+      item.capture_count === 1 &&
+      item.last_seen_at === document.captured_at &&
+      Boolean(item.id) &&
+      !allocation?.items?.[item.id as string]?.category,
+  );
+}
+
 function groupPickedRowsByCategory(
   document: FeedDocument,
   allocation: FeedAllocation | null | undefined,
@@ -234,6 +251,7 @@ function groupPickedRowsByCategory(
 export {
   assignCategories,
   groupPickedRowsByCategory,
+  hasNewUnclassifiedItems,
   loadAllocationFromPath,
   loadAllocationFromDocument,
   mergeAllocations,

@@ -4,11 +4,9 @@ import {
   normalizeCount,
   makeAbsoluteUrl,
 } from "../browser-runtime/core.ts";
-import {
-  assertFeedUrlAccessible,
-  collectUniqueItems,
-} from "../../lib/source-capture.ts";
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { assertFeedUrlAccessible } from "../../lib/source-capture.ts";
+import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
+import { jitterTimeout } from "../../lib/browser.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
@@ -351,66 +349,59 @@ async function captureDocument({
   limit?: number;
   browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
-  const browser = createBrowserSession(browserOptions);
-  prepareTikTokFeed(browser);
+  return captureBrowserFeed({
+    sourceName: "tiktok",
+    limit,
+    browserOptions,
+    prepareFeed: prepareTikTokFeed,
+    captureBatch({ browser, limit, collectedItems, collectItems }) {
+      const extractionScript = buildExtractionScript(limit);
+      const mergeBatch = (document: FeedDocument): void => {
+        collectItems(document.items);
+      };
 
-  const collectedItems: FeedItem[] = [];
-  const seen = new Set<string>();
+      mergeBatch(browser.evalJson(extractionScript));
 
-  function mergeBatch(document: FeedDocument): void {
-    collectUniqueItems(document.items, {
-      seen,
-      sourceName: "tiktok",
-      target: collectedItems,
-    });
-  }
-
-  const extractionScript = buildExtractionScript(limit);
-  mergeBatch(browser.evalJson(extractionScript));
-
-  const scrollPasses = Math.max(4, Math.min(12, limit + 2));
-  let stagnantPasses = 0;
-  for (
-    let index = 0;
-    index < scrollPasses && collectedItems.length < limit && stagnantPasses < 3;
-    index += 1
-  ) {
-    const beforeCount = collectedItems.length;
-    const beforeMetrics = browser.evalJson<{
-      scrollY: number;
-      universalCount: number;
-      articleCount: number;
-    }>(`(() => JSON.stringify({
-      scrollY: window.scrollY,
-      universalCount: Array.isArray(window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"])
-        ? window.__$UNIVERSAL_DATA$__.__DEFAULT_SCOPE__["webapp.updated-items"].length
-        : 0,
-      articleCount: document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length
-    }))()`);
-    browser.evalText(`(() => {
-      window.scrollBy({ top: Math.round(window.innerHeight * 0.92), behavior: "instant" });
-      return JSON.stringify({ ok: true, y: window.scrollY });
-    })()`);
-    browser.tryWaitForFunction(
-      `(() => {
-        const items = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"];
-        const universalCount = Array.isArray(items) ? items.length : 0;
-        const articleCount = document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length;
-        return universalCount > ${Number(beforeMetrics.universalCount) || 0} || articleCount > ${Number(beforeMetrics.articleCount) || 0};
-      })()`,
-      3000,
-    );
-    mergeBatch(browser.evalJson(extractionScript));
-    stagnantPasses =
-      collectedItems.length === beforeCount ? stagnantPasses + 1 : 0;
-  }
-
-  return {
-    schema_version: 1,
-    source: "tiktok",
-    captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit),
-  };
+      const scrollPasses = Math.max(4, Math.min(12, limit + 2));
+      let stagnantPasses = 0;
+      for (
+        let index = 0;
+        index < scrollPasses &&
+        collectedItems.length < limit &&
+        stagnantPasses < 3;
+        index += 1
+      ) {
+        const beforeCount = collectedItems.length;
+        const beforeMetrics = browser.evalJson<{
+          scrollY: number;
+          universalCount: number;
+          articleCount: number;
+        }>(`(() => JSON.stringify({
+          scrollY: window.scrollY,
+          universalCount: Array.isArray(window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"])
+            ? window.__$UNIVERSAL_DATA$__.__DEFAULT_SCOPE__["webapp.updated-items"].length
+            : 0,
+          articleCount: document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length
+        }))()`);
+        browser.evalText(`(() => {
+          window.scrollBy({ top: Math.round(window.innerHeight * 0.92), behavior: "instant" });
+          return JSON.stringify({ ok: true, y: window.scrollY });
+        })()`);
+        browser.tryWaitForFunction(
+          `(() => {
+            const items = window.__$UNIVERSAL_DATA$__?.__DEFAULT_SCOPE__?.["webapp.updated-items"];
+            const universalCount = Array.isArray(items) ? items.length : 0;
+            const articleCount = document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length;
+            return universalCount > ${Number(beforeMetrics.universalCount) || 0} || articleCount > ${Number(beforeMetrics.articleCount) || 0};
+          })()`,
+          3000,
+        );
+        mergeBatch(browser.evalJson(extractionScript));
+        stagnantPasses =
+          collectedItems.length === beforeCount ? stagnantPasses + 1 : 0;
+      }
+    },
+  });
 }
 
 const source = {

@@ -3,9 +3,9 @@ import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
 import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
-  collectUniqueItems,
 } from "../../lib/source-capture.ts";
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
+import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
 import type {
   BrowserSession,
@@ -545,54 +545,49 @@ async function captureDocument({
   limit?: number;
   browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
-  const browser = createBrowserSession(browserOptions);
-  prepareXFeed(browser);
-
-  let bestDocument: XNormalizedExtractionDocument | null = null;
-  const attempts = [
-    { waitMs: 0, allowReload: false },
-    { waitMs: jitterTimeout(1200, 400), allowReload: false },
-    { waitMs: jitterTimeout(2200, 600), allowReload: false },
-  ];
-
-  for (const attempt of attempts) {
-    if (attempt.waitMs > 0) browser.waitMilliseconds(attempt.waitMs);
-    if (attempt.allowReload) prepareXFeed(browser);
-
-    const candidate = normalizeXExtractionDocument(
-      browser.evalJson(buildExtractionScript(limit)),
-    );
-    if (
-      !bestDocument ||
-      candidate.items.length > bestDocument.items.length ||
-      (candidate.meta?.hydrated_count || 0) >
-        (bestDocument.meta?.hydrated_count || 0)
-    ) {
-      bestDocument = candidate;
-    }
-    if (candidate.items.length >= limit) break;
-  }
-
-  const document: FeedDocument = bestDocument || {
-    schema_version: 1,
-    source: "x",
-    captured_at: new Date().toISOString(),
-    items: [],
-  };
-  const seen = new Set<string>();
-  document.items = collectUniqueItems(document.items, {
-    seen,
+  return captureBrowserFeed({
     sourceName: "x",
-    target: [],
-  });
-  assertAuthenticatedCapture(
-    { sourceName: "x", browser, document },
-    {
-      blockedUrlPatterns: [/\/i\/flow\/login/i],
-      blockedTextPatterns: [/\blog in\b/i, /\bsign in\b/i],
+    limit,
+    browserOptions,
+    prepareFeed: prepareXFeed,
+    captureBatch({ browser, limit, collectItems }) {
+      let bestDocument: XNormalizedExtractionDocument | null = null;
+      const attempts = [
+        { waitMs: 0, allowReload: false },
+        { waitMs: jitterTimeout(1200, 400), allowReload: false },
+        { waitMs: jitterTimeout(2200, 600), allowReload: false },
+      ];
+
+      for (const attempt of attempts) {
+        if (attempt.waitMs > 0) browser.waitMilliseconds(attempt.waitMs);
+        if (attempt.allowReload) prepareXFeed(browser);
+
+        const candidate = normalizeXExtractionDocument(
+          browser.evalJson(buildExtractionScript(limit)),
+        );
+        if (
+          !bestDocument ||
+          candidate.items.length > bestDocument.items.length ||
+          (candidate.meta?.hydrated_count || 0) >
+            (bestDocument.meta?.hydrated_count || 0)
+        ) {
+          bestDocument = candidate;
+        }
+        if (candidate.items.length >= limit) break;
+      }
+
+      collectItems(bestDocument?.items || []);
     },
-  );
-  return document;
+    afterCapture({ browser, document }) {
+      assertAuthenticatedCapture(
+        { sourceName: "x", browser, document },
+        {
+          blockedUrlPatterns: [/\/i\/flow\/login/i],
+          blockedTextPatterns: [/\blog in\b/i, /\bsign in\b/i],
+        },
+      );
+    },
+  });
 }
 
 const source = {

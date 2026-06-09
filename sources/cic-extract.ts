@@ -1,4 +1,4 @@
-import { getSourceManifest, listSourceManifests } from "../source-manifest.ts";
+import { getSourceManifest, listSourceManifests } from "./manifest.ts";
 
 export function getExtractionScript(sourceName: string, limit = 12): string {
   const manifest = getSourceManifest(sourceName);

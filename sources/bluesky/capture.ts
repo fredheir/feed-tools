@@ -3,16 +3,15 @@ import { buildBrowserRuntimeScript } from "../browser-runtime/core.ts";
 import {
   assertAuthenticatedCapture,
   assertFeedPageAccessible,
-  collectUniqueItems,
 } from "../../lib/source-capture.ts";
-import { createBrowserSession, jitterTimeout } from "../../lib/browser.ts";
+import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
+import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
   FeedBrowserConfig,
   FeedDocument,
-  FeedItem,
 } from "../../lib/types.ts";
 
 type RawBlueskyExtractionItem = Parameters<typeof normalizeItemShape>[0];
@@ -310,72 +309,62 @@ async function captureDocument({
   limit?: number;
   browserOptions?: FeedBrowserConfig;
 }): Promise<FeedDocument> {
-  const browser = createBrowserSession(browserOptions);
-  prepareBlueskyFeed(browser);
+  return captureBrowserFeed({
+    sourceName: "bluesky",
+    limit,
+    browserOptions,
+    prepareFeed: prepareBlueskyFeed,
+    captureBatch({ browser, limit, collectedItems, collectItems }) {
+      const mergeBatch = (payload: unknown): void => {
+        const document = normalizeBlueskyExtractionDocument(payload);
+        collectItems(document.items);
+      };
 
-  const collectedItems: FeedItem[] = [];
-  const seen = new Set<string>();
+      mergeBatch(browser.evalJson(buildExtractionScript(limit)));
 
-  function mergeBatch(payload: unknown): void {
-    const document = normalizeBlueskyExtractionDocument(payload);
-    collectUniqueItems(document.items, {
-      seen,
-      sourceName: "bluesky",
-      target: collectedItems,
-    });
-  }
-
-  mergeBatch(browser.evalJson(buildExtractionScript(limit)));
-  if (collectedItems.length === 0) {
-    prepareBlueskyFeed(browser);
-    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
-  }
-
-  const scrollPasses = Math.max(4, Math.min(12, limit + 2));
-  let stagnantPasses = 0;
-  for (
-    let index = 0;
-    index < scrollPasses && collectedItems.length < limit && stagnantPasses < 3;
-    index += 1
-  ) {
-    const beforeCount = collectedItems.length;
-    const { count: knownDomItems } = parseDomCount(
-      browser.evalJson(`(() => JSON.stringify({
-      count: document.querySelectorAll('[data-testid^="feedItem-by-"]').length
-    }))()`),
-    );
-    browser.evalText(`(() => {
-      window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
-      return JSON.stringify({ ok: true, y: window.scrollY });
-    })()`);
-    try {
-      browser.waitForFunction(
-        `document.querySelectorAll('[data-testid^="feedItem-by-"]').length > ${knownDomItems}`,
-        2500,
-      );
-    } catch (err) {
-      // Timed out waiting for new feed rows; continue scrolling.
-      void err;
-    }
-    mergeBatch(browser.evalJson(buildExtractionScript(limit)));
-    stagnantPasses =
-      collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
-  }
-
-  const document = {
-    schema_version: 1,
-    source: "bluesky",
-    captured_at: new Date().toISOString(),
-    items: collectedItems.slice(0, limit),
-  };
-  assertAuthenticatedCapture(
-    { sourceName: "bluesky", browser, document },
-    {
-      blockedUrlPatterns: [/\/login/i],
-      blockedTextPatterns: [/\bsign in\b/i, /\bcreate account\b/i],
+      const scrollPasses = Math.max(4, Math.min(12, limit + 2));
+      let stagnantPasses = 0;
+      for (
+        let index = 0;
+        index < scrollPasses &&
+        collectedItems.length < limit &&
+        stagnantPasses < 3;
+        index += 1
+      ) {
+        const beforeCount = collectedItems.length;
+        const { count: knownDomItems } = parseDomCount(
+          browser.evalJson(`(() => JSON.stringify({
+          count: document.querySelectorAll('[data-testid^="feedItem-by-"]').length
+        }))()`),
+        );
+        browser.evalText(`(() => {
+          window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
+          return JSON.stringify({ ok: true, y: window.scrollY });
+        })()`);
+        try {
+          browser.waitForFunction(
+            `document.querySelectorAll('[data-testid^="feedItem-by-"]').length > ${knownDomItems}`,
+            2500,
+          );
+        } catch (err) {
+          // Timed out waiting for new feed rows; continue scrolling.
+          void err;
+        }
+        mergeBatch(browser.evalJson(buildExtractionScript(limit)));
+        stagnantPasses =
+          collectedItems.length > beforeCount ? 0 : stagnantPasses + 1;
+      }
     },
-  );
-  return document;
+    afterCapture({ browser, document }) {
+      assertAuthenticatedCapture(
+        { sourceName: "bluesky", browser, document },
+        {
+          blockedUrlPatterns: [/\/login/i],
+          blockedTextPatterns: [/\bsign in\b/i, /\bcreate account\b/i],
+        },
+      );
+    },
+  });
 }
 
 const source = {

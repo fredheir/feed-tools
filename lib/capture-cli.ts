@@ -6,10 +6,10 @@ import {
   resolveCanonicalSaveDir,
   DEFAULT_ASSETS_DIR,
 } from "./config.ts";
+import { hasNewUnclassifiedItems } from "./allocation.ts";
 import { requireArgValue } from "./cli-args.ts";
 import { combineDocuments } from "./document-ops.ts";
-import { hasNewUnclassifiedItems } from "./source-capture.ts";
-import { getCaptureHandler } from "./source-registry.ts";
+import { getCaptureHandler } from "../sources/registry.ts";
 import { isSupportedSource } from "./source-catalog.ts";
 import type {
   FeedBrowserConfig,

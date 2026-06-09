@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { renderItemCard } from "../lib/render/item.ts";
-import { getCaptureHandler } from "../lib/source-registry.ts";
+import { getCaptureHandler } from "../sources/registry.ts";
 import { isSupportedSource } from "../lib/source-catalog.ts";
 import {
   assertYouTubeCaptureReady,

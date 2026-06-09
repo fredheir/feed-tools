@@ -1,24 +1,10 @@
 import { DEFAULT_SAVE_DIR } from "../config.ts";
 import type { FeedDocument } from "../types.ts";
-
 import {
-  collectUniqueItems,
   normalizeDocument,
   persistCapturedDocument,
 } from "../source-capture.ts";
-import { getSourceManifest } from "../source-manifest.ts";
-
-/**
- * Per-source pre-normalisers convert the raw extraction payload (as emitted
- * by `buildExtractionScript`) into the canonical FeedDocument shape that the
- * generic `normalizeDocument` expects.  Sources whose extraction already
- * emits canonical items can omit the entry.
- */
-function preNormalise(rawDocument: unknown, sourceName: string): FeedDocument {
-  const fn = getSourceManifest(sourceName)?.cic.preNormalize;
-  if (fn) return fn(rawDocument);
-  return normalizeDocument(rawDocument, sourceName);
-}
+import { collectUniqueItems } from "../feed-item-collection.ts";
 
 export async function ingestDocument(
   rawDocument: unknown,
@@ -26,9 +12,17 @@ export async function ingestDocument(
     sourceName,
     assetsDir,
     saveDir,
-  }: { sourceName: string; assetsDir: string; saveDir: string },
+    preNormalize,
+  }: {
+    sourceName: string;
+    assetsDir: string;
+    saveDir: string;
+    preNormalize?: (raw: unknown) => FeedDocument;
+  },
 ): Promise<FeedDocument> {
-  const normalized = preNormalise(rawDocument, sourceName);
+  const normalized = preNormalize
+    ? preNormalize(rawDocument)
+    : normalizeDocument(rawDocument, sourceName);
   const dedupedItems = collectUniqueItems<FeedDocument["items"][number]>(
     normalized.items,
     {
