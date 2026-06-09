@@ -214,6 +214,31 @@ describe("feed-tools MCP server", () => {
     expect(fs.existsSync(configPath)).toBe(true);
   });
 
+  test("feed_doctor honors FEED_TOOLS_CONFIG when writing config", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-doctor-"));
+    const configPath = path.join(workdir, "nested", "env-config.json");
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(
+      path.join(path.dirname(configPath), "config.json.example"),
+      `${JSON.stringify({ user_preferences: { sources: [{ name: "x" }] } })}\n`,
+    );
+
+    const payload = callMcpTool(
+      "feed_doctor",
+      { write_config: true, force_config: true, cdp_ports: [] },
+      {
+        FEED_TOOLS_WORKDIR: workdir,
+        FEED_TOOLS_CONFIG: configPath,
+      },
+    );
+
+    expect(payload.config).toMatchObject({
+      status: "created",
+      path: configPath,
+    });
+    expect(fs.existsSync(configPath)).toBe(true);
+  });
+
   test("status tools return documented snake_case fields", () => {
     const browserStatus = callMcpTool("feed_browser_status", { cdp: "1" });
     expect(browserStatus).toMatchObject({

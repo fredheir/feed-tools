@@ -151,7 +151,7 @@ export function startBrowser(
     );
   }
 
-  if (existing.detail.includes("webSocketDebuggerUrl")) {
+  if (existing.detail.includes("webSocketDebuggerUrl") || existing.versionUrl) {
     throw new Error(
       `CDP port ${cdp} is occupied by a non-CDP browser endpoint: ${existing.detail}`,
     );

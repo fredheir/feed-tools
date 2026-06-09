@@ -312,7 +312,7 @@ const TOOLS: McpToolDefinition[] = [
             : undefined,
           configure: booleanValue(args.write_config) === true,
           forceConfig: booleanValue(args.force_config) === true,
-          configPath: stringValue(args.config_path),
+          configPath: configPath(args),
         }),
       ),
   },

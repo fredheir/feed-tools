@@ -58,7 +58,7 @@ export function getBrowserStatus(cdp = defaultCdp()): BrowserStatusResult {
     return {
       ok: false,
       cdp: value,
-      versionUrl: null,
+      versionUrl: getCdpVersionUrls(value)[0] || null,
       browser: null,
       webSocketDebuggerUrlPresent: false,
       detail: invalids.join("; "),

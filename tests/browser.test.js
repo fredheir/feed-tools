@@ -315,4 +315,45 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
       server.kill("SIGTERM");
     }
   });
+
+  test("rejects a non-JSON endpoint on the requested CDP port", async () => {
+    const server = spawn(process.execPath, [
+      "-e",
+      `
+import http from "node:http";
+const server = http.createServer((_request, response) => {
+  response.setHeader("content-type", "text/html");
+  response.end("<!doctype html><title>Not CDP</title>");
+});
+server.listen(0, "127.0.0.1", () => {
+  process.stdout.write(String(server.address().port) + "\\n");
+});
+process.on("SIGTERM", () => server.close(() => process.exit(0)));
+`,
+    ]);
+    const port = await new Promise((resolve, reject) => {
+      let payload = "";
+      server.stdout.on("data", (chunk) => {
+        payload += String(chunk);
+        const line = payload.split("\n")[0]?.trim();
+        if (line) resolve(Number(line));
+      });
+      server.once("error", reject);
+      server.once("exit", (code) => {
+        if (code) reject(new Error(`probe server exited with ${code}`));
+      });
+    });
+
+    try {
+      expect(() =>
+        startBrowser({
+          cdpPort: port,
+          chromeBin: process.execPath,
+          reuseExisting: false,
+        }),
+      ).toThrow(/occupied by a non-CDP browser endpoint/);
+    } finally {
+      server.kill("SIGTERM");
+    }
+  });
 });
