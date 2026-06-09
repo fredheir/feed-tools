@@ -1,14 +1,6 @@
-import type { FeedSourceName } from "./types.ts";
+import { SOURCE_NAMES, type FeedSourceName } from "./source-metadata.ts";
 
-export const SUPPORTED_SOURCES = Object.freeze([
-  "bluesky",
-  "facebook",
-  "instagram",
-  "linkedin",
-  "tiktok",
-  "youtube",
-  "x",
-]) satisfies readonly FeedSourceName[];
+export const SUPPORTED_SOURCES = SOURCE_NAMES;
 
 export function listSupportedSources(): FeedSourceName[] {
   return [...SUPPORTED_SOURCES];

@@ -9,6 +9,10 @@ import path from "node:path";
 
 import { getCdpVersionUrls } from "./browser.ts";
 import { listSupportedSources } from "./source-catalog.ts";
+import {
+  SOURCE_SIGNIN_TARGETS,
+  type SourceSigninTarget,
+} from "./source-metadata.ts";
 import type { FeedSourceName } from "./types.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
@@ -26,11 +30,6 @@ export const DEFAULT_CDP_PORT = "9222";
 export const DEFAULT_INTERVAL_MS = 30_000;
 export const DEFAULT_TIMEOUT_MS = 20 * 60_000;
 
-interface SourceSigninTarget {
-  url: string;
-  authCookies: Array<{ domains: string[]; names: string[] }>;
-}
-
 export interface SigninStatusResult {
   profileDir: string;
   cookieStoresFound: number;
@@ -43,45 +42,7 @@ type FeedSigninChromeProcess = ChildProcess & {
   profileDir: string;
 };
 
-export const SOURCE_TARGETS: Record<FeedSourceName, SourceSigninTarget> = {
-  x: {
-    url: "https://x.com/home",
-    authCookies: [{ domains: ["x.com", "twitter.com"], names: ["auth_token"] }],
-  },
-  bluesky: {
-    url: "https://bsky.app/",
-    authCookies: [
-      { domains: ["bsky.app", "bsky.social"], names: ["sid", "session"] },
-    ],
-  },
-  facebook: {
-    url: "https://www.facebook.com/",
-    authCookies: [{ domains: ["facebook.com"], names: ["c_user"] }],
-  },
-  instagram: {
-    url: "https://www.instagram.com/",
-    authCookies: [{ domains: ["instagram.com"], names: ["sessionid"] }],
-  },
-  linkedin: {
-    url: "https://www.linkedin.com/feed/",
-    authCookies: [{ domains: ["linkedin.com"], names: ["li_at"] }],
-  },
-  tiktok: {
-    url: "https://www.tiktok.com/",
-    authCookies: [
-      { domains: ["tiktok.com"], names: ["sessionid", "sessionid_ss"] },
-    ],
-  },
-  youtube: {
-    url: "https://www.youtube.com/",
-    authCookies: [
-      {
-        domains: ["youtube.com", "google.com"],
-        names: ["SID", "HSID", "SSID", "APISID", "SAPISID"],
-      },
-    ],
-  },
-};
+export const SOURCE_TARGETS = SOURCE_SIGNIN_TARGETS;
 
 export function listSupportedSigninSources(): FeedSourceName[] {
   return listSupportedSources().filter((source) =>
