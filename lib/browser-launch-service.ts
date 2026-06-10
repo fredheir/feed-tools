@@ -103,6 +103,20 @@ function defaultCdp(): string {
   return Number.isInteger(port) && port > 0 ? String(port) : raw;
 }
 
+function cdpLaunchPort(cdp: string): string {
+  const value = cdp.trim();
+  if (/^\d+$/.test(value)) return value;
+  try {
+    const parsed = new URL(
+      /^https?:\/\//i.test(value) ? value : `http://${value}`,
+    );
+    if (parsed.port) return parsed.port;
+  } catch {
+    // Fall through to the structured error below.
+  }
+  throw new Error(`CDP endpoint ${cdp} does not include a launchable port.`);
+}
+
 function shouldUseNoSandbox(value: boolean | undefined): boolean {
   if (value !== undefined) return value;
   return (
@@ -124,6 +138,7 @@ export async function startBrowser(
   options: BrowserStartOptions = {},
 ): Promise<BrowserStartResult> {
   const cdp = options.cdp || String(options.cdpPort || defaultCdp());
+  const launchCdp = cdpLaunchPort(cdp);
   const profileDir = path.resolve(options.profileDir || defaultProfileDir());
   const logPath = path.resolve(options.logPath || DEFAULT_CHROME_LOG);
   const chromeBin = resolveChromeBin(options.chromeBin);
@@ -165,7 +180,7 @@ export async function startBrowser(
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   const logFd = fs.openSync(logPath, "a");
   const args = [
-    `--remote-debugging-port=${cdp}`,
+    `--remote-debugging-port=${launchCdp}`,
     "--remote-debugging-address=127.0.0.1",
     `--user-data-dir=${profileDir}`,
     "--no-first-run",
@@ -186,7 +201,7 @@ export async function startBrowser(
 
   const deadline = Date.now() + CDP_PROBE_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    const status = getBrowserStatus(cdp);
+    const status = getBrowserStatus(launchCdp);
     if (status.ok) {
       child.unref();
       return {

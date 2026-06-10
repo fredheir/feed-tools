@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
+import net from "node:net";
 import { spawn, spawnSync } from "node:child_process";
 import { describe, expect, test } from "vitest";
 import {
@@ -419,6 +420,65 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
         reuseExisting: false,
       }),
     ).rejects.toThrow(/Chrome exited before CDP was ready/);
+  });
+
+  test("launches endpoint-form CDP values with the extracted port", async () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-cdp-url-"));
+    const chromeBin = path.join(workdir, "chrome");
+    const argsPath = path.join(workdir, "args.json");
+    const port = await new Promise((resolve, reject) => {
+      const server = net.createServer();
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", () => {
+        const address = server.address();
+        server.close(() => {
+          if (address && typeof address === "object") {
+            resolve(address.port);
+          } else {
+            reject(new Error("Could not allocate a test port"));
+          }
+        });
+      });
+    });
+    fs.writeFileSync(
+      chromeBin,
+      `#!/bin/sh
+printf '%s\\n' "$@" > '${argsPath}'
+port=""
+for arg in "$@"; do
+  case "$arg" in
+    --remote-debugging-port=*) port="\${arg#--remote-debugging-port=}" ;;
+  esac
+done
+exec '${process.execPath}' -e '
+  const http = require("node:http");
+  const port = Number(process.argv[1]);
+  http.createServer((_request, response) => {
+    response.setHeader("content-type", "application/json");
+    response.end("{\\"Browser\\":\\"Fixture Chrome\\",\\"webSocketDebuggerUrl\\":\\"ws://127.0.0.1/devtools/browser\\"}");
+  }).listen(port, "127.0.0.1");
+' "$port"
+`,
+      { mode: 0o755 },
+    );
+
+    const result = await startBrowser({
+      cdp: `http://127.0.0.1:${port}`,
+      chromeBin,
+      profileDir: path.join(workdir, "profile"),
+      logPath: path.join(workdir, "chrome.log"),
+      reuseExisting: false,
+    });
+
+    try {
+      expect(result.launched).toBe(true);
+      expect(result.cdp).toBe(`http://127.0.0.1:${port}`);
+      expect(fs.readFileSync(argsPath, "utf8")).toContain(
+        `--remote-debugging-port=${port}`,
+      );
+    } finally {
+      if (result.pid) process.kill(result.pid, "SIGTERM");
+    }
   });
 
   test("rejects a non-JSON endpoint on the requested CDP port", async () => {
