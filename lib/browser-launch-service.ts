@@ -208,7 +208,7 @@ export async function startBrowser(
       child.unref();
       return {
         ok: true,
-        cdp,
+        cdp: launchCdp,
         profileDir,
         chromeBin,
         logPath,

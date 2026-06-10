@@ -472,7 +472,7 @@ exec '${process.execPath}' -e '
 
     try {
       expect(result.launched).toBe(true);
-      expect(result.cdp).toBe(`http://127.0.0.1:${port}`);
+      expect(result.cdp).toBe(String(port));
       expect(fs.readFileSync(argsPath, "utf8")).toContain(
         `--remote-debugging-port=${port}`,
       );
