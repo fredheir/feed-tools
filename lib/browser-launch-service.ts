@@ -22,6 +22,7 @@ const DEFAULT_CDP_PORT = 9223;
 const CDP_PROBE_TIMEOUT_MS = 20_000;
 
 export interface BrowserStartOptions {
+  cdp?: string;
   cdpPort?: number;
   profileDir?: string;
   chromeBin?: string;
@@ -86,13 +87,8 @@ export function resolveChromeBin(explicit?: string | null): string | null {
   return null;
 }
 
-function sleepMilliseconds(milliseconds: number): void {
-  Atomics.wait(
-    new Int32Array(new SharedArrayBuffer(4)),
-    0,
-    0,
-    Math.max(0, milliseconds),
-  );
+function sleepMilliseconds(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function defaultProfileDir(): string {
@@ -101,10 +97,10 @@ function defaultProfileDir(): string {
   );
 }
 
-function defaultCdpPort(): number {
+function defaultCdp(): string {
   const raw = process.env.FEED_TOOLS_CDP || String(DEFAULT_CDP_PORT);
   const port = Number.parseInt(raw, 10);
-  return Number.isInteger(port) && port > 0 ? port : DEFAULT_CDP_PORT;
+  return Number.isInteger(port) && port > 0 ? String(port) : raw;
 }
 
 function shouldUseNoSandbox(value: boolean | undefined): boolean {
@@ -124,11 +120,10 @@ function openUrls(cdp: string, urls: string[] | undefined): void {
   }
 }
 
-export function startBrowser(
+export async function startBrowser(
   options: BrowserStartOptions = {},
-): BrowserStartResult {
-  const cdpPort = options.cdpPort || defaultCdpPort();
-  const cdp = String(cdpPort);
+): Promise<BrowserStartResult> {
+  const cdp = options.cdp || String(options.cdpPort || defaultCdp());
   const profileDir = path.resolve(options.profileDir || defaultProfileDir());
   const logPath = path.resolve(options.logPath || DEFAULT_CHROME_LOG);
   const chromeBin = resolveChromeBin(options.chromeBin);
@@ -184,6 +179,10 @@ export function startBrowser(
     stdio: ["ignore", logFd, logFd],
     env: { ...process.env, DISPLAY: process.env.DISPLAY || ":0" },
   });
+  let childError: Error | null = null;
+  child.once("error", (error) => {
+    childError = error;
+  });
 
   const deadline = Date.now() + CDP_PROBE_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -202,10 +201,13 @@ export function startBrowser(
         detail: `Chrome launched on CDP port ${cdp}.`,
       };
     }
+    if (childError) {
+      throw childError;
+    }
     if (child.exitCode !== null) {
       throw new Error(`Chrome exited before CDP was ready; see ${logPath}`);
     }
-    sleepMilliseconds(500);
+    await sleepMilliseconds(500);
   }
 
   try {

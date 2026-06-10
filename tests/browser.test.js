@@ -155,34 +155,34 @@ describe("buildAgentBrowserArgs", () => {
     expect(result.stdout).toBe(chromeBin);
   });
 
-  test("treats missing explicit Chrome binary paths as unavailable", () => {
+  test("treats missing explicit Chrome binary paths as unavailable", async () => {
     const missingChromeBin = path.join(
       os.tmpdir(),
       "feed-missing-chrome",
       "chrome",
     );
 
-    expect(() =>
+    await expect(
       startBrowser({
         chromeBin: missingChromeBin,
       }),
-    ).toThrow(/Chrome binary not found/);
+    ).rejects.toThrow(/Chrome binary not found/);
   });
 
-  test("treats explicit Chrome directories as unavailable", () => {
+  test("treats explicit Chrome directories as unavailable", async () => {
     const chromeDir = fs.mkdtempSync(
       path.join(os.tmpdir(), "feed-chrome-dir-"),
     );
 
     expect(resolveChromeBin(chromeDir)).toBeNull();
-    expect(() =>
+    await expect(
       startBrowser({
         chromeBin: chromeDir,
       }),
-    ).toThrow(/Chrome binary not found/);
+    ).rejects.toThrow(/Chrome binary not found/);
   });
 
-  test("treats explicit non-executable Chrome files as unavailable", () => {
+  test("treats explicit non-executable Chrome files as unavailable", async () => {
     const chromeBin = path.join(
       fs.mkdtempSync(path.join(os.tmpdir(), "feed-chrome-file-")),
       "chrome",
@@ -190,11 +190,11 @@ describe("buildAgentBrowserArgs", () => {
     fs.writeFileSync(chromeBin, "#!/bin/sh\nexit 0\n", { mode: 0o644 });
 
     expect(resolveChromeBin(chromeBin)).toBeNull();
-    expect(() =>
+    await expect(
       startBrowser({
         chromeBin,
       }),
-    ).toThrow(/Chrome binary not found/);
+    ).rejects.toThrow(/Chrome binary not found/);
   });
 
   test("normalizes cdp config to disable headed and auto-connect", () => {
@@ -349,16 +349,76 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
     });
 
     try {
-      expect(() =>
+      await expect(
         startBrowser({
           cdpPort: port,
           chromeBin: process.execPath,
           reuseExisting: false,
         }),
-      ).toThrow(/already occupied/);
+      ).rejects.toThrow(/already occupied/);
     } finally {
       server.kill("SIGTERM");
     }
+  });
+
+  test("reuses FEED_TOOLS_CDP endpoint values without changing ports", async () => {
+    const server = spawn(process.execPath, [
+      "-e",
+      `
+import http from "node:http";
+const server = http.createServer((_request, response) => {
+  response.setHeader("content-type", "application/json");
+  response.end('{"Browser":"Fixture Chrome","webSocketDebuggerUrl":"ws://[::1]/devtools/browser"}');
+});
+server.listen(0, "::1", () => {
+  process.stdout.write(String(server.address().port) + "\\n");
+});
+process.on("SIGTERM", () => server.close(() => process.exit(0)));
+`,
+    ]);
+    const port = await new Promise((resolve, reject) => {
+      let payload = "";
+      server.stdout.on("data", (chunk) => {
+        payload += String(chunk);
+        const line = payload.split("\n")[0]?.trim();
+        if (line) resolve(String(line));
+      });
+      server.once("error", reject);
+      server.once("exit", (code) => {
+        if (code) reject(new Error(`probe server exited with ${code}`));
+      });
+    });
+    const previousCdp = process.env.FEED_TOOLS_CDP;
+    process.env.FEED_TOOLS_CDP = `http://[::1]:${port}`;
+
+    try {
+      const result = await startBrowser();
+      expect(result.launched).toBe(false);
+      expect(result.cdp).toBe(`http://[::1]:${port}`);
+    } finally {
+      if (previousCdp === undefined) {
+        delete process.env.FEED_TOOLS_CDP;
+      } else {
+        process.env.FEED_TOOLS_CDP = previousCdp;
+      }
+      server.kill("SIGTERM");
+    }
+  });
+
+  test("fails fast when Chrome exits before CDP is ready", async () => {
+    const chromeBin = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), "feed-chrome-exits-")),
+      "chrome",
+    );
+    fs.writeFileSync(chromeBin, "#!/bin/sh\nexit 42\n", { mode: 0o755 });
+
+    await expect(
+      startBrowser({
+        cdpPort: 1,
+        chromeBin,
+        reuseExisting: false,
+      }),
+    ).rejects.toThrow(/Chrome exited before CDP was ready/);
   });
 
   test("rejects a non-JSON endpoint on the requested CDP port", async () => {
@@ -390,13 +450,13 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
     });
 
     try {
-      expect(() =>
+      await expect(
         startBrowser({
           cdpPort: port,
           chromeBin: process.execPath,
           reuseExisting: false,
         }),
-      ).toThrow(/occupied by a non-CDP browser endpoint/);
+      ).rejects.toThrow(/occupied by a non-CDP browser endpoint/);
     } finally {
       server.kill("SIGTERM");
     }
