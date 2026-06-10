@@ -121,7 +121,7 @@ function browserStatusMcpResult(
 }
 
 function browserStartMcpResult(
-  result: ReturnType<typeof startBrowser>,
+  result: Awaited<ReturnType<typeof startBrowser>>,
 ): JsonObject {
   return {
     ok: result.ok,
@@ -342,9 +342,9 @@ const TOOLS: McpToolDefinition[] = [
         no_sandbox: { type: "boolean" },
       },
     },
-    handler: (args) =>
+    handler: async (args) =>
       browserStartMcpResult(
-        startBrowser({
+        await startBrowser({
           cdpPort: numberValue(args.cdp_port),
           profileDir: profileDir(args),
           chromeBin: stringValue(args.chrome_bin),
@@ -369,14 +369,14 @@ const TOOLS: McpToolDefinition[] = [
         no_sandbox: { type: "boolean" },
       },
     },
-    handler: (args) => {
+    handler: async (args) => {
       const sources = sourceList(args.sources);
       if (sources.length === 0) throw new Error("Provide at least one source");
       const resolvedProfileDir = profileDir(args);
       const openedUrls = Object.fromEntries(
         sources.map((source) => [source, SOURCE_TARGETS[source].url]),
       );
-      const browser = startBrowser({
+      const browser = await startBrowser({
         cdpPort: numberValue(args.cdp_port),
         profileDir: resolvedProfileDir,
         logPath: DEFAULT_CHROME_LOG,
