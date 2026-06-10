@@ -106,16 +106,10 @@ function defaultCdp(): string {
 function cdpLaunchPort(cdp: string): string {
   const value = cdp.trim();
   if (/^\d+$/.test(value)) return value;
-  try {
-    const parsed = new URL(
-      /^https?:\/\//i.test(value) ? value : `http://${value}`,
-    );
-    if (parsed.port) return parsed.port;
-  } catch (error) {
-    throw new Error(`CDP endpoint ${cdp} is not a valid launch endpoint.`, {
-      cause: error,
-    });
-  }
+  const parsed = new URL(
+    /^https?:\/\//i.test(value) ? value : `http://${value}`,
+  );
+  if (parsed.port) return parsed.port;
   throw new Error(`CDP endpoint ${cdp} does not include a launchable port.`);
 }
 
