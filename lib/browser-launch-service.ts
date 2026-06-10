@@ -111,8 +111,10 @@ function cdpLaunchPort(cdp: string): string {
       /^https?:\/\//i.test(value) ? value : `http://${value}`,
     );
     if (parsed.port) return parsed.port;
-  } catch {
-    // Fall through to the structured error below.
+  } catch (error) {
+    throw new Error(`CDP endpoint ${cdp} is not a valid launch endpoint.`, {
+      cause: error,
+    });
   }
   throw new Error(`CDP endpoint ${cdp} does not include a launchable port.`);
 }
