@@ -42,4 +42,27 @@ describe("feed-mcp-config", () => {
       },
     });
   });
+
+  test("runs directly as an executable wrapper", () => {
+    const result = spawnSync(
+      "./bin/feed-mcp-config",
+      [
+        "--client",
+        "codex",
+        "--workdir",
+        "/tmp/feed-tools",
+        "--cdp",
+        "9333",
+        "--profile",
+        "/tmp/feed-profile",
+      ],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).mcpServers["feed-tools"].args).toEqual([
+      "--experimental-strip-types",
+      "/tmp/feed-tools/bin/feed-mcp",
+    ]);
+  });
 });
