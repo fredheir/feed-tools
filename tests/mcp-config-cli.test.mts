@@ -10,6 +10,7 @@ describe("feed-mcp-config", () => {
     const result = spawnSync(
       process.execPath,
       [
+        "--experimental-strip-types",
         "./bin/feed-mcp-config",
         "--",
         "--client",
