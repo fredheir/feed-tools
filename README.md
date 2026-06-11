@@ -50,6 +50,7 @@ After the initial run, offer to render a feed about a particular topic (see Topi
 - If `config.json` is missing, commands fall back to `config.json.example` for bootstrap only; create a tailored `config.json` before live capture
 - `pnpm install` is configured for non-interactive setup: required native builds for `agent-browser` and `esbuild` are allowlisted, while maintainer hooks stay disabled by default
 - Run `./bin/feed-doctor` to choose the capture path before the first capture
+- For MCP hosts, run `pnpm mcp:config` to print a local server configuration for setup, browser, sign-in, and config tools
 - For video-heavy sources such as YouTube, TikTok, X, and Instagram, run `pnpm setup:yt-dlp` and `pnpm setup:ffmpeg` before capture
 - Keep generated state and output under `./var`
 - Expect the main working files to be `./var/feed.json`, `./var/feed.html`, and `./var/feed-archive/feed.sqlite`
