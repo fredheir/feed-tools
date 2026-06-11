@@ -4,6 +4,23 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-11
+
+### New Features
+
+- Added a local `feed-mcp` setup/status server with tools for doctor checks, CDP browser status/start, sign-in status/opening, and config read/write, giving MCP hosts a structured setup path while keeping capture, curation, classification, and rendering on the existing CLI workflow (PR [#59](https://github.com/fredheir/feed-tools/pull/59)).
+- Added `feed-mcp-config` and MCP setup documentation, so operators can print a local MCP host configuration and follow the implemented setup/browser/sign-in/config flow instead of relying on target-interface notes ([f1b9f88](https://github.com/fredheir/feed-tools/commit/f1b9f88c79d03d56830a6976067473a0ad843e0f)).
+
+### Changed
+
+- Added a slop-scan delta-ratchet workflow and moved `slop-scan` to the maintained `modem-dev` fork, so pull requests fail only on added or worsened findings while default-branch scans preserve the baseline (PR [#57](https://github.com/fredheir/feed-tools/pull/57)).
+- Centralized source manifests, sign-in metadata, CiC extraction scripts, and browser capture orchestration, reducing duplicated per-source wiring while preserving the existing source capture behavior (PR [#66](https://github.com/fredheir/feed-tools/pull/66), PR [#67](https://github.com/fredheir/feed-tools/pull/67)).
+- Updated GitHub Actions and dependency-scan maintenance by bumping `pnpm/action-setup` to 6.0.8 and adding a `brace-expansion >=5.0.6` override, keeping CI pins and the dependency baseline current (PR [#56](https://github.com/fredheir/feed-tools/pull/56), [5aaee00](https://github.com/fredheir/feed-tools/commit/5aaee00e9dde024c0a6aa4b21790de5f8df29120)).
+
+### Fixed
+
+- Fixed browser startup so endpoint-form CDP values are honored, invalid endpoints are reported explicitly, and launched browsers return the verified CDP port instead of silently drifting to the wrong endpoint (PR [#68](https://github.com/fredheir/feed-tools/pull/68)).
+
 ## [0.4.1] - 2026-05-19
 
 ### Changed
