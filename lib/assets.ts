@@ -238,11 +238,7 @@ function ensureBrowserPlayableVideo(
 }
 
 function removeStaleVideoDownload(pathToRemove: string): void {
-  try {
-    fs.rmSync(pathToRemove, { force: true });
-  } catch {
-    // Best effort cleanup: the fresh yt-dlp run below is the important part.
-  }
+  fs.rmSync(pathToRemove, { force: true });
 }
 
 function findReusableVideoDownload(
