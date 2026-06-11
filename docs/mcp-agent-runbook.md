@@ -1,27 +1,29 @@
 # MCP Agent Runbook
 
-This is target-interface documentation for the planned local feed-tools MCP server. The runnable `bin/feed-mcp` entrypoint and MCP tool definitions land in later implementation PRs in this stack. Until those PRs are present, use the existing CLI flow in `AGENTS.md`.
+This runbook covers the implemented local feed-tools MCP setup/status server. Use MCP for environment checks, dedicated browser launch, sign-in status, and config management. Use the existing CLI commands for capture, curation, classification, and rendering.
 
-## Rules once MCP is available
+## Rules
 
-- Use feed-tools MCP tools for setup, capture, curation, classification, and rendering.
+- Use feed-tools MCP tools for setup, browser launch/status, sign-in, and config.
+- Use `feed-capture`, `feed-curate`, `feed-classify`, and `feed-render` for the feed workflow.
 - Do not drive the browser through Claude in Chrome, Cowork browser tools, or generic browser automation unless the MCP/CDP path is unavailable.
 - Do not ask the user to perform shell steps that the agent can perform itself.
 - Do ask the user to complete platform login in the opened Chrome profile.
 - Keep full feed documents on disk unless the user explicitly needs the JSON payload.
-- Treat classification-required state as a normal workflow step, not a fatal error.
+- Treat classification-required CLI output as a normal workflow step, not a fatal error.
 
 ## Expected architecture
 
 ```text
 agent
-  -> feed-tools MCP tools
-     -> local feed-tools services
+     -> feed-tools MCP tools
+     -> local setup/browser/sign-in/config services
         -> local Chrome profile over CDP
-        -> sqlite + feed.json + feed.html
+  -> feed-tools CLI commands
+     -> sqlite + feed.json + feed.html
 ```
 
-Claude in Chrome is fallback-only. Prefer MCP/CDP once available.
+Claude in Chrome is fallback-only. Prefer MCP/CDP for browser setup and auth.
 
 ## Initial setup
 
@@ -101,90 +103,49 @@ Call `feed_signin_status` for the sources you intend to capture. For missing sou
 
 ## Capture flow
 
-Call:
+Run:
 
-```text
-feed_capture
+```sh
+./bin/feed-capture x 30
 ```
 
-Recommended input:
+For multiple sources, either pass all sources at once or capture one source at a time if the host has short command timeouts.
 
-```json
-{
-  "sources": ["x"],
-  "limit": 30,
-  "include_document": false
-}
-```
-
-For multiple sources, either pass all sources at once or capture one source at a time if the host has short tool timeouts.
-
-If the result is `login_required`, return to the authentication flow. If the result is `capture_empty`, report the source and relevant next actions. Do not render an empty feed.
+If capture reports a login issue, return to the authentication flow. If capture is empty, report the source and relevant next actions. Do not render an empty feed.
 
 ## Curation flow
 
-Call:
+Run:
 
-```text
-feed_curate
-```
-
-Common inputs:
-
-```json
-{
-  "sources": ["x"],
-  "limit": 80,
-  "exclude_completed": true
-}
+```sh
+./bin/feed-curate --sources x --limit 80 --exclude-completed
 ```
 
 For a topic feed, pass a keyword battery rather than one term.
 
 ## Classification flow
 
-If `feed_curate` returns `requires_classification: true`, inspect the returned rows and assign categories deliberately.
+If `feed-curate` reports that classification is required, inspect the returned rows and assign categories deliberately.
 
-Call:
+Run:
 
-```text
-feed_classify
+```sh
+./bin/feed-classify --category "News:1-4,8" --category "Coding:5-7" --category "Other:9-12"
 ```
 
-Example:
-
-```json
-{
-  "assignments": [
-    { "category": "News", "rows": "1-4,8" },
-    { "category": "Coding", "rows": "5-7" },
-    { "category": "Other", "rows": "9-12" }
-  ]
-}
-```
-
-After classification, call `feed_curate` again. Continue only once it returns a normal row listing.
+After classification, run `feed-curate` again. Continue only once it returns a normal row listing.
 
 ## Render flow
 
-Call:
+Run:
 
-```text
-feed_render
-```
-
-Recommended default:
-
-```json
-{
-  "tab": true,
-  "open": false
-}
+```sh
+./bin/feed-render --tab --no-open
 ```
 
 If the user asked for a summary, pass it explicitly.
 
-Return the `html_path` to the user. If the user wants the file opened in the controlled browser, call `feed_open`.
+Return the HTML path to the user. If the user wants the file opened in a browser, use the local browser flow available in the current environment.
 
 ## Full normal workflow
 
@@ -197,12 +158,11 @@ feed_config_write           # only if config is missing or wrong
 feed_signin_status
 feed_signin_open            # only for missing source auth
 feed_signin_status          # repeat until ready
-feed_capture
-feed_curate
-feed_classify               # only if required
-feed_curate                 # repeat after classification
-feed_render
-feed_open                   # optional
+./bin/feed-capture
+./bin/feed-curate
+./bin/feed-classify         # only if required
+./bin/feed-curate           # repeat after classification
+./bin/feed-render
 ```
 
 ## Failure handling
@@ -213,8 +173,8 @@ feed_open                   # optional
 - `chrome_profile_locked`: use a dedicated feed-tools profile or close the Chrome process that owns the profile.
 - `login_required`: call `feed_signin_open`, ask the user to log in, then poll `feed_signin_status`.
 - `capture_empty`: do not render. Check auth, selectors, blocked page state, and source-specific access.
-- `classification_required`: classify returned rows with `feed_classify`, then rerun `feed_curate`.
-- `tool_timeout`: retry per source with a lower limit. Avoid multi-source capture if the MCP host has short tool limits.
+- `classification_required`: classify returned rows with `feed-classify`, then rerun `feed-curate`.
+- `tool_timeout`: retry CLI commands per source with a lower limit.
 
 ## When to use Claude in Chrome
 

@@ -2,29 +2,31 @@
 
 ## Purpose
 
-The MCP server is the planned preferred agent interface for feed-tools. It lets an agent call feed workflow tools directly instead of driving a browser through Claude in Chrome or Cowork browser tools.
+The MCP server is the preferred setup and browser-control interface for feed-tools. It lets an agent inspect local readiness, manage a dedicated CDP browser profile, handle sign-in checks, and create config without driving a browser through Claude in Chrome or Cowork browser tools.
 
 The normal path is:
 
 ```text
 agent / MCP host
   -> feed-tools MCP server
-     -> feed-tools capture, curation, classification, and render services
+     -> feed-tools setup, browser, sign-in, and config services
         -> local Chrome profile over CDP
+     -> feed-tools CLI commands
+        -> capture, curation, classification, render
         -> sqlite, JSON snapshots, feed.json, feed.html
 ```
 
-This first documentation PR describes the target interface. The runnable `bin/feed-mcp` entrypoint lands in the follow-up implementation PRs. Until that entrypoint is present, use the existing CLI flow in `AGENTS.md`.
+The runnable entrypoint is `bin/feed-mcp`. Use `pnpm mcp:config` to print a copy-paste MCP host configuration for a local checkout.
 
 Claude in Chrome remains a fallback for hosted environments where the user's signed-in browser is available through a Chrome connector but no usable CDP browser is available.
 
 ## Goals
 
-- expose feed workflow operations as MCP tools
+- expose setup, browser, sign-in, and config operations as MCP tools
 - keep browser operation inside feed-tools code
 - reuse the existing CDP and `agent-browser` capture path
 - keep the user's signed-in Chrome profile local
-- return compact structured results and file paths to the agent
+- return compact structured setup and auth results to the agent
 - avoid Cowork download mounts, console-message transport, and browser-extension settings
 
 ## Non-goals
@@ -33,13 +35,13 @@ Claude in Chrome remains a fallback for hosted environments where the user's sig
 - no replacement of source extractor code
 - no remote hosted feed service in the first cut
 - no dependency on Claude in Chrome for the normal path
-- no large feed document payloads by default
+- no capture, curate, classify, render, or pipeline MCP tools yet; use the existing CLI commands for the feed workflow
 
 ## Local MCP model
 
-The implementation should use a local stdio MCP server. The MCP host starts a local command and communicates with it over stdin/stdout. Because stdout is protocol traffic, the MCP server must not write normal logs to stdout. Logs should go to stderr or files, and child-process stdout should be captured and returned as tool data.
+The implementation uses a local stdio MCP server. The MCP host starts a local command and communicates with it over stdin/stdout. Because stdout is protocol traffic, the MCP server must not write normal logs to stdout. Logs should go to stderr or files, and child-process stdout should be captured and returned as tool data.
 
-Future MCP host configuration for a checked-out repo:
+MCP host configuration for a checked-out repo:
 
 ```json
 {
@@ -110,6 +112,8 @@ The MCP server must validate CDP by requesting `/json/version` and checking for 
 
 ## Tool surface
 
+Current implemented tools:
+
 ### `feed_doctor`
 
 Checks local readiness and returns structured next actions.
@@ -138,29 +142,28 @@ Returns the active config and resolved path.
 
 Creates or updates `config.json` from structured source, browser, render, curation, and summary preferences.
 
-### `feed_capture`
+## Config helper
 
-Captures one or more sources through the existing source adapters.
+Run this from the repository root to print a local MCP host configuration:
 
-### `feed_curate`
+```sh
+pnpm mcp:config
+```
 
-Exports a sqlite-backed workset and row listing. Classification-required state should be represented as data, not as a failed MCP call.
+Useful options:
 
-### `feed_classify`
+```sh
+pnpm mcp:config -- --client codex --cdp 9223 --profile ./chrome-profile
+```
 
-Writes category assignments back into sqlite.
+Capture, curation, classification, and rendering remain CLI commands:
 
-### `feed_render`
-
-Renders `feed.html`. Default `open` should be false for MCP.
-
-### `feed_open`
-
-Opens a local file or URL in the controlled browser.
-
-### `feed_pipeline`
-
-Convenience wrapper for capture plus curate. It should stop before render when classification is required.
+```sh
+./bin/feed-capture
+./bin/feed-curate
+./bin/feed-classify
+./bin/feed-render
+```
 
 ## Error model
 
@@ -176,12 +179,7 @@ Tool failures should use this shape:
       | "cdp_invalid"
       | "chrome_not_found"
       | "chrome_profile_locked"
-      | "login_required"
-      | "capture_empty"
-      | "classification_required"
       | "config_missing"
-      | "source_unsupported"
-      | "tool_timeout"
       | "unexpected";
     message: string;
     detail?: string;
@@ -190,14 +188,12 @@ Tool failures should use this shape:
 }
 ```
 
-`classification_required` is not a terminal failure. The agent should classify rows and continue.
-
 ## Implementation phases
 
 1. Add MCP docs and agent runbook.
 2. Extract doctor, browser, and sign-in services from CLIs.
 3. Add the MCP server with status/browser/sign-in/config tools.
-4. Extract capture, curate, classify, and render services.
-5. Add pipeline tools and structured row output.
-6. Rework README and AGENTS so MCP/CDP is primary and CiC is fallback.
-7. Package the MCP server for easier install.
+4. Add a config helper for MCP host setup.
+5. Optional future work: extract capture, curate, classify, and render services.
+6. Optional future work: add pipeline tools and structured row output.
+7. Optional future work: package the MCP server for easier install.
