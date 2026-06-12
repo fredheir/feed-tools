@@ -51,6 +51,8 @@ jobs:
       - run: |
           uv tool install apm-cli
           apm install --target agent-skills
+      - name: Install repo guard tools
+        run: scripts/ci/just --version
       - run: scripts/guards/repo-contract
         env:
           REPO_STANDARDS_LOCAL: ${{ runner.temp }}/markolo-shared-contract
