@@ -1,6 +1,7 @@
 name: dead-code
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "assets/**"

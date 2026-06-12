@@ -1,6 +1,7 @@
 name: commitlint
 
 on:
+  workflow_dispatch:
   pull_request:
 
 permissions:

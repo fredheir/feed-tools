@@ -1,6 +1,7 @@
 name: slop-scan
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "bin/**"
