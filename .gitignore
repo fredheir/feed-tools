@@ -28,3 +28,6 @@ apm_modules/
 .agents/skills/jenkins/
 .agents/skills/visualization/
 !.agents/skills/.gitkeep
+
+# dependency-scan scratch output
+tmp/
