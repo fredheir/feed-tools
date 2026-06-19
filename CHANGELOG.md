@@ -4,6 +4,10 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Made the slop-scan baseline job run for manual workflow dispatches, so operator-triggered CI checks no longer complete as a misleading skipped workflow.
+
 ## [0.5.0] - 2026-06-11
 
 ### New Features
