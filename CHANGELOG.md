@@ -7,6 +7,7 @@ All notable changes to this repo will be documented in this file.
 ### Fixed
 
 - Made the slop-scan baseline job run for manual workflow dispatches, so operator-triggered CI checks no longer complete as a misleading skipped workflow.
+- Routed feed-tools GitHub Actions directly to GitHub-hosted runners, removing the inherited self-hosted label that left push checks queued indefinitely.
 - Refreshed the Vite and js-yaml pins to patched versions, clearing the open GitHub dependency alerts for the test and commitlint toolchain.
 
 ## [0.5.0] - 2026-06-11
