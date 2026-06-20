@@ -7,6 +7,7 @@ import {
 import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
 import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
+import { getSourceAccessRegexps } from "../../lib/source-metadata.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
@@ -19,6 +20,8 @@ type XExtractionMeta = {
   hydrated_count: number;
   incomplete_count: number;
 };
+
+const X_ACCESS = getSourceAccessRegexps("x");
 
 type RawXExtractionItem = Parameters<typeof normalizeItemShape>[0] & {
   capture_incomplete?: boolean | null;
@@ -498,13 +501,7 @@ function prepareXFeed(browser: BrowserSession): void {
     })()`,
     hydrationWait,
   );
-  assertFeedPageAccessible(
-    { sourceName: "x", browser },
-    {
-      blockedUrlPatterns: [/\/i\/flow\/login/i],
-      blockedTextPatterns: [/\blog in\b/i, /\bsign in\b/i],
-    },
-  );
+  assertFeedPageAccessible({ sourceName: "x", browser }, X_ACCESS);
   browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
@@ -581,10 +578,7 @@ async function captureDocument({
     afterCapture({ browser, document }) {
       assertAuthenticatedCapture(
         { sourceName: "x", browser, document },
-        {
-          blockedUrlPatterns: [/\/i\/flow\/login/i],
-          blockedTextPatterns: [/\blog in\b/i, /\bsign in\b/i],
-        },
+        X_ACCESS,
       );
     },
   });
