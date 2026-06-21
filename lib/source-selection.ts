@@ -1,5 +1,5 @@
 import { getEnabledSourceNames } from "./config.ts";
-import { listSupportedSources } from "./source-catalog.ts";
+import { SUPPORTED_SOURCES } from "./source-catalog.ts";
 import type { FeedConfig, FeedSourceName } from "./types.ts";
 
 import { listStoredSources } from "./sqlite-store.ts";
@@ -48,7 +48,7 @@ export function resolveSelectedSources(
   saveDir: string,
   explicitSources: string[] = [],
 ): string[] {
-  const supportedSources = new Set(listSupportedSources());
+  const supportedSources = new Set(SUPPORTED_SOURCES);
   const selectedSources = validateExplicitSources(
     explicitSources,
     supportedSources,

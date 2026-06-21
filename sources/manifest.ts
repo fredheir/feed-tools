@@ -126,20 +126,4 @@ function listSourceManifests(): SourceManifest[] {
   return Object.values(SOURCE_MANIFESTS);
 }
 
-function listManifestSourceNames(): FeedSourceName[] {
-  return [...SUPPORTED_SOURCE_NAMES];
-}
-
-function isManifestSourceName(
-  sourceName: string,
-): sourceName is FeedSourceName {
-  return Object.prototype.hasOwnProperty.call(SOURCE_MANIFESTS, sourceName);
-}
-
-export {
-  getSourceManifest,
-  isManifestSourceName,
-  listManifestSourceNames,
-  listSourceManifests,
-  SOURCE_MANIFESTS,
-};
+export { getSourceManifest, listSourceManifests, SOURCE_MANIFESTS };

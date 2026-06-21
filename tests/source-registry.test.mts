@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  SUPPORTED_SOURCES,
-  isSupportedSource,
-  listSupportedSources,
-} from "../lib/source-catalog.ts";
+import { SUPPORTED_SOURCES, isSupportedSource } from "../lib/source-catalog.ts";
 import {
   SOURCE_ACCESS_POLICIES,
   SOURCE_SIGNIN_TARGETS,
@@ -14,11 +10,19 @@ import { getBootstrapHandler, getCaptureHandler } from "../sources/registry.ts";
 
 describe("source registry", () => {
   test("lists the supported capture sources from the canonical registry", () => {
-    expect(listSupportedSources()).toEqual([...SUPPORTED_SOURCES]);
+    expect([...SUPPORTED_SOURCES]).toEqual([
+      "bluesky",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "youtube",
+      "x",
+    ]);
   });
 
   test("resolves handlers for every supported source", () => {
-    for (const source of listSupportedSources()) {
+    for (const source of SUPPORTED_SOURCES) {
       expect(isSupportedSource(source)).toBe(true);
       expect(typeof getCaptureHandler(source)).toBe("function");
       expect(typeof getBootstrapHandler(source)).toBe("function");
@@ -26,7 +30,7 @@ describe("source registry", () => {
   });
 
   test("uses one source access policy for sign-in and CiC prep metadata", () => {
-    for (const source of listSupportedSources()) {
+    for (const source of SUPPORTED_SOURCES) {
       const config = getSourceConfig(source);
 
       expect(config?.url).toBe(SOURCE_SIGNIN_TARGETS[source].url);
