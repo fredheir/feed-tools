@@ -1,11 +1,15 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { findCookieStores, hasAuthCookie } from "../lib/signin-service.ts";
+import {
+  findCookieStores,
+  hasAuthCookie,
+  launchChrome,
+} from "../lib/signin-service.ts";
 
 function createCookieStore(
   cookies: Array<{ host: string; name: string }>,
@@ -55,5 +59,48 @@ describe("feed-signin helpers", () => {
     expect(
       hasAuthCookie([store], [{ domains: ["bsky.app"], names: ["SID"] }]),
     ).toBe(false);
+  });
+
+  test("rejects occupied non-CDP endpoints before launching Chrome", async () => {
+    const child = spawn(process.execPath, [
+      "-e",
+      `
+const http = require("node:http");
+const server = http.createServer((_request, response) => {
+  response.setHeader("content-type", "text/html");
+  response.end("<!doctype html><title>Not CDP</title>");
+});
+server.listen(0, "127.0.0.1", () => {
+  process.stdout.write(String(server.address().port) + "\\n");
+});
+process.on("SIGTERM", () => server.close(() => process.exit(0)));
+`,
+    ]);
+    const port = await new Promise<number>((resolve, reject) => {
+      let payload = "";
+      child.stdout.on("data", (chunk) => {
+        payload += String(chunk);
+        const line = payload.split("\n")[0]?.trim();
+        if (line) resolve(Number(line));
+      });
+      child.once("error", reject);
+      child.once("exit", (code) => {
+        if (code) reject(new Error(`probe server exited with ${code}`));
+      });
+    });
+
+    try {
+      expect(() =>
+        launchChrome({
+          sources: [],
+          cdpPort: String(port),
+          chromeBin: process.execPath,
+          profileDir: fs.mkdtempSync(path.join(os.tmpdir(), "feed-profile-")),
+          logPath: path.join(os.tmpdir(), "feed-chrome.log"),
+        }),
+      ).toThrow(/occupied by a non-CDP browser endpoint/);
+    } finally {
+      child.kill("SIGTERM");
+    }
   });
 });

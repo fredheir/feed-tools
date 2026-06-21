@@ -1,4 +1,8 @@
-import { getCdpVersionUrls, readCdpVersionPayload } from "./browser.ts";
+import {
+  cdpValueForVersionUrl,
+  getCdpVersionUrls,
+  readCdpVersionPayload,
+} from "./browser.ts";
 
 export interface BrowserStatusResult {
   ok: boolean;
@@ -41,7 +45,7 @@ export function getBrowserStatus(cdp?: string): BrowserStatusResult {
             : "Chrome DevTools Protocol endpoint";
         return {
           ok: true,
-          cdp: value,
+          cdp: cdpValueForVersionUrl(value, url),
           versionUrl: url,
           browser,
           webSocketDebuggerUrlPresent,

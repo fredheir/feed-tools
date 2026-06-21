@@ -171,7 +171,7 @@ const timeout = setTimeout(() => controller.abort(), timeoutMs);
   });
 }
 
-function cdpValueForUrl(input: string, url: string): string {
+export function cdpValueForVersionUrl(input: string, url: string): string {
   if (!/^\d+$/.test(String(input || "").trim())) return input;
   const parsed = new URL(url);
   if (parsed.hostname === "127.0.0.1") return input;
@@ -194,7 +194,7 @@ export function assertCdpEndpoint(cdp: string): string {
     try {
       const parsed = JSON.parse(output) as { webSocketDebuggerUrl?: unknown };
       if (typeof parsed.webSocketDebuggerUrl === "string") {
-        return cdpValueForUrl(cdp, url);
+        return cdpValueForVersionUrl(cdp, url);
       }
     } catch {
       invalids.push(url);
