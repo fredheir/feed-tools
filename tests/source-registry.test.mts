@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { SUPPORTED_SOURCES, isSupportedSource } from "../lib/source-catalog.ts";
+import {
+  SUPPORTED_SOURCES,
+  SUPPORTED_SOURCE_SET,
+} from "../lib/source-catalog.ts";
 import {
   SOURCE_ACCESS_POLICIES,
   SOURCE_SIGNIN_TARGETS,
@@ -23,7 +26,7 @@ describe("source registry", () => {
 
   test("resolves handlers for every supported source", () => {
     for (const source of SUPPORTED_SOURCES) {
-      expect(isSupportedSource(source)).toBe(true);
+      expect(SUPPORTED_SOURCE_SET.has(source)).toBe(true);
       expect(typeof getCaptureHandler(source)).toBe("function");
       expect(typeof getBootstrapHandler(source)).toBe("function");
     }

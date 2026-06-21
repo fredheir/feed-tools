@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { readFileSync } from "node:fs";
-import { isSupportedSource, SUPPORTED_SOURCES } from "../lib/source-catalog.ts";
+import {
+  SUPPORTED_SOURCES,
+  SUPPORTED_SOURCE_SET,
+} from "../lib/source-catalog.ts";
 import { SOURCE_NAMES } from "../lib/source-metadata.ts";
 
 describe("source catalog", () => {
@@ -18,8 +21,8 @@ describe("source catalog", () => {
   });
 
   test("answers support checks without loading runtime handlers", () => {
-    expect(isSupportedSource("x")).toBe(true);
-    expect(isSupportedSource("mastodon")).toBe(false);
+    expect(SUPPORTED_SOURCE_SET.has("x")).toBe(true);
+    expect(SUPPORTED_SOURCE_SET.has("mastodon")).toBe(false);
     expect(readFileSync("lib/source-catalog.ts", "utf8")).not.toContain(
       "../sources/manifest",
     );

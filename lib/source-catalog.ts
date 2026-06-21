@@ -1,9 +1,4 @@
-import { SOURCE_NAMES, type FeedSourceName } from "./source-metadata.ts";
+import { SOURCE_NAMES } from "./source-metadata.ts";
 
 export const SUPPORTED_SOURCES = Object.freeze([...SOURCE_NAMES]);
-
-export function isSupportedSource(
-  sourceName: string,
-): sourceName is FeedSourceName {
-  return (SOURCE_NAMES as readonly string[]).includes(sourceName);
-}
+export const SUPPORTED_SOURCE_SET = new Set<string>(SOURCE_NAMES);
