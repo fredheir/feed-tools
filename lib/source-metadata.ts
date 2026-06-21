@@ -15,6 +15,12 @@ export interface SourceSigninTarget {
   authCookies: Array<{ domains: string[]; names: string[] }>;
 }
 
+export interface SourceAccessPolicy {
+  urlPrefixes: string[];
+  blockedUrlPatterns: string[];
+  blockedTextPatterns: string[];
+}
+
 export const SOURCE_SIGNIN_TARGETS = {
   x: {
     url: "https://x.com/home",
@@ -54,3 +60,64 @@ export const SOURCE_SIGNIN_TARGETS = {
     ],
   },
 } satisfies Record<FeedSourceName, SourceSigninTarget>;
+
+export const SOURCE_ACCESS_POLICIES = {
+  x: {
+    urlPrefixes: ["https://x.com/", "https://twitter.com/"],
+    blockedUrlPatterns: ["/i/flow/login"],
+    blockedTextPatterns: ["log in", "sign in"],
+  },
+  bluesky: {
+    urlPrefixes: ["https://bsky.app/"],
+    blockedUrlPatterns: ["/login"],
+    blockedTextPatterns: ["sign in", "create account"],
+  },
+  facebook: {
+    urlPrefixes: ["https://www.facebook.com/", "https://m.facebook.com/"],
+    blockedUrlPatterns: ["/login", "/checkpoint"],
+    blockedTextPatterns: [
+      "log in to facebook",
+      "forgotten password",
+      "forgot password",
+    ],
+  },
+  instagram: {
+    urlPrefixes: ["https://www.instagram.com/"],
+    blockedUrlPatterns: ["/accounts/login", "/challenge/", "/checkpoint/"],
+    blockedTextPatterns: ["log in"],
+  },
+  linkedin: {
+    urlPrefixes: ["https://www.linkedin.com/feed"],
+    blockedUrlPatterns: ["/login", "/authwall"],
+    blockedTextPatterns: ["sign in", "join now"],
+  },
+  tiktok: {
+    urlPrefixes: ["https://www.tiktok.com/"],
+    blockedUrlPatterns: ["/login", "captcha"],
+    blockedTextPatterns: ["log in", "captcha"],
+  },
+  youtube: {
+    urlPrefixes: ["https://www.youtube.com/"],
+    blockedUrlPatterns: ["consent", "sorry"],
+    blockedTextPatterns: ["Turn on history", "Make YouTube your own"],
+  },
+} satisfies Record<FeedSourceName, SourceAccessPolicy>;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function getSourceAccessRegexps(sourceName: FeedSourceName): {
+  blockedUrlPatterns: RegExp[];
+  blockedTextPatterns: RegExp[];
+} {
+  const policy = SOURCE_ACCESS_POLICIES[sourceName];
+  return {
+    blockedUrlPatterns: policy.blockedUrlPatterns.map(
+      (pattern) => new RegExp(escapeRegExp(pattern), "i"),
+    ),
+    blockedTextPatterns: policy.blockedTextPatterns.map(
+      (pattern) => new RegExp(escapeRegExp(pattern), "i"),
+    ),
+  };
+}

@@ -6,13 +6,18 @@
  * this metadata to drive the browser via MCP tools instead of CDP.
  */
 
+import {
+  SOURCE_ACCESS_POLICIES,
+  SOURCE_SIGNIN_TARGETS,
+} from "../source-metadata.ts";
+
 const SCROLL_TOP_SCRIPT = `window.scrollTo({ top: 0, behavior: "instant" })`;
 const SCROLL_DOWN_WINDOW = `window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" })`;
 
 const SOURCE_CONFIGS = {
   x: {
-    url: "https://x.com/home",
-    urlPrefixes: ["https://x.com/", "https://twitter.com/"],
+    url: SOURCE_SIGNIN_TARGETS.x.url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES.x.urlPrefixes,
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -39,13 +44,13 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('article').length`,
-    blockedUrlPatterns: ["/i/flow/login"],
-    blockedTextPatterns: ["log in", "sign in"],
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.x.blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES.x.blockedTextPatterns,
   },
 
   bluesky: {
-    url: "https://bsky.app/",
-    urlPrefixes: ["https://bsky.app/"],
+    url: SOURCE_SIGNIN_TARGETS.bluesky.url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES.bluesky.urlPrefixes,
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -57,13 +62,13 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('[data-testid^="feedItem-by-"]').length`,
-    blockedUrlPatterns: ["/login"],
-    blockedTextPatterns: ["sign in", "create account"],
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.bluesky.blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES.bluesky.blockedTextPatterns,
   },
 
   linkedin: {
-    url: "https://www.linkedin.com/feed/",
-    urlPrefixes: ["https://www.linkedin.com/feed"],
+    url: SOURCE_SIGNIN_TARGETS.linkedin.url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES.linkedin.urlPrefixes,
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -78,13 +83,13 @@ const SOURCE_CONFIGS = {
       else window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
     })()`,
     itemCountExpression: `(document.querySelector('main')?.innerText.match(/Feed post/g) || []).length`,
-    blockedUrlPatterns: ["/login", "/authwall"],
-    blockedTextPatterns: ["sign in", "join now"],
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.linkedin.blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES.linkedin.blockedTextPatterns,
   },
 
   instagram: {
-    url: "https://www.instagram.com/",
-    urlPrefixes: ["https://www.instagram.com/"],
+    url: SOURCE_SIGNIN_TARGETS.instagram.url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES.instagram.urlPrefixes,
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -96,13 +101,13 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('main article').length`,
-    blockedUrlPatterns: ["/accounts/login", "/challenge/", "/checkpoint/"],
-    blockedTextPatterns: ["log in"],
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.instagram.blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES.instagram.blockedTextPatterns,
   },
 
   tiktok: {
-    url: "https://www.tiktok.com/",
-    urlPrefixes: ["https://www.tiktok.com/"],
+    url: SOURCE_SIGNIN_TARGETS.tiktok.url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES.tiktok.urlPrefixes,
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -119,13 +124,13 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length`,
-    blockedUrlPatterns: ["/login", "captcha"],
-    blockedTextPatterns: ["log in", "captcha"],
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.tiktok.blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES.tiktok.blockedTextPatterns,
   },
 
   youtube: {
-    url: "https://www.youtube.com/",
-    urlPrefixes: ["https://www.youtube.com/"],
+    url: SOURCE_SIGNIN_TARGETS.youtube.url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES.youtube.urlPrefixes,
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -142,13 +147,13 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: `window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: "instant" })`,
     itemCountExpression: `document.querySelectorAll('div.ytLockupViewModelHost, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length`,
-    blockedUrlPatterns: ["consent", "sorry"],
-    blockedTextPatterns: ["Turn on history", "Make YouTube your own"],
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.youtube.blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES.youtube.blockedTextPatterns,
   },
 
   facebook: {
-    url: "https://www.facebook.com/",
-    urlPrefixes: ["https://www.facebook.com/", "https://m.facebook.com/"],
+    url: SOURCE_SIGNIN_TARGETS.facebook.url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES.facebook.urlPrefixes,
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -160,12 +165,8 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('[role="article"]').length`,
-    blockedUrlPatterns: ["/login", "/checkpoint"],
-    blockedTextPatterns: [
-      "log in to facebook",
-      "forgotten password",
-      "forgot password",
-    ],
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.facebook.blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES.facebook.blockedTextPatterns,
   },
 } as const;
 

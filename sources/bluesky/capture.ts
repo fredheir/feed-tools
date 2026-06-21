@@ -7,6 +7,7 @@ import {
 import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
 import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
+import { getSourceAccessRegexps } from "../../lib/source-metadata.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
@@ -15,6 +16,8 @@ import type {
 } from "../../lib/types.ts";
 
 type RawBlueskyExtractionItem = Parameters<typeof normalizeItemShape>[0];
+
+const BLUESKY_ACCESS = getSourceAccessRegexps("bluesky");
 
 type RawBlueskyExtractionPayload = {
   captured_at?: string | null;
@@ -281,13 +284,7 @@ function prepareBlueskyFeed(browser: BrowserSession): void {
     })()`,
     mediumWait,
   );
-  assertFeedPageAccessible(
-    { sourceName: "bluesky", browser },
-    {
-      blockedUrlPatterns: [/\/login/i],
-      blockedTextPatterns: [/\bsign in\b/i, /\bcreate account\b/i],
-    },
-  );
+  assertFeedPageAccessible({ sourceName: "bluesky", browser }, BLUESKY_ACCESS);
   browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
@@ -358,10 +355,7 @@ async function captureDocument({
     afterCapture({ browser, document }) {
       assertAuthenticatedCapture(
         { sourceName: "bluesky", browser, document },
-        {
-          blockedUrlPatterns: [/\/login/i],
-          blockedTextPatterns: [/\bsign in\b/i, /\bcreate account\b/i],
-        },
+        BLUESKY_ACCESS,
       );
     },
   });

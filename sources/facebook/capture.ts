@@ -11,6 +11,7 @@ import {
 } from "../../lib/source-capture.ts";
 import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
 import { jitterTimeout } from "../../lib/browser.ts";
+import { getSourceAccessRegexps } from "../../lib/source-metadata.ts";
 import type { FacebookSnapshotLine } from "./parse.ts";
 import {
   cleanAuthorHeading,
@@ -35,6 +36,8 @@ import type {
   FeedItem,
   FeedMedia,
 } from "../../lib/types.ts";
+
+const FACEBOOK_ACCESS = getSourceAccessRegexps("facebook");
 
 type FacebookEnrichmentRef = {
   ref: string;
@@ -404,13 +407,7 @@ function prepareFacebookFeed(browser: BrowserSession): void {
   );
   assertFeedPageAccessible(
     { sourceName: "facebook", browser },
-    {
-      blockedUrlPatterns: [/\/login/i],
-      blockedTextPatterns: [
-        /\blog in to facebook\b/i,
-        /\bforgotten password\b/i,
-      ],
-    },
+    FACEBOOK_ACCESS,
   );
 }
 
@@ -473,13 +470,7 @@ async function captureDocument({
     afterCapture({ browser, document }) {
       assertAuthenticatedCapture(
         { sourceName: "facebook", browser, document },
-        {
-          blockedUrlPatterns: [/\/login/i],
-          blockedTextPatterns: [
-            /\blog in to facebook\b/i,
-            /\bforgotten password\b/i,
-          ],
-        },
+        FACEBOOK_ACCESS,
       );
     },
   });
