@@ -4,10 +4,12 @@ import {
   listSupportedSources,
   SUPPORTED_SOURCES,
 } from "../lib/source-catalog.ts";
+import { listManifestSourceNames } from "../sources/manifest.ts";
 
 describe("source catalog", () => {
   test("exposes the canonical supported source list", () => {
-    expect(SUPPORTED_SOURCES).toEqual([
+    expect(SUPPORTED_SOURCES).toEqual(listManifestSourceNames());
+    expect(listSupportedSources()).toEqual([
       "bluesky",
       "facebook",
       "instagram",
@@ -16,7 +18,6 @@ describe("source catalog", () => {
       "youtube",
       "x",
     ]);
-    expect(listSupportedSources()).toEqual(SUPPORTED_SOURCES);
   });
 
   test("answers support checks without loading runtime handlers", () => {

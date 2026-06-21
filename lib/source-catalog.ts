@@ -1,6 +1,10 @@
-import { SOURCE_NAMES, type FeedSourceName } from "./source-metadata.ts";
+import {
+  isManifestSourceName,
+  listManifestSourceNames,
+} from "../sources/manifest.ts";
+import type { FeedSourceName } from "./source-metadata.ts";
 
-export const SUPPORTED_SOURCES = SOURCE_NAMES;
+export const SUPPORTED_SOURCES = Object.freeze(listManifestSourceNames());
 
 export function listSupportedSources(): FeedSourceName[] {
   return [...SUPPORTED_SOURCES];
@@ -9,5 +13,5 @@ export function listSupportedSources(): FeedSourceName[] {
 export function isSupportedSource(
   sourceName: string,
 ): sourceName is FeedSourceName {
-  return SUPPORTED_SOURCES.includes(sourceName as FeedSourceName);
+  return isManifestSourceName(sourceName);
 }
