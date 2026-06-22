@@ -36,6 +36,76 @@ function mergeArrays<T>(
   return Array.isArray(oldArray) ? oldArray : [];
 }
 
+function mergeAuthor(
+  oldItem: MergeableFeedItem,
+  newItem: MergeableFeedItem,
+): MergeableFeedItem["author"] {
+  return {
+    handle: mergeValues(newItem.author?.handle, oldItem.author?.handle),
+    display_name: mergeValues(
+      newItem.author?.display_name,
+      oldItem.author?.display_name,
+    ),
+    profile_image_url: mergeValues(
+      newItem.author?.profile_image_url,
+      oldItem.author?.profile_image_url,
+    ),
+    profile_image_local: mergeValues(
+      newItem.author?.profile_image_local,
+      oldItem.author?.profile_image_local,
+    ),
+  };
+}
+
+function mergeStats(
+  oldItem: MergeableFeedItem,
+  newItem: MergeableFeedItem,
+): MergeableFeedItem["stats"] {
+  return {
+    reply: mergeValues(newItem.stats?.reply, oldItem.stats?.reply),
+    share: mergeValues(newItem.stats?.share, oldItem.stats?.share),
+    like: mergeValues(newItem.stats?.like, oldItem.stats?.like),
+    view: mergeValues(newItem.stats?.view, oldItem.stats?.view),
+  };
+}
+
+function mergeThread(
+  oldItem: MergeableFeedItem,
+  newItem: MergeableFeedItem,
+): MergeableFeedItem["thread"] {
+  return {
+    has_thread_line:
+      mergeValues(
+        newItem.thread?.has_thread_line,
+        oldItem.thread?.has_thread_line,
+      ) ?? false,
+    thread_line_height: mergeValues(
+      newItem.thread?.thread_line_height,
+      oldItem.thread?.thread_line_height,
+    ),
+    thread_line_x: mergeValues(
+      newItem.thread?.thread_line_x,
+      oldItem.thread?.thread_line_x,
+    ),
+    child_candidate_index: mergeValues(
+      newItem.thread?.child_candidate_index,
+      oldItem.thread?.child_candidate_index,
+    ),
+    child_candidate_handle: mergeValues(
+      newItem.thread?.child_candidate_handle,
+      oldItem.thread?.child_candidate_handle,
+    ),
+    child_candidate_url: mergeValues(
+      newItem.thread?.child_candidate_url,
+      oldItem.thread?.child_candidate_url,
+    ),
+    relationship_confidence: mergeValues(
+      newItem.thread?.relationship_confidence,
+      oldItem.thread?.relationship_confidence,
+    ),
+  };
+}
+
 function mergeItem(
   oldItem: MergeableFeedItem,
   newItem: MergeableFeedItem,
@@ -92,60 +162,12 @@ function mergeItem(
       sanitizeSourceItemId(source, oldItem.source_item_id),
     ),
     url: mergeValues(newItem.url, oldItem.url),
-    author: {
-      handle: mergeValues(newItem.author?.handle, oldItem.author?.handle),
-      display_name: mergeValues(
-        newItem.author?.display_name,
-        oldItem.author?.display_name,
-      ),
-      profile_image_url: mergeValues(
-        newItem.author?.profile_image_url,
-        oldItem.author?.profile_image_url,
-      ),
-      profile_image_local: mergeValues(
-        newItem.author?.profile_image_local,
-        oldItem.author?.profile_image_local,
-      ),
-    },
+    author: mergeAuthor(oldItem, newItem),
     content: {
       text: mergeValues(newItem.content?.text, oldItem.content?.text),
     },
-    stats: {
-      reply: mergeValues(newItem.stats?.reply, oldItem.stats?.reply),
-      share: mergeValues(newItem.stats?.share, oldItem.stats?.share),
-      like: mergeValues(newItem.stats?.like, oldItem.stats?.like),
-      view: mergeValues(newItem.stats?.view, oldItem.stats?.view),
-    },
-    thread: {
-      has_thread_line: mergeValues(
-        newItem.thread?.has_thread_line,
-        oldItem.thread?.has_thread_line,
-      ),
-      thread_line_height: mergeValues(
-        newItem.thread?.thread_line_height,
-        oldItem.thread?.thread_line_height,
-      ),
-      thread_line_x: mergeValues(
-        newItem.thread?.thread_line_x,
-        oldItem.thread?.thread_line_x,
-      ),
-      child_candidate_index: mergeValues(
-        newItem.thread?.child_candidate_index,
-        oldItem.thread?.child_candidate_index,
-      ),
-      child_candidate_handle: mergeValues(
-        newItem.thread?.child_candidate_handle,
-        oldItem.thread?.child_candidate_handle,
-      ),
-      child_candidate_url: mergeValues(
-        newItem.thread?.child_candidate_url,
-        oldItem.thread?.child_candidate_url,
-      ),
-      relationship_confidence: mergeValues(
-        newItem.thread?.relationship_confidence,
-        oldItem.thread?.relationship_confidence,
-      ),
-    },
+    stats: mergeStats(oldItem, newItem),
+    thread: mergeThread(oldItem, newItem),
     media: mergeArrays(newItem.media, oldItem.media),
     cards: mergeArrays(newItem.cards, oldItem.cards),
     embedded_links: mergeArrays(newItem.embedded_links, oldItem.embedded_links),
