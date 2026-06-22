@@ -34,6 +34,11 @@ interface CaptureAccessContext {
   document?: FeedDocument;
 }
 
+interface CaptureAccessPolicy {
+  blockedUrlPatterns?: RegExp[];
+  blockedTextPatterns?: RegExp[];
+}
+
 class CaptureAccessError extends Error {
   sourceName: string;
 
@@ -241,25 +246,11 @@ function assertAuthenticatedCapture(
     browser,
     document,
   }: CaptureAccessContext & { document: FeedDocument },
-  options: {
-    blockedUrlPatterns?: RegExp[];
-    blockedTextPatterns?: RegExp[];
-  } = {},
+  options: CaptureAccessPolicy = {},
 ): void {
   if (document.items.length > 0) return;
 
-  const { blockedUrlPatterns = [], blockedTextPatterns = [] } = options;
-  const currentUrl = browser.getCurrentUrl() || "";
-  const pageText = browser.snapshotText(["-c"], 5000) || "";
-
-  const blockedByUrl = blockedUrlPatterns.some((pattern) =>
-    pattern.test(currentUrl),
-  );
-  const blockedByText = blockedTextPatterns.some((pattern) =>
-    pattern.test(pageText),
-  );
-
-  if (blockedByUrl || blockedByText) {
+  if (isBlockedCaptureAccess(browser, options)) {
     throw new CaptureAccessError(
       sourceName,
       `Capture failed for ${sourceName}: authentication or feed access was not confirmed`,
@@ -269,23 +260,9 @@ function assertAuthenticatedCapture(
 
 function assertFeedPageAccessible(
   { sourceName, browser }: CaptureAccessContext,
-  options: {
-    blockedUrlPatterns?: RegExp[];
-    blockedTextPatterns?: RegExp[];
-  } = {},
+  options: CaptureAccessPolicy = {},
 ): void {
-  const { blockedUrlPatterns = [], blockedTextPatterns = [] } = options;
-  const currentUrl = browser.getCurrentUrl() || "";
-  const pageText = browser.snapshotText(["-c"], 5000) || "";
-
-  const blockedByUrl = blockedUrlPatterns.some((pattern) =>
-    pattern.test(currentUrl),
-  );
-  const blockedByText = blockedTextPatterns.some((pattern) =>
-    pattern.test(pageText),
-  );
-
-  if (blockedByUrl || blockedByText) {
+  if (isBlockedCaptureAccess(browser, options)) {
     throw new CaptureAccessError(
       sourceName,
       `Capture failed for ${sourceName}: blocked page state was detected before extraction`,
@@ -297,18 +274,30 @@ function assertFeedUrlAccessible(
   { sourceName, browser }: CaptureAccessContext,
   options: { blockedUrlPatterns?: RegExp[] } = {},
 ): void {
-  const { blockedUrlPatterns = [] } = options;
-  const currentUrl = browser.getCurrentUrl() || "";
-  const blockedByUrl = blockedUrlPatterns.some((pattern) =>
-    pattern.test(currentUrl),
-  );
-
-  if (blockedByUrl) {
+  if (matchesAnyPattern(options.blockedUrlPatterns, browser.getCurrentUrl())) {
     throw new CaptureAccessError(
       sourceName,
       `Capture failed for ${sourceName}: blocked page state was detected before extraction`,
     );
   }
+}
+
+function isBlockedCaptureAccess(
+  browser: CaptureAccessContext["browser"],
+  { blockedUrlPatterns = [], blockedTextPatterns = [] }: CaptureAccessPolicy,
+): boolean {
+  return (
+    matchesAnyPattern(blockedUrlPatterns, browser.getCurrentUrl()) ||
+    matchesAnyPattern(blockedTextPatterns, browser.snapshotText(["-c"], 5000))
+  );
+}
+
+function matchesAnyPattern(
+  patterns: RegExp[] | undefined,
+  value: string | null | undefined,
+): boolean {
+  const text = value || "";
+  return Boolean(patterns?.some((pattern) => pattern.test(text)));
 }
 
 export {

@@ -9,15 +9,29 @@
 import {
   SOURCE_ACCESS_POLICIES,
   SOURCE_SIGNIN_TARGETS,
+  type FeedSourceName,
 } from "../source-metadata.ts";
 
 const SCROLL_TOP_SCRIPT = `window.scrollTo({ top: 0, behavior: "instant" })`;
 const SCROLL_DOWN_WINDOW = `window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" })`;
 
+function sourceAccess(sourceName: FeedSourceName): {
+  url: string;
+  urlPrefixes: string[];
+  blockedUrlPatterns: string[];
+  blockedTextPatterns: string[];
+} {
+  return {
+    url: SOURCE_SIGNIN_TARGETS[sourceName].url,
+    urlPrefixes: SOURCE_ACCESS_POLICIES[sourceName].urlPrefixes,
+    blockedUrlPatterns: SOURCE_ACCESS_POLICIES[sourceName].blockedUrlPatterns,
+    blockedTextPatterns: SOURCE_ACCESS_POLICIES[sourceName].blockedTextPatterns,
+  };
+}
+
 const SOURCE_CONFIGS = {
   x: {
-    url: SOURCE_SIGNIN_TARGETS.x.url,
-    urlPrefixes: SOURCE_ACCESS_POLICIES.x.urlPrefixes,
+    ...sourceAccess("x"),
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -44,13 +58,10 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('article').length`,
-    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.x.blockedUrlPatterns,
-    blockedTextPatterns: SOURCE_ACCESS_POLICIES.x.blockedTextPatterns,
   },
 
   bluesky: {
-    url: SOURCE_SIGNIN_TARGETS.bluesky.url,
-    urlPrefixes: SOURCE_ACCESS_POLICIES.bluesky.urlPrefixes,
+    ...sourceAccess("bluesky"),
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -62,13 +73,10 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('[data-testid^="feedItem-by-"]').length`,
-    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.bluesky.blockedUrlPatterns,
-    blockedTextPatterns: SOURCE_ACCESS_POLICIES.bluesky.blockedTextPatterns,
   },
 
   linkedin: {
-    url: SOURCE_SIGNIN_TARGETS.linkedin.url,
-    urlPrefixes: SOURCE_ACCESS_POLICIES.linkedin.urlPrefixes,
+    ...sourceAccess("linkedin"),
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -83,13 +91,10 @@ const SOURCE_CONFIGS = {
       else window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "instant" });
     })()`,
     itemCountExpression: `(document.querySelector('main')?.innerText.match(/Feed post/g) || []).length`,
-    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.linkedin.blockedUrlPatterns,
-    blockedTextPatterns: SOURCE_ACCESS_POLICIES.linkedin.blockedTextPatterns,
   },
 
   instagram: {
-    url: SOURCE_SIGNIN_TARGETS.instagram.url,
-    urlPrefixes: SOURCE_ACCESS_POLICIES.instagram.urlPrefixes,
+    ...sourceAccess("instagram"),
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -101,13 +106,10 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('main article').length`,
-    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.instagram.blockedUrlPatterns,
-    blockedTextPatterns: SOURCE_ACCESS_POLICIES.instagram.blockedTextPatterns,
   },
 
   tiktok: {
-    url: SOURCE_SIGNIN_TARGETS.tiktok.url,
-    urlPrefixes: SOURCE_ACCESS_POLICIES.tiktok.urlPrefixes,
+    ...sourceAccess("tiktok"),
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -124,13 +126,10 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('article[data-e2e="recommend-list-item-container"]').length`,
-    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.tiktok.blockedUrlPatterns,
-    blockedTextPatterns: SOURCE_ACCESS_POLICIES.tiktok.blockedTextPatterns,
   },
 
   youtube: {
-    url: SOURCE_SIGNIN_TARGETS.youtube.url,
-    urlPrefixes: SOURCE_ACCESS_POLICIES.youtube.urlPrefixes,
+    ...sourceAccess("youtube"),
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -147,13 +146,10 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: `window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: "instant" })`,
     itemCountExpression: `document.querySelectorAll('div.ytLockupViewModelHost, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2').length`,
-    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.youtube.blockedUrlPatterns,
-    blockedTextPatterns: SOURCE_ACCESS_POLICIES.youtube.blockedTextPatterns,
   },
 
   facebook: {
-    url: SOURCE_SIGNIN_TARGETS.facebook.url,
-    urlPrefixes: SOURCE_ACCESS_POLICIES.facebook.urlPrefixes,
+    ...sourceAccess("facebook"),
     readyChecks: [
       "document.readyState === 'complete'",
       `(() => {
@@ -165,8 +161,6 @@ const SOURCE_CONFIGS = {
     scrollTopScript: SCROLL_TOP_SCRIPT,
     scrollDownScript: SCROLL_DOWN_WINDOW,
     itemCountExpression: `document.querySelectorAll('[role="article"]').length`,
-    blockedUrlPatterns: SOURCE_ACCESS_POLICIES.facebook.blockedUrlPatterns,
-    blockedTextPatterns: SOURCE_ACCESS_POLICIES.facebook.blockedTextPatterns,
   },
 } as const;
 
