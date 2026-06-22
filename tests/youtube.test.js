@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { renderItemCard } from "../lib/render/item.ts";
 import { getCaptureHandler } from "../sources/registry.ts";
-import { isSupportedSource } from "../lib/source-catalog.ts";
+import { SUPPORTED_SOURCE_SET } from "../lib/source-catalog.ts";
 import {
   assertYouTubeCaptureReady,
   extractYouTubeVideoId,
@@ -64,7 +64,7 @@ describe("youtube support", () => {
   });
 
   test("registers youtube as a supported source", () => {
-    expect(isSupportedSource("youtube")).toBe(true);
+    expect(SUPPORTED_SOURCE_SET.has("youtube")).toBe(true);
     expect(typeof getCaptureHandler("youtube")).toBe("function");
   });
 

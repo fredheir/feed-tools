@@ -20,7 +20,7 @@ import {
   toOptionalString,
   toStringArray,
 } from "./coerce.ts";
-import { isSupportedSource } from "./source-catalog.ts";
+import { SUPPORTED_SOURCE_SET } from "./source-catalog.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
@@ -68,7 +68,7 @@ function normalizeSourcePreference(
     throw new Error(`Invalid source config entry: ${configPath}`);
   }
   const raw = value as RawSourcePreference;
-  if (!raw.name || !isSupportedSource(raw.name)) {
+  if (!raw.name || !SUPPORTED_SOURCE_SET.has(raw.name)) {
     throw new Error(`Unsupported source in config: ${String(raw.name || "")}`);
   }
 

@@ -38,6 +38,7 @@ import {
 } from "./x/capture.ts";
 import {
   SOURCE_SIGNIN_TARGETS,
+  SOURCE_NAMES,
   type FeedSourceName,
 } from "../lib/source-metadata.ts";
 import type { SourceManifest } from "../lib/source-manifest.ts";
@@ -102,6 +103,17 @@ const SOURCE_MANIFESTS = {
     signin: SOURCE_SIGNIN_TARGETS.x,
   },
 } satisfies Record<FeedSourceName, SourceManifest>;
+
+const SUPPORTED_SOURCE_NAMES = Object.freeze(
+  Object.keys(SOURCE_MANIFESTS),
+) as readonly FeedSourceName[];
+
+if (
+  [...SUPPORTED_SOURCE_NAMES].sort().join("\0") !==
+  [...SOURCE_NAMES].sort().join("\0")
+) {
+  throw new Error("Source manifest names must match source metadata names");
+}
 
 function getSourceManifest(sourceName: string): SourceManifest | null {
   if (!Object.prototype.hasOwnProperty.call(SOURCE_MANIFESTS, sourceName)) {

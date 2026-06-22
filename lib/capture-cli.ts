@@ -10,7 +10,7 @@ import { hasNewUnclassifiedItems } from "./allocation.ts";
 import { requireArgValue } from "./cli-args.ts";
 import { combineDocuments } from "./document-ops.ts";
 import { getCaptureHandler } from "../sources/registry.ts";
-import { isSupportedSource } from "./source-catalog.ts";
+import { SUPPORTED_SOURCE_SET } from "./source-catalog.ts";
 import type {
   FeedBrowserConfig,
   FeedConfig,
@@ -30,8 +30,8 @@ function parseSourceNames(argv: string[]): {
     Number.isNaN(Number(args[0]))
   ) {
     const candidate = args.shift();
-    if (candidate && isSupportedSource(candidate)) {
-      sourceNames.push(candidate);
+    if (candidate && SUPPORTED_SOURCE_SET.has(candidate)) {
+      sourceNames.push(candidate as FeedSourceName);
     } else if (candidate) {
       throw new Error(`Unsupported source: ${candidate}`);
     }

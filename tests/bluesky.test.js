@@ -5,7 +5,7 @@ import {
 } from "../sources/bluesky/capture.ts";
 import { renderItemCard } from "../lib/render/item.ts";
 import { getCaptureHandler } from "../sources/registry.ts";
-import { isSupportedSource } from "../lib/source-catalog.ts";
+import { SUPPORTED_SOURCE_SET } from "../lib/source-catalog.ts";
 import { readFixture } from "./helpers/cli-config.mts";
 
 describe("bluesky support", () => {
@@ -18,7 +18,7 @@ describe("bluesky support", () => {
   });
 
   test("registers bluesky as a supported source", () => {
-    expect(isSupportedSource("bluesky")).toBe(true);
+    expect(SUPPORTED_SOURCE_SET.has("bluesky")).toBe(true);
     expect(typeof getCaptureHandler("bluesky")).toBe("function");
   });
 
