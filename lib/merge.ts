@@ -155,6 +155,40 @@ function mergeItem(
   } as MergeableFeedItem;
 }
 
+function normalizeNewItem(
+  item: FeedItem,
+  source: string | undefined,
+  capturedAt: string | null,
+): MergeableFeedItem {
+  return {
+    ...normalizeItemShape(item, {
+      source: item.source || source,
+      index: item.index,
+    }),
+    first_seen_at: capturedAt,
+    last_seen_at: capturedAt,
+    capture_count: 1,
+  };
+}
+
+function normalizeRetainedItem(
+  item: MergeableFeedItem,
+  source: string | undefined,
+  capturedAt: string | null,
+): MergeableFeedItem {
+  return {
+    ...normalizeItemShape(item, {
+      source: item.source || source,
+      index: item.index,
+    }),
+    first_seen_at: item.first_seen_at || capturedAt,
+    last_seen_at: item.last_seen_at || capturedAt,
+    capture_count: Number.isInteger(item.capture_count)
+      ? item.capture_count
+      : 1,
+  };
+}
+
 export function mergeDocuments(
   oldDocument: FeedDocument | null | undefined,
   newDocument: FeedDocument,
@@ -162,15 +196,9 @@ export function mergeDocuments(
   if (!oldDocument || !Array.isArray(oldDocument.items)) {
     return {
       ...newDocument,
-      items: newDocument.items.map((item) => ({
-        ...normalizeItemShape(item, {
-          source: item.source || newDocument.source,
-          index: item.index,
-        }),
-        first_seen_at: newDocument.captured_at,
-        last_seen_at: newDocument.captured_at,
-        capture_count: 1,
-      })),
+      items: newDocument.items.map((item) =>
+        normalizeNewItem(item, newDocument.source, newDocument.captured_at),
+      ),
     };
   }
   if (!newDocument || !Array.isArray(newDocument.items)) return oldDocument;
@@ -187,15 +215,7 @@ export function mergeDocuments(
     const oldItem = oldByKey.get(key);
     const merged = oldItem
       ? mergeItem(oldItem, item, capturedAt)
-      : {
-          ...normalizeItemShape(item, {
-            source: item.source || newDocument.source,
-            index: item.index,
-          }),
-          first_seen_at: capturedAt,
-          last_seen_at: capturedAt,
-          capture_count: 1,
-        };
+      : normalizeNewItem(item, newDocument.source, capturedAt);
     mergedItems.push(merged);
     seen.add(key);
   }
@@ -203,17 +223,9 @@ export function mergeDocuments(
   for (const item of oldDocument.items) {
     const key = stableItemKey(item);
     if (seen.has(key)) continue;
-    mergedItems.push({
-      ...normalizeItemShape(item, {
-        source: item.source || oldDocument.source,
-        index: item.index,
-      }),
-      first_seen_at: item.first_seen_at || oldDocument.captured_at,
-      last_seen_at: item.last_seen_at || oldDocument.captured_at,
-      capture_count: Number.isInteger(item.capture_count)
-        ? item.capture_count
-        : 1,
-    });
+    mergedItems.push(
+      normalizeRetainedItem(item, oldDocument.source, oldDocument.captured_at),
+    );
   }
 
   return {
