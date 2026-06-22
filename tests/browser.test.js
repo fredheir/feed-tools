@@ -12,6 +12,7 @@ import {
   getRuntimeBrowserOptions,
   readCdpVersionPayload,
 } from "../lib/browser.ts";
+import { getBrowserStatus } from "../lib/browser-status.ts";
 import {
   resolveChromeBin,
   startBrowser,
@@ -314,6 +315,9 @@ nonCdpServer.listen(0, "127.0.0.1", () => {
 
     try {
       expect(assertCdpEndpoint(String(port))).toMatch(
+        new RegExp(`^http://(localhost|\\[::1\\]):${port}$`),
+      );
+      expect(getBrowserStatus(String(port)).cdp).toMatch(
         new RegExp(`^http://(localhost|\\[::1\\]):${port}$`),
       );
     } finally {
