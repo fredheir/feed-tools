@@ -36,6 +36,76 @@ function mergeArrays<T>(
   return Array.isArray(oldArray) ? oldArray : [];
 }
 
+function mergeAuthor(
+  oldItem: MergeableFeedItem,
+  newItem: MergeableFeedItem,
+): MergeableFeedItem["author"] {
+  return {
+    handle: mergeValues(newItem.author?.handle, oldItem.author?.handle),
+    display_name: mergeValues(
+      newItem.author?.display_name,
+      oldItem.author?.display_name,
+    ),
+    profile_image_url: mergeValues(
+      newItem.author?.profile_image_url,
+      oldItem.author?.profile_image_url,
+    ),
+    profile_image_local: mergeValues(
+      newItem.author?.profile_image_local,
+      oldItem.author?.profile_image_local,
+    ),
+  };
+}
+
+function mergeStats(
+  oldItem: MergeableFeedItem,
+  newItem: MergeableFeedItem,
+): MergeableFeedItem["stats"] {
+  return {
+    reply: mergeValues(newItem.stats?.reply, oldItem.stats?.reply),
+    share: mergeValues(newItem.stats?.share, oldItem.stats?.share),
+    like: mergeValues(newItem.stats?.like, oldItem.stats?.like),
+    view: mergeValues(newItem.stats?.view, oldItem.stats?.view),
+  };
+}
+
+function mergeThread(
+  oldItem: MergeableFeedItem,
+  newItem: MergeableFeedItem,
+): MergeableFeedItem["thread"] {
+  return {
+    has_thread_line:
+      mergeValues(
+        newItem.thread?.has_thread_line,
+        oldItem.thread?.has_thread_line,
+      ) ?? false,
+    thread_line_height: mergeValues(
+      newItem.thread?.thread_line_height,
+      oldItem.thread?.thread_line_height,
+    ),
+    thread_line_x: mergeValues(
+      newItem.thread?.thread_line_x,
+      oldItem.thread?.thread_line_x,
+    ),
+    child_candidate_index: mergeValues(
+      newItem.thread?.child_candidate_index,
+      oldItem.thread?.child_candidate_index,
+    ),
+    child_candidate_handle: mergeValues(
+      newItem.thread?.child_candidate_handle,
+      oldItem.thread?.child_candidate_handle,
+    ),
+    child_candidate_url: mergeValues(
+      newItem.thread?.child_candidate_url,
+      oldItem.thread?.child_candidate_url,
+    ),
+    relationship_confidence: mergeValues(
+      newItem.thread?.relationship_confidence,
+      oldItem.thread?.relationship_confidence,
+    ),
+  };
+}
+
 function mergeItem(
   oldItem: MergeableFeedItem,
   newItem: MergeableFeedItem,
@@ -92,60 +162,12 @@ function mergeItem(
       sanitizeSourceItemId(source, oldItem.source_item_id),
     ),
     url: mergeValues(newItem.url, oldItem.url),
-    author: {
-      handle: mergeValues(newItem.author?.handle, oldItem.author?.handle),
-      display_name: mergeValues(
-        newItem.author?.display_name,
-        oldItem.author?.display_name,
-      ),
-      profile_image_url: mergeValues(
-        newItem.author?.profile_image_url,
-        oldItem.author?.profile_image_url,
-      ),
-      profile_image_local: mergeValues(
-        newItem.author?.profile_image_local,
-        oldItem.author?.profile_image_local,
-      ),
-    },
+    author: mergeAuthor(oldItem, newItem),
     content: {
       text: mergeValues(newItem.content?.text, oldItem.content?.text),
     },
-    stats: {
-      reply: mergeValues(newItem.stats?.reply, oldItem.stats?.reply),
-      share: mergeValues(newItem.stats?.share, oldItem.stats?.share),
-      like: mergeValues(newItem.stats?.like, oldItem.stats?.like),
-      view: mergeValues(newItem.stats?.view, oldItem.stats?.view),
-    },
-    thread: {
-      has_thread_line: mergeValues(
-        newItem.thread?.has_thread_line,
-        oldItem.thread?.has_thread_line,
-      ),
-      thread_line_height: mergeValues(
-        newItem.thread?.thread_line_height,
-        oldItem.thread?.thread_line_height,
-      ),
-      thread_line_x: mergeValues(
-        newItem.thread?.thread_line_x,
-        oldItem.thread?.thread_line_x,
-      ),
-      child_candidate_index: mergeValues(
-        newItem.thread?.child_candidate_index,
-        oldItem.thread?.child_candidate_index,
-      ),
-      child_candidate_handle: mergeValues(
-        newItem.thread?.child_candidate_handle,
-        oldItem.thread?.child_candidate_handle,
-      ),
-      child_candidate_url: mergeValues(
-        newItem.thread?.child_candidate_url,
-        oldItem.thread?.child_candidate_url,
-      ),
-      relationship_confidence: mergeValues(
-        newItem.thread?.relationship_confidence,
-        oldItem.thread?.relationship_confidence,
-      ),
-    },
+    stats: mergeStats(oldItem, newItem),
+    thread: mergeThread(oldItem, newItem),
     media: mergeArrays(newItem.media, oldItem.media),
     cards: mergeArrays(newItem.cards, oldItem.cards),
     embedded_links: mergeArrays(newItem.embedded_links, oldItem.embedded_links),
@@ -155,6 +177,40 @@ function mergeItem(
   } as MergeableFeedItem;
 }
 
+function normalizeNewItem(
+  item: FeedItem,
+  source: string | undefined,
+  capturedAt: string | null,
+): MergeableFeedItem {
+  return {
+    ...normalizeItemShape(item, {
+      source: item.source || source,
+      index: item.index,
+    }),
+    first_seen_at: capturedAt,
+    last_seen_at: capturedAt,
+    capture_count: 1,
+  };
+}
+
+function normalizeRetainedItem(
+  item: MergeableFeedItem,
+  source: string | undefined,
+  capturedAt: string | null,
+): MergeableFeedItem {
+  return {
+    ...normalizeItemShape(item, {
+      source: item.source || source,
+      index: item.index,
+    }),
+    first_seen_at: item.first_seen_at || capturedAt,
+    last_seen_at: item.last_seen_at || capturedAt,
+    capture_count: Number.isInteger(item.capture_count)
+      ? item.capture_count
+      : 1,
+  };
+}
+
 export function mergeDocuments(
   oldDocument: FeedDocument | null | undefined,
   newDocument: FeedDocument,
@@ -162,15 +218,9 @@ export function mergeDocuments(
   if (!oldDocument || !Array.isArray(oldDocument.items)) {
     return {
       ...newDocument,
-      items: newDocument.items.map((item) => ({
-        ...normalizeItemShape(item, {
-          source: item.source || newDocument.source,
-          index: item.index,
-        }),
-        first_seen_at: newDocument.captured_at,
-        last_seen_at: newDocument.captured_at,
-        capture_count: 1,
-      })),
+      items: newDocument.items.map((item) =>
+        normalizeNewItem(item, newDocument.source, newDocument.captured_at),
+      ),
     };
   }
   if (!newDocument || !Array.isArray(newDocument.items)) return oldDocument;
@@ -187,15 +237,7 @@ export function mergeDocuments(
     const oldItem = oldByKey.get(key);
     const merged = oldItem
       ? mergeItem(oldItem, item, capturedAt)
-      : {
-          ...normalizeItemShape(item, {
-            source: item.source || newDocument.source,
-            index: item.index,
-          }),
-          first_seen_at: capturedAt,
-          last_seen_at: capturedAt,
-          capture_count: 1,
-        };
+      : normalizeNewItem(item, newDocument.source, capturedAt);
     mergedItems.push(merged);
     seen.add(key);
   }
@@ -203,17 +245,9 @@ export function mergeDocuments(
   for (const item of oldDocument.items) {
     const key = stableItemKey(item);
     if (seen.has(key)) continue;
-    mergedItems.push({
-      ...normalizeItemShape(item, {
-        source: item.source || oldDocument.source,
-        index: item.index,
-      }),
-      first_seen_at: item.first_seen_at || oldDocument.captured_at,
-      last_seen_at: item.last_seen_at || oldDocument.captured_at,
-      capture_count: Number.isInteger(item.capture_count)
-        ? item.capture_count
-        : 1,
-    });
+    mergedItems.push(
+      normalizeRetainedItem(item, oldDocument.source, oldDocument.captured_at),
+    );
   }
 
   return {
