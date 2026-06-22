@@ -12,6 +12,10 @@ import {
 } from "./sqlite-store.ts";
 import { ensureSourceStorage, getSourceStoragePaths } from "./storage.ts";
 import { isRecord } from "./coerce.ts";
+import {
+  getSourceAccessRegexps,
+  type FeedSourceName,
+} from "./source-metadata.ts";
 import type {
   CaptureAdapter,
   FeedBrowserConfig,
@@ -26,7 +30,7 @@ interface PersistOptions {
 }
 
 interface CaptureAccessContext {
-  sourceName: string;
+  sourceName: FeedSourceName;
   browser: {
     getCurrentUrl: () => string;
     snapshotText: (args: string[], timeoutMs: number) => string;
@@ -246,11 +250,11 @@ function assertAuthenticatedCapture(
     browser,
     document,
   }: CaptureAccessContext & { document: FeedDocument },
-  options: CaptureAccessPolicy = {},
+  options?: CaptureAccessPolicy,
 ): void {
   if (document.items.length > 0) return;
 
-  if (isBlockedCaptureAccess(browser, options)) {
+  if (isBlockedCaptureAccess(browser, accessPolicyFor(sourceName, options))) {
     throw new CaptureAccessError(
       sourceName,
       `Capture failed for ${sourceName}: authentication or feed access was not confirmed`,
@@ -260,9 +264,9 @@ function assertAuthenticatedCapture(
 
 function assertFeedPageAccessible(
   { sourceName, browser }: CaptureAccessContext,
-  options: CaptureAccessPolicy = {},
+  options?: CaptureAccessPolicy,
 ): void {
-  if (isBlockedCaptureAccess(browser, options)) {
+  if (isBlockedCaptureAccess(browser, accessPolicyFor(sourceName, options))) {
     throw new CaptureAccessError(
       sourceName,
       `Capture failed for ${sourceName}: blocked page state was detected before extraction`,
@@ -272,14 +276,26 @@ function assertFeedPageAccessible(
 
 function assertFeedUrlAccessible(
   { sourceName, browser }: CaptureAccessContext,
-  options: { blockedUrlPatterns?: RegExp[] } = {},
+  options?: { blockedUrlPatterns?: RegExp[] },
 ): void {
-  if (matchesAnyPattern(options.blockedUrlPatterns, browser.getCurrentUrl())) {
+  if (
+    matchesAnyPattern(
+      accessPolicyFor(sourceName, options).blockedUrlPatterns,
+      browser.getCurrentUrl(),
+    )
+  ) {
     throw new CaptureAccessError(
       sourceName,
       `Capture failed for ${sourceName}: blocked page state was detected before extraction`,
     );
   }
+}
+
+function accessPolicyFor(
+  sourceName: FeedSourceName,
+  override?: CaptureAccessPolicy,
+): CaptureAccessPolicy {
+  return override ?? getSourceAccessRegexps(sourceName);
 }
 
 function isBlockedCaptureAccess(
