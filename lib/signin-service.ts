@@ -7,8 +7,8 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
-import { getCdpVersionUrls } from "./browser.ts";
 import { SUPPORTED_SOURCES } from "./source-catalog.ts";
+import { getBrowserStatus } from "./browser-status.ts";
 import {
   SOURCE_SIGNIN_TARGETS,
   type SourceSigninTarget,
@@ -84,27 +84,6 @@ function assertPythonSqliteAvailable(): void {
   }
 }
 
-function readCdpVersion(cdpPort: string): string | null {
-  const script = `
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 1000);
-fetch(process.argv[1], { signal: controller.signal })
-  .then((response) => process.exit(response.ok ? 0 : 1))
-  .catch(() => process.exit(1))
-  .finally(() => clearTimeout(timeout));
-`;
-  for (const url of getCdpVersionUrls(cdpPort)) {
-    const result = spawnSync(process.execPath, ["-e", script, url], {
-      stdio: "ignore",
-      timeout: 2000,
-    });
-    if (result.status === 0) {
-      return url;
-    }
-  }
-  return null;
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -114,15 +93,17 @@ export async function waitForCdp(
   child: ChildProcess,
 ): Promise<void> {
   const deadline = Date.now() + 20_000;
+  let status = getBrowserStatus(cdpPort);
   while (Date.now() < deadline) {
-    if (readCdpVersion(cdpPort)) return;
+    status = getBrowserStatus(cdpPort);
+    if (status.ok) return;
     if (child.exitCode !== null) {
       throw new Error(`Chrome exited before CDP was ready; see ${CHROME_LOG}`);
     }
     await sleep(500);
   }
   throw new Error(
-    `Chrome did not expose CDP at ${getCdpVersionUrls(cdpPort).join(", ")}; see ${CHROME_LOG}`,
+    `Chrome did not expose CDP on ${cdpPort}: ${status.detail}; see ${CHROME_LOG}`,
   );
 }
 
@@ -242,9 +223,15 @@ export function launchChrome({
       `Chrome binary not found: ${chromeBin}. Run ./bin/feed-setup-sandbox first.`,
     );
   }
-  if (readCdpVersion(cdpPort)) {
+  const existing = getBrowserStatus(cdpPort);
+  if (existing.ok) {
     throw new Error(
       `CDP port ${cdpPort} is already in use; choose another port with --cdp`,
+    );
+  }
+  if (existing.versionUrl) {
+    throw new Error(
+      `CDP port ${cdpPort} is occupied by a non-CDP browser endpoint: ${existing.detail}`,
     );
   }
   fs.mkdirSync(profileDir, { recursive: true });
