@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { getBrowserStatus } from "./browser-status.ts";
@@ -151,6 +152,13 @@ export function detectSandboxSignals(env = process.env): SandboxSignal[] {
       detail: "repo is under an ephemeral session mount",
     });
   }
+  if (env.HOME) {
+    try {
+      fs.accessSync(env.HOME, fs.constants.W_OK);
+    } catch {
+      signals.push({ name: "home", detail: `${env.HOME} is not writable` });
+    }
+  }
   return signals;
 }
 
@@ -192,6 +200,155 @@ function checkWorkspaceChrome(): CheckResult {
     recommendation:
       "Run ./bin/feed-setup-sandbox to install Chrome under ./chrome-install.",
   };
+}
+
+function checkCommand(
+  name: string,
+  command: string,
+  args: string[],
+  recommendation: string,
+): CheckResult {
+  const version = commandResponds(command, args);
+  if (version !== null) {
+    return { name, ok: true, detail: version || `${command} responded` };
+  }
+  return {
+    name,
+    ok: false,
+    detail: `${command} did not respond`,
+    recommendation,
+  };
+}
+
+export function redactRemoteUrl(remote: string): string {
+  try {
+    const parsed = new URL(remote);
+    if (parsed.username) parsed.username = "redacted";
+    if (parsed.password) parsed.password = "redacted";
+    return parsed.toString();
+  } catch {
+    return remote;
+  }
+}
+
+export function isSshRemote(remote: string): boolean {
+  return remote.startsWith("git@") || /^ssh:\/\//i.test(remote);
+}
+
+const NON_PRIVATE_SSH_FILES = new Set([
+  "allowed_signers",
+  "authorized_keys",
+  "authorized_principals",
+  "config",
+  "environment",
+  "known_hosts",
+  "known_hosts2",
+  "known_hosts.old",
+  "rc",
+]);
+
+export function isSshPrivateKeyFilename(filename: string): boolean {
+  return (
+    !filename.startsWith(".") &&
+    !filename.endsWith(".pub") &&
+    !filename.endsWith("-cert.pub") &&
+    !NON_PRIVATE_SSH_FILES.has(filename) &&
+    (/^id_/.test(filename) ||
+      /(^|[-_])(rsa|dsa|ecdsa|ed25519|ed448)($|[-_])/i.test(filename))
+  );
+}
+
+function hasSshPrivateKey(sshDir: string): boolean {
+  try {
+    return fs
+      .readdirSync(sshDir, { withFileTypes: true })
+      .some(
+        (entry) =>
+          (entry.isFile() || entry.isSymbolicLink()) &&
+          isSshPrivateKeyFilename(entry.name),
+      );
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "EACCES" || code === "EPERM") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function hasSshAgentKey(): boolean {
+  return (
+    Boolean(process.env.SSH_AUTH_SOCK) &&
+    commandResponds("ssh-add", ["-l"]) !== null
+  );
+}
+
+function hasSshCredentials(sshDir: string): boolean {
+  return hasSshAgentKey() || hasSshPrivateKey(sshDir);
+}
+
+function checkGitRemote(): CheckResult {
+  const remote = commandResponds("git", [
+    "-C",
+    WORKDIR,
+    "remote",
+    "get-url",
+    "origin",
+  ]);
+  if (remote === null) {
+    return {
+      name: "git-remote",
+      ok: true,
+      detail: "origin remote unavailable; skipped",
+    };
+  }
+  const redactedRemote = redactRemoteUrl(remote);
+  if (!isSshRemote(remote)) {
+    return { name: "git-remote", ok: true, detail: redactedRemote };
+  }
+  const sshDir = path.join(os.homedir(), ".ssh");
+  if (hasSshCredentials(sshDir)) {
+    return { name: "git-remote", ok: true, detail: redactedRemote };
+  }
+  return {
+    name: "git-remote",
+    ok: false,
+    detail: `${redactedRemote}; no private key found in ${sshDir}`,
+    recommendation:
+      "Use gh auth plus an HTTPS remote in keyless sandboxes, or add an SSH key.",
+  };
+}
+
+function checkSandboxDependencies(): CheckResult[] {
+  return [
+    checkCommand("pnpm", "pnpm", ["--version"], "Install pnpm before setup."),
+    checkCommand(
+      "uv",
+      "uv",
+      ["--version"],
+      "Install uv, then run pnpm setup:yt-dlp for video sources.",
+    ),
+    checkCommand(
+      "yt-dlp",
+      "yt-dlp",
+      ["--version"],
+      "Run pnpm setup:yt-dlp before capturing video sources.",
+    ),
+    checkCommand(
+      "ffmpeg",
+      "ffmpeg",
+      ["-version"],
+      "Run pnpm setup:ffmpeg before capturing video sources.",
+    ),
+    checkCommand(
+      "ffprobe",
+      "ffprobe",
+      ["-version"],
+      "Run pnpm setup:ffmpeg before capturing video sources.",
+    ),
+    checkWorkspaceChrome(),
+    checkGitRemote(),
+  ];
 }
 
 function checkCic(): CheckResult {
@@ -355,7 +512,7 @@ export function runDoctor(options: DoctorOptions = {}): DoctorResult {
     checkCic(),
   ];
   if (isSandbox(results)) {
-    results.push(checkWorkspaceChrome());
+    results.push(...checkSandboxDependencies());
   }
   const config = configure
     ? maybeWriteConfig(results, forceConfig, configPath)
