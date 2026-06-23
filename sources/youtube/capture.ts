@@ -7,7 +7,6 @@ import {
 import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
 import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
-import { getSourceAccessRegexps } from "../../lib/source-metadata.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
@@ -15,8 +14,6 @@ import type {
   FeedDocument,
   FeedItem,
 } from "../../lib/types.ts";
-
-const YOUTUBE_ACCESS = getSourceAccessRegexps("youtube");
 
 type RawYouTubeCard = {
   kind?: "video" | "short";
@@ -385,10 +382,7 @@ function assertYouTubeCaptureReady(
   browser: BrowserSession,
   document: FeedDocument,
 ): void {
-  assertAuthenticatedCapture(
-    { sourceName: "youtube", browser, document },
-    YOUTUBE_ACCESS,
-  );
+  assertAuthenticatedCapture({ sourceName: "youtube", browser, document });
   if (document.items.length === 0) {
     throw new Error(
       "Capture failed for youtube: no homepage items were extracted",
@@ -431,7 +425,7 @@ function prepareYouTubeFeed(browser: BrowserSession): void {
     })()`,
     longWait,
   );
-  assertFeedPageAccessible({ sourceName: "youtube", browser }, YOUTUBE_ACCESS);
+  assertFeedPageAccessible({ sourceName: "youtube", browser });
   browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
