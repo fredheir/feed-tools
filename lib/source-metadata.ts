@@ -10,6 +10,8 @@ export const SOURCE_NAMES = Object.freeze([
 
 export type FeedSourceName = (typeof SOURCE_NAMES)[number];
 
+export const SOURCE_NAME_SET = new Set<string>(SOURCE_NAMES);
+
 export interface SourceSigninTarget {
   url: string;
   authCookies: Array<{ domains: string[]; names: string[] }>;

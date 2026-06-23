@@ -7,9 +7,9 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
-import { SUPPORTED_SOURCES } from "./source-catalog.ts";
 import { getBrowserStatus } from "./browser-status.ts";
 import {
+  SOURCE_NAMES,
   SOURCE_SIGNIN_TARGETS,
   type SourceSigninTarget,
 } from "./source-metadata.ts";
@@ -45,7 +45,7 @@ type FeedSigninChromeProcess = ChildProcess & {
 export const SOURCE_TARGETS = SOURCE_SIGNIN_TARGETS;
 
 export function listSupportedSigninSources(): FeedSourceName[] {
-  return SUPPORTED_SOURCES.filter((source) => Boolean(SOURCE_TARGETS[source]));
+  return SOURCE_NAMES.filter((source) => Boolean(SOURCE_TARGETS[source]));
 }
 
 function commandExists(command: string): boolean {
