@@ -49,7 +49,5 @@ export function resolveSelectedSources(
   if (selectedSources.length > 0) return selectedSources;
 
   const stored = new Set(listStoredSources(saveDir));
-  return getEnabledSourceNames(config).filter(
-    (source) => isFeedSourceName(source) && stored.has(source),
-  );
+  return getEnabledSourceNames(config).filter((source) => stored.has(source));
 }
