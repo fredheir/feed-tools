@@ -1,5 +1,5 @@
 import { getEnabledSourceNames } from "./config.ts";
-import { SOURCE_NAMES } from "./source-metadata.ts";
+import { isFeedSourceName } from "./source-metadata.ts";
 import type { FeedConfig, FeedSourceName } from "./types.ts";
 
 import { listStoredSources } from "./sqlite-store.ts";
@@ -17,16 +17,13 @@ export function appendCommaList(target: string[], spec: string): string[] {
 
 export function validateExplicitSources(
   explicitSources: string[],
-  supportedSources: Set<FeedSourceName>,
 ): FeedSourceName[] {
   const requested = explicitSources.filter(Boolean);
   if (requested.length === 0) return [];
 
-  const selectedSources = requested.filter((source): source is FeedSourceName =>
-    supportedSources.has(source as FeedSourceName),
-  );
+  const selectedSources = requested.filter(isFeedSourceName);
   const invalidSources = requested.filter(
-    (source) => !supportedSources.has(source as FeedSourceName),
+    (source) => !isFeedSourceName(source),
   );
 
   if (selectedSources.length === 0) {
@@ -48,16 +45,11 @@ export function resolveSelectedSources(
   saveDir: string,
   explicitSources: string[] = [],
 ): string[] {
-  const supportedSources = new Set<FeedSourceName>(SOURCE_NAMES);
-  const selectedSources = validateExplicitSources(
-    explicitSources,
-    supportedSources,
-  );
+  const selectedSources = validateExplicitSources(explicitSources);
   if (selectedSources.length > 0) return selectedSources;
 
   const stored = new Set(listStoredSources(saveDir));
   return getEnabledSourceNames(config).filter(
-    (source) =>
-      supportedSources.has(source as FeedSourceName) && stored.has(source),
+    (source) => isFeedSourceName(source) && stored.has(source),
   );
 }

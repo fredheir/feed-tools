@@ -53,9 +53,7 @@ describe("source selection", () => {
       },
     };
 
-    expect(
-      validateExplicitSources(["linkedin"], new Set(["linkedin"])),
-    ).toEqual(["linkedin"]);
+    expect(validateExplicitSources(["linkedin"])).toEqual(["linkedin"]);
     expect(resolveSelectedSources(config, saveDir, [])).toEqual([
       "x",
       "bluesky",
@@ -63,15 +61,12 @@ describe("source selection", () => {
   });
 
   test("treats explicit source requests as authoritative", () => {
-    expect(() =>
-      validateExplicitSources(["invalid"], new Set(["x", "linkedin"])),
-    ).toThrow("No supported sources in explicit selection");
-    expect(() =>
-      validateExplicitSources(
-        ["linkedin", "invalid"],
-        new Set(["x", "linkedin"]),
-      ),
-    ).toThrow("Unsupported source selection: invalid");
+    expect(() => validateExplicitSources(["invalid"])).toThrow(
+      "No supported sources in explicit selection",
+    );
+    expect(() => validateExplicitSources(["linkedin", "invalid"])).toThrow(
+      "Unsupported source selection: invalid",
+    );
   });
 });
 

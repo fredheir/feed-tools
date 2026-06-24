@@ -5,7 +5,6 @@ import type {
   CurationPreferences,
   FeedBrowserConfig,
   FeedConfig,
-  FeedSourceName,
   RawFeedConfig,
   RawSourcePreference,
   RenderPreferences,
@@ -20,7 +19,7 @@ import {
   toOptionalString,
   toStringArray,
 } from "./coerce.ts";
-import { SOURCE_NAME_SET } from "./source-metadata.ts";
+import { isFeedSourceName } from "./source-metadata.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
@@ -68,12 +67,12 @@ function normalizeSourcePreference(
     throw new Error(`Invalid source config entry: ${configPath}`);
   }
   const raw = value as RawSourcePreference;
-  if (!raw.name || !SOURCE_NAME_SET.has(raw.name)) {
+  if (!raw.name || !isFeedSourceName(raw.name)) {
     throw new Error(`Unsupported source in config: ${String(raw.name || "")}`);
   }
 
   return {
-    name: raw.name as FeedSourceName,
+    name: raw.name,
     enabled: toOptionalBoolean(raw.enabled),
     default: toOptionalBoolean(raw.default),
     capture: normalizeCaptureConfig(raw.capture),
@@ -240,7 +239,7 @@ function getEnabledSources(config: FeedConfig): SourcePreference[] {
 export function getEnabledSourceNames(config: FeedConfig): string[] {
   return getEnabledSources(config)
     .map((source) => source?.name)
-    .filter((value): value is FeedSourceName => Boolean(value));
+    .filter(isFeedSourceName);
 }
 
 function getSourcePreferences(

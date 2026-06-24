@@ -9,7 +9,7 @@ import {
   runSigninWait,
   waitForCdp,
 } from "./signin-service.ts";
-import { SOURCE_NAME_SET } from "./source-metadata.ts";
+import { isFeedSourceName } from "./source-metadata.ts";
 import type { FeedSourceName } from "./types.ts";
 
 interface ParsedArgs {
@@ -75,9 +75,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
     if (arg.startsWith("--")) throw new Error(`Unknown argument: ${arg}`);
-    if (!SOURCE_NAME_SET.has(arg))
-      throw new Error(`Unsupported source: ${arg}`);
-    sources.push(arg as FeedSourceName);
+    if (!isFeedSourceName(arg)) throw new Error(`Unsupported source: ${arg}`);
+    sources.push(arg);
   }
 
   if (sources.length === 0) {

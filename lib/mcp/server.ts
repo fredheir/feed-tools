@@ -5,7 +5,7 @@ import { getBrowserStatus } from "../browser-status.ts";
 import { startBrowser } from "../browser-launch-service.ts";
 import { type DoctorResult, runDoctor } from "../doctor-service.ts";
 import { SOURCE_TARGETS, getSigninStatus } from "../signin-service.ts";
-import { SOURCE_NAMES } from "../source-metadata.ts";
+import { SOURCE_NAMES, isFeedSourceName } from "../source-metadata.ts";
 import type { FeedSourceName } from "../types.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -81,10 +81,7 @@ function stringList(value: unknown): string[] {
 }
 
 function sourceList(value: unknown): FeedSourceName[] {
-  const supported = new Set(SOURCE_NAMES);
-  return stringList(value).filter((source): source is FeedSourceName =>
-    supported.has(source as FeedSourceName),
-  );
+  return stringList(value).filter(isFeedSourceName);
 }
 
 function configPath(args: JsonRecord): string {
