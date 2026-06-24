@@ -12,10 +12,6 @@ export type FeedSourceName = (typeof SOURCE_NAMES)[number];
 
 export const SOURCE_NAME_SET = new Set<string>(SOURCE_NAMES);
 
-export function isFeedSourceName(value: string): value is FeedSourceName {
-  return SOURCE_NAME_SET.has(value);
-}
-
 export interface SourceSigninTarget {
   url: string;
   authCookies: Array<{ domains: string[]; names: string[] }>;

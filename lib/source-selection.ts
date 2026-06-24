@@ -1,5 +1,5 @@
 import { getEnabledSourceNames } from "./config.ts";
-import { isFeedSourceName } from "./source-metadata.ts";
+import { SOURCE_NAME_SET } from "./source-metadata.ts";
 import type { FeedConfig, FeedSourceName } from "./types.ts";
 
 import { listStoredSources } from "./sqlite-store.ts";
@@ -21,9 +21,11 @@ export function validateExplicitSources(
   const requested = explicitSources.filter(Boolean);
   if (requested.length === 0) return [];
 
-  const selectedSources = requested.filter(isFeedSourceName);
+  const selectedSources = requested.filter((source): source is FeedSourceName =>
+    SOURCE_NAME_SET.has(source),
+  );
   const invalidSources = requested.filter(
-    (source) => !isFeedSourceName(source),
+    (source) => !SOURCE_NAME_SET.has(source),
   );
 
   if (selectedSources.length === 0) {
