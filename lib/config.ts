@@ -237,7 +237,7 @@ function getEnabledSources(config: FeedConfig): SourcePreference[] {
   return getSources(config).filter((source) => source?.enabled !== false);
 }
 
-export function getEnabledSourceNames(config: FeedConfig): string[] {
+export function getEnabledSourceNames(config: FeedConfig): FeedSourceName[] {
   return getEnabledSources(config)
     .map((source) => source?.name)
     .filter((value): value is FeedSourceName => Boolean(value));
