@@ -7,7 +7,6 @@ import {
 import { assertFeedUrlAccessible } from "../../lib/source-capture.ts";
 import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
 import { jitterTimeout } from "../../lib/browser.ts";
-import { getSourceAccessRegexps } from "../../lib/source-metadata.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
@@ -18,7 +17,6 @@ import type {
 } from "../../lib/types.ts";
 
 const TIKTOK_BASE_URL = "https://www.tiktok.com";
-const TIKTOK_ACCESS = getSourceAccessRegexps("tiktok");
 interface BrowserElement {
   currentSrc?: string;
   src?: string;
@@ -332,7 +330,7 @@ function prepareTikTokFeed(browser: BrowserSession): void {
     })()`,
     longWait,
   );
-  assertFeedUrlAccessible({ sourceName: "tiktok", browser }, TIKTOK_ACCESS);
+  assertFeedUrlAccessible({ sourceName: "tiktok", browser });
   browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });

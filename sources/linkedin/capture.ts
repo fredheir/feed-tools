@@ -6,15 +6,12 @@ import {
 } from "../../lib/source-capture.ts";
 import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
 import { jitterTimeout } from "../../lib/browser.ts";
-import { getSourceAccessRegexps } from "../../lib/source-metadata.ts";
 import type {
   BrowserSession,
   CaptureAdapter,
   FeedBrowserConfig,
   FeedDocument,
 } from "../../lib/types.ts";
-
-const LINKEDIN_ACCESS = getSourceAccessRegexps("linkedin");
 
 type LinkedInScoredCandidate = {
   source_item_id?: string | null;
@@ -493,10 +490,7 @@ function prepareLinkedInFeed(browser: BrowserSession): void {
     })()`,
     mediumWait,
   );
-  assertFeedPageAccessible(
-    { sourceName: "linkedin", browser },
-    LINKEDIN_ACCESS,
-  );
+  assertFeedPageAccessible({ sourceName: "linkedin", browser });
   browser.evalText(`(() => {
     const main = document.querySelector("main");
     if (main) {
@@ -575,10 +569,7 @@ async function captureDocument({
       }
     },
     afterCapture({ browser, document }) {
-      assertAuthenticatedCapture(
-        { sourceName: "linkedin", browser, document },
-        LINKEDIN_ACCESS,
-      );
+      assertAuthenticatedCapture({ sourceName: "linkedin", browser, document });
     },
   });
 }

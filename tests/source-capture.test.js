@@ -224,79 +224,56 @@ describe("runSourceCapture", () => {
     ).toThrow(CaptureAccessError);
   });
 
-  test("flags an x login-wall snapshot using the same boundary signals as the source", () => {
+  test("flags an x login-wall snapshot using the canonical source policy", () => {
     const snapshot = readFixture("access", "x-login.txt");
 
     expect(() =>
-      assertAuthenticatedCapture(
-        {
-          sourceName: "x",
-          browser: {
-            getCurrentUrl() {
-              return "https://x.com/i/flow/login";
-            },
-            snapshotText() {
-              return snapshot;
-            },
+      assertAuthenticatedCapture({
+        sourceName: "x",
+        browser: {
+          getCurrentUrl() {
+            return "https://x.com/i/flow/login";
           },
-          document: { items: [] },
+          snapshotText() {
+            return snapshot;
+          },
         },
-        {
-          blockedUrlPatterns: [/\/i\/flow\/login/i],
-          blockedTextPatterns: [/\blog in\b/i, /\bsign in\b/i],
-        },
-      ),
+        document: { items: [] },
+      }),
     ).toThrow(CaptureAccessError);
   });
 
-  test("flags an instagram login page before extraction", () => {
-    const snapshot = readFixture("access", "instagram-login.txt");
-
+  test("flags an instagram login page using the canonical source policy", () => {
     expect(() =>
-      assertFeedUrlAccessible(
-        {
-          sourceName: "instagram",
-          browser: {
-            getCurrentUrl() {
-              return "https://www.instagram.com/accounts/login/";
-            },
-            snapshotText() {
-              return snapshot;
-            },
+      assertFeedUrlAccessible({
+        sourceName: "instagram",
+        browser: {
+          getCurrentUrl() {
+            return "https://www.instagram.com/accounts/login/";
+          },
+          snapshotText() {
+            return "";
           },
         },
-        {
-          blockedUrlPatterns: [
-            /\/accounts\/login/i,
-            /\/challenge\//i,
-            /\/checkpoint\//i,
-          ],
-        },
-      ),
+      }),
     ).toThrow(CaptureAccessError);
   });
 
-  test("flags a linkedin authwall snapshot before extraction", () => {
+  test("flags a linkedin authwall snapshot using the canonical source policy", () => {
     const snapshot = readFixture("access", "linkedin-authwall.txt");
 
     expect(() =>
-      assertFeedPageAccessible(
-        {
-          sourceName: "linkedin",
-          browser: {
-            getCurrentUrl() {
-              return "https://www.linkedin.com/authwall";
-            },
-            snapshotText() {
-              return snapshot;
-            },
+      assertFeedPageAccessible({
+        sourceName: "linkedin",
+        browser: {
+          getCurrentUrl() {
+            return "https://www.linkedin.com/authwall";
+          },
+          snapshotText() {
+            return snapshot;
           },
         },
-        {
-          blockedUrlPatterns: [/\/login/i, /\/authwall/i],
-          blockedTextPatterns: [/\bsign in\b/i, /\bjoin now\b/i],
-        },
-      ),
+      }),
     ).toThrow(CaptureAccessError);
   });
 

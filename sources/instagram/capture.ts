@@ -7,7 +7,6 @@ import {
 import { captureBrowserFeed } from "../../lib/browser-feed-capture.ts";
 import { jitterTimeout } from "../../lib/browser.ts";
 import { isPlainObject, normalizeItemShape } from "../../lib/item-shape.ts";
-import { getSourceAccessRegexps } from "../../lib/source-metadata.ts";
 import {
   extractInstagramSourceItemId,
   isInstagramPermalinkUrl,
@@ -23,8 +22,6 @@ import type {
 } from "../../lib/types.ts";
 
 type RawInstagramExtractionItem = Parameters<typeof normalizeItemShape>[0];
-
-const INSTAGRAM_ACCESS = getSourceAccessRegexps("instagram");
 
 type RawInstagramExtractionPayload = {
   captured_at?: string | null;
@@ -318,10 +315,7 @@ function prepareInstagramFeed(browser: BrowserSession): void {
     })()`,
     mediumWait,
   );
-  assertFeedUrlAccessible(
-    { sourceName: "instagram", browser },
-    INSTAGRAM_ACCESS,
-  );
+  assertFeedUrlAccessible({ sourceName: "instagram", browser });
   browser.evalText(`(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     return JSON.stringify({ ok: true });
@@ -379,10 +373,11 @@ async function captureDocument({
       }
     },
     afterCapture({ browser, document }) {
-      assertAuthenticatedCapture(
-        { sourceName: "instagram", browser, document },
-        INSTAGRAM_ACCESS,
-      );
+      assertAuthenticatedCapture({
+        sourceName: "instagram",
+        browser,
+        document,
+      });
     },
   });
 }
