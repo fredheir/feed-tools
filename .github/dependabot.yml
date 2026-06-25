@@ -8,8 +8,6 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
     groups:
       github-actions:
         patterns:
