@@ -50,6 +50,13 @@ export interface ConfigWriteResult {
   browser?: Record<string, unknown>;
 }
 
+export interface ConfigReadResult {
+  ok: true;
+  path: string;
+  exists: boolean;
+  config: unknown | null;
+}
+
 function normalizeBrowserConfig(value: unknown): FeedBrowserConfig {
   if (!isRecord(value)) return {};
   const raw = value as Partial<FeedBrowserConfig>;
@@ -245,6 +252,25 @@ export function writeConfigFromPreferences({
     sourcesEnabled: enabledSourceNames(sources),
     preferenceSectionsWritten,
     browser: browser ? { ...browser } : {},
+  };
+}
+
+export function readConfigDocument(targetPath: string): ConfigReadResult {
+  const resolvedTargetPath = path.resolve(targetPath);
+  if (!fs.existsSync(resolvedTargetPath)) {
+    return {
+      ok: true,
+      path: resolvedTargetPath,
+      exists: false,
+      config: null,
+    };
+  }
+
+  return {
+    ok: true,
+    path: resolvedTargetPath,
+    exists: true,
+    config: JSON.parse(fs.readFileSync(resolvedTargetPath, "utf8")),
   };
 }
 

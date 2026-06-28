@@ -12,6 +12,7 @@ import {
   getDefaultSource,
   getEnabledSourceNames,
   parseConfigPayload,
+  readConfigDocument,
   getSaveDir,
   resolveCanonicalSaveDir,
   writeConfigFromPreferences,
@@ -292,5 +293,30 @@ describe("config helpers", () => {
         (source: { name?: string }) => source.name === "bluesky",
       ),
     ).toMatchObject({ enabled: false });
+  });
+
+  test("reads raw config documents from the config owner", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-read-"));
+    const targetPath = path.join(workdir, "config.json");
+
+    expect(readConfigDocument(targetPath)).toMatchObject({
+      ok: true,
+      path: targetPath,
+      exists: false,
+      config: null,
+    });
+
+    fs.writeFileSync(
+      targetPath,
+      `${JSON.stringify({ user_preferences: { sources: [{ name: "x" }] } })}\n`,
+      "utf8",
+    );
+
+    expect(readConfigDocument(targetPath)).toMatchObject({
+      ok: true,
+      path: targetPath,
+      exists: true,
+      config: { user_preferences: { sources: [{ name: "x" }] } },
+    });
   });
 });

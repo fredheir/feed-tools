@@ -1,10 +1,11 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { getBrowserStatus } from "../browser-status.ts";
 import { startBrowser } from "../browser-launch-service.ts";
 import {
+  type ConfigReadResult,
   type ConfigWriteResult,
+  readConfigDocument,
   writeConfigFromPreferences,
 } from "../config.ts";
 import { type DoctorResult, runDoctor } from "../doctor-service.ts";
@@ -98,10 +99,6 @@ function configPath(args: JsonRecord): string {
   );
 }
 
-function readJsonFile(filePath: string): JsonValue {
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonValue;
-}
-
 function profileDir(args: JsonRecord): string {
   return path.resolve(
     stringValue(args.profile_dir) ||
@@ -163,6 +160,15 @@ function configWriteMcpResult(result: ConfigWriteResult): JsonObject {
       ? { preference_sections_written: result.preferenceSectionsWritten }
       : {}),
     ...(result.browser ? { browser: asJson(result.browser) } : {}),
+  };
+}
+
+function configReadMcpResult(result: ConfigReadResult): JsonObject {
+  return {
+    ok: result.ok,
+    path: result.path,
+    exists: result.exists,
+    config: asJson(result.config),
   };
 }
 
@@ -361,15 +367,8 @@ const TOOLS: McpToolDefinition[] = [
       type: "object",
       properties: { config_path: { type: "string" } },
     },
-    handler: (args) => {
-      const pathToRead = configPath(args);
-      return {
-        ok: true,
-        path: pathToRead,
-        exists: fs.existsSync(pathToRead),
-        config: fs.existsSync(pathToRead) ? readJsonFile(pathToRead) : null,
-      };
-    },
+    handler: (args) =>
+      configReadMcpResult(readConfigDocument(configPath(args))),
   },
   {
     name: "feed_config_write",
