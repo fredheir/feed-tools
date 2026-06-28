@@ -3,6 +3,10 @@ import path from "node:path";
 
 import { getBrowserStatus } from "../browser-status.ts";
 import { startBrowser } from "../browser-launch-service.ts";
+import {
+  type ConfigWriteResult,
+  writeConfigFromPreferences,
+} from "../config.ts";
 import { type DoctorResult, runDoctor } from "../doctor-service.ts";
 import { SOURCE_TARGETS, getSigninStatus } from "../signin-service.ts";
 import { SOURCE_NAMES, SOURCE_NAME_SET } from "../source-metadata.ts";
@@ -146,100 +150,35 @@ function signinStatusMcpResult(
   };
 }
 
-function enabledSourceNames(sources: unknown[]): string[] {
-  const names: string[] = [];
-  for (const source of sources) {
-    if (!isRecord(source) || source.enabled === false) continue;
-    const name = stringValue(source.name);
-    if (name) names.push(name);
-  }
-  return names;
-}
-
-function mergePreferenceSection(
-  userPreferences: JsonRecord,
-  key: "render" | "curation" | "summary",
-  value: unknown,
-): boolean {
-  if (!isRecord(value)) return false;
-  const existing = isRecord(userPreferences[key]) ? userPreferences[key] : {};
-  userPreferences[key] = asJson({ ...existing, ...value });
-  return true;
+function configWriteMcpResult(result: ConfigWriteResult): JsonObject {
+  return {
+    ok: result.ok,
+    written: result.written,
+    path: result.path,
+    ...(result.detail ? { detail: result.detail } : {}),
+    ...(result.sourcesEnabled
+      ? { sources_enabled: asJson(result.sourcesEnabled) }
+      : {}),
+    ...(result.preferenceSectionsWritten !== undefined
+      ? { preference_sections_written: result.preferenceSectionsWritten }
+      : {}),
+    ...(result.browser ? { browser: asJson(result.browser) } : {}),
+  };
 }
 
 function writeConfig(args: JsonRecord): JsonValue {
-  const targetPath = configPath(args);
-  const overwrite = booleanValue(args.overwrite) === true;
-  if (fs.existsSync(targetPath) && !overwrite) {
-    return {
-      ok: true,
-      written: false,
-      path: targetPath,
-      detail: "config already exists; pass overwrite=true to replace it",
-    };
-  }
-
-  const templatePath =
-    fs.existsSync(targetPath) && overwrite ? targetPath : EXAMPLE_CONFIG_PATH;
-  if (!fs.existsSync(templatePath)) {
-    throw new Error(`Missing config template: ${templatePath}`);
-  }
-
-  const raw = readJsonFile(templatePath);
-  if (!isRecord(raw)) throw new Error("Invalid config template");
-  const config = raw;
-  const userPreferences = isRecord(config.user_preferences)
-    ? config.user_preferences
-    : {};
-  config.user_preferences = asJson(userPreferences);
-  const sources = Array.isArray(userPreferences.sources)
-    ? userPreferences.sources
-    : [];
-  userPreferences.sources = asJson(sources);
-
-  const sourceSpecs = Array.isArray(args.sources) ? args.sources : [];
-  const sourceSpecByName = new Map<string, JsonRecord>();
-  for (const spec of sourceSpecs) {
-    if (!isRecord(spec)) continue;
-    const name = stringValue(spec.name);
-    if (name) sourceSpecByName.set(name, spec);
-  }
-  const requestedSources = new Set(sourceSpecByName.keys());
-  const browser = isRecord(args.browser) ? args.browser : null;
-  const preferenceSectionsWritten = [
-    mergePreferenceSection(userPreferences, "render", args.render),
-    mergePreferenceSection(userPreferences, "curation", args.curation),
-    mergePreferenceSection(userPreferences, "summary", args.summary),
-  ].filter(Boolean).length;
-
-  for (const source of sources) {
-    if (!isRecord(source)) continue;
-    const name = stringValue(source.name);
-    if (!name) continue;
-    const spec = sourceSpecByName.get(name);
-    if (requestedSources.size > 0) source.enabled = requestedSources.has(name);
-    if (spec) {
-      if (typeof spec.enabled === "boolean") source.enabled = spec.enabled;
-      if (typeof spec.default === "boolean") source.default = spec.default;
-    }
-    const capture = isRecord(source.capture) ? source.capture : {};
-    source.capture = asJson(capture);
-    if (spec && typeof spec.default_limit === "number") {
-      capture.default_limit = spec.default_limit;
-    }
-    if (browser) capture.browser = asJson({ ...browser });
-  }
-
-  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-  fs.writeFileSync(targetPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-  return {
-    ok: true,
-    written: true,
-    path: targetPath,
-    sources_enabled: enabledSourceNames(sources),
-    preference_sections_written: preferenceSectionsWritten,
-    browser: asJson(browser || {}),
-  };
+  return configWriteMcpResult(
+    writeConfigFromPreferences({
+      targetPath: configPath(args),
+      templatePath: EXAMPLE_CONFIG_PATH,
+      overwrite: booleanValue(args.overwrite) === true,
+      sources: args.sources,
+      browser: args.browser,
+      render: args.render,
+      curation: args.curation,
+      summary: args.summary,
+    }),
+  );
 }
 
 function toolResult(value: JsonValue): JsonObject {
