@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { getBrowserStatus } from "./browser-status.ts";
 import { listCicSources } from "./cic/source-config.ts";
+import { writeConfigFromPreferences } from "./config.ts";
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..");
 const WORKDIR = path.resolve(process.env.FEED_TOOLS_WORKDIR || PACKAGE_ROOT);
@@ -379,36 +380,6 @@ export function recommendedBrowserConfig(
   return null;
 }
 
-export function applyBrowserConfigToPayload(
-  payload: string,
-  browser: RecommendedBrowserConfig,
-): string {
-  const parsed = JSON.parse(payload) as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("Invalid config template");
-  }
-  const config = parsed as {
-    user_preferences?: { sources?: unknown[] };
-  };
-  const sources = config.user_preferences?.sources;
-  if (!Array.isArray(sources)) {
-    throw new Error("Config template is missing user_preferences.sources");
-  }
-
-  for (const source of sources) {
-    if (!source || typeof source !== "object" || Array.isArray(source)) {
-      continue;
-    }
-    const entry = source as {
-      capture?: { browser?: RecommendedBrowserConfig };
-    };
-    entry.capture = entry.capture || {};
-    entry.capture.browser = { ...browser };
-  }
-
-  return `${JSON.stringify(config, null, 2)}\n`;
-}
-
 function maybeWriteConfig(
   results: CheckResult[],
   forceConfig: boolean,
@@ -445,12 +416,13 @@ function maybeWriteConfig(
         "No usable agent-browser or CDP path was detected; config.json was not changed.",
     };
   }
-  const payload = applyBrowserConfigToPayload(
-    fs.readFileSync(examplePath, "utf8"),
+  writeConfigFromPreferences({
+    targetPath: targetConfigPath,
+    templatePath: examplePath,
+    overwrite: true,
+    useExistingTargetAsTemplate: false,
     browser,
-  );
-  fs.mkdirSync(path.dirname(targetConfigPath), { recursive: true });
-  fs.writeFileSync(targetConfigPath, payload);
+  });
   return {
     status: "created",
     detail:
