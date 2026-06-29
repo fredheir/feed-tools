@@ -4,8 +4,13 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Added `workflow_dispatch` triggers to all CI workflows, so operators can manually rerun any individual check (tests, lint, typecheck, commitlint, dead-code, format, slop-scan, dependency, contract, secrets, actions-hygiene) without waiting for a push or pull request event (commits [8a32a82](https://github.com/fredheir/feed-tools/commit/8a32a8282a395cc1e332a872c8093e2eafe9d16d), [3b4acb3](https://github.com/fredheir/feed-tools/commit/3b4acb3f642c943fb3b429acf3bed7b703d79de3)).
+
 ### Fixed
 
+- Fixed stale video asset cleanup to propagate errors instead of swallowing them; `removeStaleVideoDownload` previously caught all `fs.rmSync` failures silently with a best-effort comment, meaning corrupted or locked files could silently block a fresh yt-dlp download without surfacing any failure (PR [#69](https://github.com/fredheir/feed-tools/pull/69)).
 - Made the slop-scan baseline job run for manual workflow dispatches, so operator-triggered CI checks no longer complete as a misleading skipped workflow.
 - Routed feed-tools GitHub Actions directly to GitHub-hosted runners, removing the inherited self-hosted label that left push checks queued indefinitely.
 - Skipped private shared-standards jobs for Dependabot pull requests, preventing unauthenticated dependency PRs from failing on unavailable repository secrets.
