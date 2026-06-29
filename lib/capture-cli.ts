@@ -63,7 +63,7 @@ function parseCaptureCliArgs(
   let limit = defaults.default_limit ?? 12;
   let assetsDir = "";
   let saveDir = sourceNames.length > 1 ? getSaveDir(config) : "";
-  let browserOptions = getCaptureBrowserOptions(config, primarySource);
+  let browserOptions: FeedBrowserConfig = {};
   let args = remainingArgs;
 
   if (args[0] && !args[0].startsWith("--")) {
