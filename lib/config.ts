@@ -388,6 +388,29 @@ function resolveConfigRelativePath(
     : path.resolve(configBaseDir(config), candidate);
 }
 
+function resolveConfigRelativeBrowserPaths(
+  browser: FeedBrowserConfig,
+  config: FeedConfig,
+): FeedBrowserConfig {
+  return {
+    ...browser,
+    profile:
+      browser.profile === null
+        ? null
+        : resolveConfigRelativePath(browser.profile, config) || browser.profile,
+    statePath:
+      browser.statePath === null
+        ? null
+        : resolveConfigRelativePath(browser.statePath, config) ||
+          browser.statePath,
+    executablePath:
+      browser.executablePath === null
+        ? null
+        : resolveConfigRelativePath(browser.executablePath, config) ||
+          browser.executablePath,
+  };
+}
+
 export function resolveCanonicalSaveDir(
   config: FeedConfig,
   requestedSaveDir: string | null = null,
@@ -489,8 +512,12 @@ export function getCaptureDefaults(
 ): SourceCaptureConfig {
   const source = getSourcePreferences(config, sourceName);
   const capture = source?.capture || { browser: {} };
+  const browser = capture.browser
+    ? resolveConfigRelativeBrowserPaths(capture.browser, config)
+    : capture.browser;
   return {
     ...capture,
+    browser,
     assets_dir: capture.assets_dir
       ? resolveConfigRelativePath(capture.assets_dir, config)
       : undefined,

@@ -179,14 +179,44 @@ describe("config helpers", () => {
         sessionName: "feed-session",
         session: null,
         profile: null,
-        statePath: "./tmp/browser-state.json",
+        statePath: "/tmp/tmp/browser-state.json",
         headed: undefined,
         allowFileAccess: true,
         colorScheme: "dark",
-        executablePath: "./chrome",
+        executablePath: "/tmp/chrome",
       },
       default_limit: undefined,
       save_dir: undefined,
+    });
+  });
+
+  test("resolves browser path defaults from the config file directory", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-base-"));
+    const configPath = path.join(workdir, "profiles", "config.json");
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: {
+          sources: [
+            {
+              name: "x",
+              capture: {
+                browser: {
+                  profile: "./chrome-profile",
+                  statePath: "../state/x.json",
+                  executablePath: "/opt/chrome/chrome",
+                },
+              },
+            },
+          ],
+        },
+      }),
+      configPath,
+    );
+
+    expect(getCaptureBrowserOptions(config, "x")).toMatchObject({
+      profile: path.join(workdir, "profiles", "chrome-profile"),
+      statePath: path.join(workdir, "state/x.json"),
+      executablePath: "/opt/chrome/chrome",
     });
   });
 
@@ -214,7 +244,7 @@ describe("config helpers", () => {
     expect(getCaptureBrowserOptions(config, "x")).toMatchObject({
       cdp: "9222",
       session: "123",
-      profile: "false",
+      profile: "/tmp/false",
     });
   });
 
