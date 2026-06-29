@@ -180,9 +180,15 @@ for (const sourceName of sourceNames) {
     saveDir || sourceDefaults.save_dir,
     sourceName,
   );
+  const sourceBrowserDefaults = getCaptureBrowserOptions(config, sourceName);
+  const sourceBrowserArgs = [
+    ...(sourceBrowserDefaults.args || []),
+    ...(browserOptions.args || []),
+  ];
   const sourceBrowserOptions = {
-    ...getCaptureBrowserOptions(config, sourceName),
+    ...sourceBrowserDefaults,
     ...browserOptions,
+    ...(sourceBrowserArgs.length > 0 ? { args: sourceBrowserArgs } : {}),
   };
   const captureHandler = getCaptureHandler(sourceName);
   if (!captureHandler) {

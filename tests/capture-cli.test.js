@@ -25,6 +25,8 @@ describe("feed-capture", () => {
     );
     expect(cli).toContain('let assetsDir = "";');
     expect(cli).toContain("let browserOptions: FeedBrowserConfig = {};");
+    expect(cli).toContain("...(sourceBrowserDefaults.args || []),");
+    expect(cli).toContain("...(browserOptions.args || []),");
   });
 
   test("prints usage for help", () => {
