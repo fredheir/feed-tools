@@ -24,7 +24,6 @@ import { SOURCE_NAME_SET } from "./source-metadata.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
-export const DEFAULT_ASSETS_DIR = path.join(REPO_ROOT, "var", "feed-assets");
 const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
 const CONFIG_BASE_DIR = new WeakMap<FeedConfig, string>();
