@@ -6,6 +6,8 @@ import { describe, expect, test } from "vitest";
 
 import {
   DEFAULT_SAVE_DIR,
+  defaultConfigTemplatePath,
+  findConfigTemplatePath,
   getCaptureBrowserOptions,
   getCaptureDefaults,
   getCurationPreferences,
@@ -338,6 +340,30 @@ describe("config helpers", () => {
         ],
       },
     });
+  });
+
+  test("selects config templates from the config owner", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-"));
+    const targetPath = path.join(workdir, "nested", "config.json");
+    const workdirTemplatePath = path.join(workdir, "config.json.example");
+    const targetTemplatePath = path.join(
+      path.dirname(targetPath),
+      "config.json.example",
+    );
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+
+    fs.writeFileSync(targetTemplatePath, "{}\n", "utf8");
+    expect(findConfigTemplatePath(targetPath, workdir)).toBe(
+      targetTemplatePath,
+    );
+    expect(defaultConfigTemplatePath(targetPath, workdir)).toBe(
+      targetTemplatePath,
+    );
+
+    fs.writeFileSync(workdirTemplatePath, "{}\n", "utf8");
+    expect(findConfigTemplatePath(targetPath, workdir)).toBe(
+      workdirTemplatePath,
+    );
   });
 
   test("reads raw config documents from the config owner", () => {

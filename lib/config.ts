@@ -26,8 +26,44 @@ const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
 export const DEFAULT_ASSETS_DIR = path.join(REPO_ROOT, "var", "feed-assets");
 const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");
-const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
+
+export function defaultConfigPath(
+  workdir = process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
+): string {
+  return path.join(path.resolve(workdir), "config.json");
+}
+
+export function resolveConfigPath(
+  configPath: string | null | undefined,
+): string {
+  return path.resolve(
+    configPath || process.env.FEED_TOOLS_CONFIG || defaultConfigPath(),
+  );
+}
+
+export function findConfigTemplatePath(
+  targetPath: string,
+  workdir = process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
+): string | null {
+  const resolvedTargetPath = path.resolve(targetPath);
+  const candidates = [
+    path.join(path.resolve(workdir), "config.json.example"),
+    path.join(path.dirname(resolvedTargetPath), "config.json.example"),
+    EXAMPLE_CONFIG_PATH,
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+export function defaultConfigTemplatePath(
+  targetPath: string,
+  workdir = process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
+): string {
+  return (
+    findConfigTemplatePath(targetPath, workdir) ??
+    path.join(path.resolve(workdir), "config.json.example")
+  );
+}
 
 export interface ConfigWriteOptions {
   targetPath: string;
@@ -324,8 +360,7 @@ export function parseConfigPayload(
 }
 
 function getConfigPath(): string {
-  const override = process.env.FEED_TOOLS_CONFIG;
-  return override ? path.resolve(override) : DEFAULT_CONFIG_PATH;
+  return resolveConfigPath(null);
 }
 
 function resolveSaveDir(value: string | null | undefined): string {

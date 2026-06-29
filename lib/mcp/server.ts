@@ -5,7 +5,9 @@ import { startBrowser } from "../browser-launch-service.ts";
 import {
   type ConfigReadResult,
   type ConfigWriteResult,
+  defaultConfigTemplatePath,
   readConfigDocument,
+  resolveConfigPath,
   writeConfigFromPreferences,
 } from "../config.ts";
 import { type DoctorResult, runDoctor } from "../doctor-service.ts";
@@ -17,8 +19,6 @@ const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const DEFAULT_WORKDIR = path.resolve(
   process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
 );
-const DEFAULT_CONFIG_PATH = path.join(DEFAULT_WORKDIR, "config.json");
-const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
 const DEFAULT_CHROME_PROFILE = path.join(DEFAULT_WORKDIR, "chrome-profile");
 const DEFAULT_CHROME_LOG = path.join(DEFAULT_WORKDIR, "chrome.log");
 
@@ -92,11 +92,7 @@ function sourceList(value: unknown): FeedSourceName[] {
 }
 
 function configPath(args: JsonRecord): string {
-  return path.resolve(
-    stringValue(args.config_path) ||
-      process.env.FEED_TOOLS_CONFIG ||
-      DEFAULT_CONFIG_PATH,
-  );
+  return resolveConfigPath(stringValue(args.config_path));
 }
 
 function profileDir(args: JsonRecord): string {
@@ -173,10 +169,11 @@ function configReadMcpResult(result: ConfigReadResult): JsonObject {
 }
 
 function writeConfig(args: JsonRecord): JsonValue {
+  const targetPath = configPath(args);
   return configWriteMcpResult(
     writeConfigFromPreferences({
-      targetPath: configPath(args),
-      templatePath: EXAMPLE_CONFIG_PATH,
+      targetPath,
+      templatePath: defaultConfigTemplatePath(targetPath, DEFAULT_WORKDIR),
       overwrite: booleanValue(args.overwrite) === true,
       sources: args.sources,
       browser: args.browser,
