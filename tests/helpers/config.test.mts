@@ -16,6 +16,7 @@ import {
   parseConfigPayload,
   readConfigDocument,
   getSaveDir,
+  loadOptionalConfig,
   resolveCanonicalSaveDir,
   writeConfigFromPreferences,
 } from "../../lib/config.ts";
@@ -364,6 +365,39 @@ describe("config helpers", () => {
     expect(findConfigTemplatePath(targetPath, workdir)).toBe(
       workdirTemplatePath,
     );
+  });
+
+  test("loads missing workdir config from the workdir template", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-"));
+    const previousWorkdir = process.env.FEED_TOOLS_WORKDIR;
+    const previousConfig = process.env.FEED_TOOLS_CONFIG;
+    fs.writeFileSync(
+      path.join(workdir, "config.json.example"),
+      `${JSON.stringify({
+        user_preferences: { sources: [{ name: "youtube" }] },
+      })}\n`,
+      "utf8",
+    );
+
+    try {
+      process.env.FEED_TOOLS_WORKDIR = workdir;
+      delete process.env.FEED_TOOLS_CONFIG;
+
+      const config = loadOptionalConfig();
+      if (!config) throw new Error("Expected workdir template config");
+      expect(getEnabledSourceNames(config)).toEqual(["youtube"]);
+    } finally {
+      if (previousWorkdir === undefined) {
+        delete process.env.FEED_TOOLS_WORKDIR;
+      } else {
+        process.env.FEED_TOOLS_WORKDIR = previousWorkdir;
+      }
+      if (previousConfig === undefined) {
+        delete process.env.FEED_TOOLS_CONFIG;
+      } else {
+        process.env.FEED_TOOLS_CONFIG = previousConfig;
+      }
+    }
   });
 
   test("reads raw config documents from the config owner", () => {

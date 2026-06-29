@@ -386,20 +386,24 @@ function readConfigFile(configPath: string): FeedConfig {
   return parseConfigPayload(fs.readFileSync(configPath, "utf8"), configPath);
 }
 
+function fallbackConfigTemplatePath(configPath: string): string | null {
+  return process.env.FEED_TOOLS_CONFIG
+    ? null
+    : findConfigTemplatePath(configPath);
+}
+
 export function loadConfig(): FeedConfig {
   const configPath = getConfigPath();
   try {
     return readConfigFile(configPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      if (
-        !process.env.FEED_TOOLS_CONFIG &&
-        fs.existsSync(EXAMPLE_CONFIG_PATH)
-      ) {
+      const templatePath = fallbackConfigTemplatePath(configPath);
+      if (templatePath) {
         process.stderr.write(
-          `Warning: ${configPath} not found; using ${EXAMPLE_CONFIG_PATH}. Copy it to config.json and tailor sources, render, curation, and summary preferences before live capture.\n`,
+          `Warning: ${configPath} not found; using ${templatePath}. Copy it to config.json and tailor sources, render, curation, and summary preferences before live capture.\n`,
         );
-        return readConfigFile(EXAMPLE_CONFIG_PATH);
+        return readConfigFile(templatePath);
       }
       throw new Error(`Missing config: ${configPath}`);
     }
@@ -413,12 +417,8 @@ export function loadOptionalConfig(): FeedConfig | null {
     return readConfigFile(configPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      if (
-        !process.env.FEED_TOOLS_CONFIG &&
-        fs.existsSync(EXAMPLE_CONFIG_PATH)
-      ) {
-        return readConfigFile(EXAMPLE_CONFIG_PATH);
-      }
+      const templatePath = fallbackConfigTemplatePath(configPath);
+      if (templatePath) return readConfigFile(templatePath);
       return null;
     }
     throw error;
