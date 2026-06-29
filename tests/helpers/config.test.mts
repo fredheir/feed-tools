@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
@@ -13,6 +14,7 @@ import {
   parseConfigPayload,
   getSaveDir,
   resolveCanonicalSaveDir,
+  writeConfigFromPreferences,
 } from "../../lib/config.ts";
 import { normalizeBrowserOptions } from "../../lib/browser.ts";
 import type { FeedConfig } from "../../lib/types.ts";
@@ -241,5 +243,54 @@ describe("config helpers", () => {
         headed: false,
       });
     }
+  });
+
+  test("writes preference updates from the config owner", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-"));
+    const targetPath = path.join(workdir, "config.json");
+
+    const result = writeConfigFromPreferences({
+      targetPath,
+      templatePath: path.join(repoRoot, "config.json.example"),
+      overwrite: true,
+      sources: [
+        { name: "x", default_limit: 5 },
+        { name: "bluesky", enabled: false },
+      ],
+      browser: { cdp: "9223" },
+      render: { show_tabs: false },
+      curation: { target_items_per_tab: 4 },
+      summary: { custom_instructions: "Prefer short bullets." },
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      written: true,
+      path: targetPath,
+      sourcesEnabled: ["x"],
+      preferenceSectionsWritten: 3,
+      browser: { cdp: "9223" },
+    });
+    const config = JSON.parse(fs.readFileSync(targetPath, "utf8"));
+    expect(config).toMatchObject({
+      user_preferences: {
+        render: { show_tabs: false },
+        curation: { target_items_per_tab: 4 },
+        summary: { custom_instructions: "Prefer short bullets." },
+      },
+    });
+    expect(
+      config.user_preferences.sources.find(
+        (source: { name?: string }) => source.name === "x",
+      ),
+    ).toMatchObject({
+      enabled: true,
+      capture: { default_limit: 5, browser: { cdp: "9223" } },
+    });
+    expect(
+      config.user_preferences.sources.find(
+        (source: { name?: string }) => source.name === "bluesky",
+      ),
+    ).toMatchObject({ enabled: false });
   });
 });

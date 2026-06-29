@@ -29,6 +29,27 @@ const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");
 const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
 
+export interface ConfigWriteOptions {
+  targetPath: string;
+  templatePath: string;
+  overwrite?: boolean;
+  sources?: unknown;
+  browser?: unknown;
+  render?: unknown;
+  curation?: unknown;
+  summary?: unknown;
+}
+
+export interface ConfigWriteResult {
+  ok: true;
+  written: boolean;
+  path: string;
+  detail?: string;
+  sourcesEnabled?: string[];
+  preferenceSectionsWritten?: number;
+  browser?: Record<string, unknown>;
+}
+
 function normalizeBrowserConfig(value: unknown): FeedBrowserConfig {
   if (!isRecord(value)) return {};
   const raw = value as Partial<FeedBrowserConfig>;
@@ -114,6 +135,116 @@ function normalizeSummaryPreferences(value: unknown): SummaryPreferences {
     prefer_minimal_agent_writing: toOptionalBoolean(
       value.prefer_minimal_agent_writing,
     ),
+  };
+}
+
+function enabledSourceNames(sources: unknown[]): string[] {
+  const names: string[] = [];
+  for (const source of sources) {
+    if (!isRecord(source) || source.enabled === false) continue;
+    const name = toOptionalString(source.name);
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function mergePreferenceSection(
+  userPreferences: Record<string, unknown>,
+  key: "render" | "curation" | "summary",
+  value: unknown,
+): boolean {
+  if (!isRecord(value)) return false;
+  const existing = isRecord(userPreferences[key]) ? userPreferences[key] : {};
+  userPreferences[key] = { ...existing, ...value };
+  return true;
+}
+
+export function writeConfigFromPreferences({
+  targetPath,
+  templatePath,
+  overwrite = false,
+  sources: sourceInput,
+  browser: browserInput,
+  render,
+  curation,
+  summary,
+}: ConfigWriteOptions): ConfigWriteResult {
+  const resolvedTargetPath = path.resolve(targetPath);
+  if (fs.existsSync(resolvedTargetPath) && !overwrite) {
+    return {
+      ok: true,
+      written: false,
+      path: resolvedTargetPath,
+      detail: "config already exists; pass overwrite=true to replace it",
+    };
+  }
+
+  const resolvedTemplatePath =
+    fs.existsSync(resolvedTargetPath) && overwrite
+      ? resolvedTargetPath
+      : path.resolve(templatePath);
+  if (!fs.existsSync(resolvedTemplatePath)) {
+    throw new Error(`Missing config template: ${resolvedTemplatePath}`);
+  }
+
+  const raw = JSON.parse(fs.readFileSync(resolvedTemplatePath, "utf8"));
+  if (!isRecord(raw)) throw new Error("Invalid config template");
+  const config = raw;
+  const userPreferences = isRecord(config.user_preferences)
+    ? config.user_preferences
+    : {};
+  config.user_preferences = userPreferences;
+  const sources = Array.isArray(userPreferences.sources)
+    ? userPreferences.sources
+    : [];
+  userPreferences.sources = sources;
+
+  const sourceSpecs = Array.isArray(sourceInput) ? sourceInput : [];
+  const sourceSpecByName = new Map<string, Record<string, unknown>>();
+  for (const spec of sourceSpecs) {
+    if (!isRecord(spec)) continue;
+    const name = toOptionalString(spec.name);
+    if (name) sourceSpecByName.set(name, spec);
+  }
+  const requestedSources = new Set(sourceSpecByName.keys());
+  const browser = isRecord(browserInput) ? browserInput : null;
+  const preferenceSectionsWritten = [
+    mergePreferenceSection(userPreferences, "render", render),
+    mergePreferenceSection(userPreferences, "curation", curation),
+    mergePreferenceSection(userPreferences, "summary", summary),
+  ].filter(Boolean).length;
+
+  for (const source of sources) {
+    if (!isRecord(source)) continue;
+    const name = toOptionalString(source.name);
+    if (!name) continue;
+    const spec = sourceSpecByName.get(name);
+    if (requestedSources.size > 0) source.enabled = requestedSources.has(name);
+    if (spec) {
+      if (typeof spec.enabled === "boolean") source.enabled = spec.enabled;
+      if (typeof spec.default === "boolean") source.default = spec.default;
+    }
+    const capture = isRecord(source.capture) ? source.capture : {};
+    source.capture = capture;
+    if (spec && typeof spec.default_limit === "number") {
+      capture.default_limit = spec.default_limit;
+    }
+    if (browser) capture.browser = { ...browser };
+  }
+
+  fs.mkdirSync(path.dirname(resolvedTargetPath), { recursive: true });
+  fs.writeFileSync(
+    resolvedTargetPath,
+    `${JSON.stringify(config, null, 2)}\n`,
+    "utf8",
+  );
+  return {
+    ok: true,
+    written: true,
+    path: resolvedTargetPath,
+    sourcesEnabled: enabledSourceNames(sources),
+    preferenceSectionsWritten,
+    browser: browser ? { ...browser } : {},
   };
 }
 
