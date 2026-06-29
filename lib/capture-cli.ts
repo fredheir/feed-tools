@@ -4,6 +4,7 @@ import {
   getCaptureDefaults,
   getCaptureBrowserOptions,
   getAssetsDir,
+  getSaveDir,
   resolveCanonicalSaveDir,
 } from "./config.ts";
 import { hasNewUnclassifiedItems } from "./allocation.ts";
@@ -61,7 +62,7 @@ function parseCaptureCliArgs(
   const defaults = getCaptureDefaults(config, primarySource);
   let limit = defaults.default_limit ?? 12;
   let assetsDir = "";
-  let saveDir = "";
+  let saveDir = sourceNames.length > 1 ? getSaveDir(config) : "";
   let browserOptions = getCaptureBrowserOptions(config, primarySource);
   let args = remainingArgs;
 
