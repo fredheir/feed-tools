@@ -27,6 +27,7 @@ export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
 export const DEFAULT_ASSETS_DIR = path.join(REPO_ROOT, "var", "feed-assets");
 const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
+const CONFIG_BASE_DIR = new WeakMap<FeedConfig, string>();
 
 export function defaultConfigPath(
   workdir = process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
@@ -347,7 +348,7 @@ export function parseConfigPayload(
   }
   const raw = parsed as RawFeedConfig;
 
-  return {
+  const config: FeedConfig = {
     version: typeof raw.version === "number" ? raw.version : undefined,
     user_preferences: normalizeUserPreferences(
       raw.user_preferences,
@@ -357,15 +358,31 @@ export function parseConfigPayload(
       ? { notes: toOptionalString(raw.summary.notes) ?? undefined }
       : {},
   };
+  CONFIG_BASE_DIR.set(config, path.dirname(path.resolve(configPath)));
+  return config;
 }
 
 function getConfigPath(): string {
   return resolveConfigPath(null);
 }
 
-function resolveSaveDir(value: string | null | undefined): string {
+function configBaseDir(config: FeedConfig): string {
+  return CONFIG_BASE_DIR.get(config) ?? REPO_ROOT;
+}
+
+function defaultSaveDir(config: FeedConfig): string {
+  return path.join(configBaseDir(config), "var", "feed-archive");
+}
+
+function resolveSaveDir(
+  value: string | null | undefined,
+  config: FeedConfig,
+): string {
   const candidate = String(value || "").trim();
-  return candidate ? path.resolve(REPO_ROOT, candidate) : "";
+  if (!candidate) return "";
+  return path.isAbsolute(candidate)
+    ? candidate
+    : path.resolve(configBaseDir(config), candidate);
 }
 
 export function resolveCanonicalSaveDir(
@@ -373,9 +390,14 @@ export function resolveCanonicalSaveDir(
   requestedSaveDir: string | null = null,
   sourceName: string | null = null,
 ): string {
-  const normalizedRequested = resolveSaveDir(requestedSaveDir);
+  const normalizedRequested = resolveSaveDir(requestedSaveDir, config);
+  const legacySaveDir = path.join(configBaseDir(config), "var");
 
-  if (normalizedRequested && normalizedRequested === LEGACY_SAVE_DIR) {
+  if (
+    normalizedRequested &&
+    (normalizedRequested === LEGACY_SAVE_DIR ||
+      normalizedRequested === legacySaveDir)
+  ) {
     return getSaveDir(config, sourceName);
   }
 
@@ -476,14 +498,16 @@ export function getSaveDir(
 ): string {
   if (sourceName) {
     return resolveSaveDir(
-      getCaptureDefaults(config, sourceName).save_dir || DEFAULT_SAVE_DIR,
+      getCaptureDefaults(config, sourceName).save_dir || defaultSaveDir(config),
+      config,
     );
   }
 
   return resolveSaveDir(
     getEnabledSources(config)[0]?.capture?.save_dir ||
       getSources(config)[0]?.capture?.save_dir ||
-      DEFAULT_SAVE_DIR,
+      defaultSaveDir(config),
+    config,
   );
 }
 

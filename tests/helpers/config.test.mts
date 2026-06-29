@@ -386,6 +386,9 @@ describe("config helpers", () => {
       const config = loadOptionalConfig();
       if (!config) throw new Error("Expected workdir template config");
       expect(getEnabledSourceNames(config)).toEqual(["youtube"]);
+      expect(getSaveDir(config, "youtube")).toBe(
+        path.join(workdir, "var", "feed-archive"),
+      );
     } finally {
       if (previousWorkdir === undefined) {
         delete process.env.FEED_TOOLS_WORKDIR;
