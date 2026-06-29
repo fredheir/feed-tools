@@ -60,12 +60,8 @@ function parseCaptureCliArgs(
 
   const defaults = getCaptureDefaults(config, primarySource);
   let limit = defaults.default_limit ?? 12;
-  let assetsDir = getAssetsDir(config, primarySource);
-  let saveDir = resolveCanonicalSaveDir(
-    config,
-    defaults.save_dir,
-    primarySource,
-  );
+  let assetsDir = "";
+  let saveDir = "";
   let browserOptions = getCaptureBrowserOptions(config, primarySource);
   let args = remainingArgs;
 

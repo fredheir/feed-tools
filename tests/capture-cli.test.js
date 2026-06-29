@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { describe, expect, test } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
@@ -8,6 +9,18 @@ import {
 } from "./helpers/cli-config.mts";
 
 describe("feed-capture", () => {
+  test("keeps config-owned source defaults per source", () => {
+    const cli = fs.readFileSync(
+      path.join(repoRoot, "lib/capture-cli.ts"),
+      "utf8",
+    );
+
+    expect(cli).not.toContain("let saveDir = resolveCanonicalSaveDir(");
+    expect(cli).not.toContain("let assetsDir = getAssetsDir(");
+    expect(cli).toContain('let saveDir = "";');
+    expect(cli).toContain('let assetsDir = "";');
+  });
+
   test("prints usage for help", () => {
     const configPath = writeTestConfig(repoRoot);
     const output = execFileSync(
