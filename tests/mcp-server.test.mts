@@ -327,4 +327,16 @@ describe("feed-tools MCP server", () => {
     expect(signinStatus).not.toHaveProperty("profileDir");
     expect(signinStatus).not.toHaveProperty("cookieStoresFound");
   });
+
+  test("feed_signin_status uses browser service profile defaults", () => {
+    const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-profile-"));
+
+    const signinStatus = callMcpTool(
+      "feed_signin_status",
+      { sources: ["x"] },
+      { FEED_TOOLS_CHROME_PROFILE: profileDir },
+    );
+
+    expect(signinStatus.profile_dir).toBe(profileDir);
+  });
 });

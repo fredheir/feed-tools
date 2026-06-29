@@ -91,10 +91,16 @@ function sleepMilliseconds(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-function defaultProfileDir(): string {
+export function resolveBrowserProfileDir(profileDir?: string | null): string {
   return path.resolve(
-    process.env.FEED_TOOLS_CHROME_PROFILE || DEFAULT_CHROME_PROFILE,
+    profileDir ||
+      process.env.FEED_TOOLS_CHROME_PROFILE ||
+      DEFAULT_CHROME_PROFILE,
   );
+}
+
+export function resolveBrowserLogPath(logPath?: string | null): string {
+  return path.resolve(logPath || DEFAULT_CHROME_LOG);
 }
 
 function defaultCdp(): string {
@@ -135,8 +141,8 @@ export async function startBrowser(
 ): Promise<BrowserStartResult> {
   const cdp = options.cdp || String(options.cdpPort || defaultCdp());
   const launchCdp = cdpLaunchPort(cdp);
-  const profileDir = path.resolve(options.profileDir || defaultProfileDir());
-  const logPath = path.resolve(options.logPath || DEFAULT_CHROME_LOG);
+  const profileDir = resolveBrowserProfileDir(options.profileDir);
+  const logPath = resolveBrowserLogPath(options.logPath);
   const chromeBin = resolveChromeBin(options.chromeBin);
   const reuseExisting = options.reuseExisting !== false;
 

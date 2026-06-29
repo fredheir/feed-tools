@@ -1,7 +1,10 @@
 import path from "node:path";
 
 import { getBrowserStatus } from "../browser-status.ts";
-import { startBrowser } from "../browser-launch-service.ts";
+import {
+  resolveBrowserProfileDir,
+  startBrowser,
+} from "../browser-launch-service.ts";
 import {
   type ConfigReadResult,
   type ConfigWriteResult,
@@ -19,8 +22,6 @@ const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const DEFAULT_WORKDIR = path.resolve(
   process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
 );
-const DEFAULT_CHROME_PROFILE = path.join(DEFAULT_WORKDIR, "chrome-profile");
-const DEFAULT_CHROME_LOG = path.join(DEFAULT_WORKDIR, "chrome.log");
 
 type JsonValue =
   | null
@@ -96,11 +97,7 @@ function configPath(args: JsonRecord): string {
 }
 
 function profileDir(args: JsonRecord): string {
-  return path.resolve(
-    stringValue(args.profile_dir) ||
-      process.env.FEED_TOOLS_CHROME_PROFILE ||
-      DEFAULT_CHROME_PROFILE,
-  );
+  return resolveBrowserProfileDir(stringValue(args.profile_dir));
 }
 
 function browserStatusMcpResult(
@@ -287,9 +284,8 @@ const TOOLS: McpToolDefinition[] = [
       browserStartMcpResult(
         await startBrowser({
           cdpPort: numberValue(args.cdp_port),
-          profileDir: profileDir(args),
+          profileDir: stringValue(args.profile_dir),
           chromeBin: stringValue(args.chrome_bin),
-          logPath: DEFAULT_CHROME_LOG,
           urls: stringList(args.urls),
           reuseExisting: booleanValue(args.reuse_existing),
           noSandbox: booleanValue(args.no_sandbox),
@@ -313,23 +309,22 @@ const TOOLS: McpToolDefinition[] = [
     handler: async (args) => {
       const sources = sourceList(args.sources);
       if (sources.length === 0) throw new Error("Provide at least one source");
-      const resolvedProfileDir = profileDir(args);
       const openedUrls = Object.fromEntries(
         sources.map((source) => [source, SOURCE_TARGETS[source].url]),
       );
       const browser = await startBrowser({
         cdpPort: numberValue(args.cdp_port),
-        profileDir: resolvedProfileDir,
-        logPath: DEFAULT_CHROME_LOG,
+        profileDir: stringValue(args.profile_dir),
         urls: Object.values(openedUrls),
         reuseExisting: booleanValue(args.reuse_existing),
         noSandbox: booleanValue(args.no_sandbox),
       });
-      const auth = getSigninStatus(sources, resolvedProfileDir);
+      const authProfileDir = browser.profileDir;
+      const auth = getSigninStatus(sources, authProfileDir);
       return {
         ok: true,
         cdp: browser.cdp,
-        profile_dir: resolvedProfileDir,
+        profile_dir: authProfileDir,
         opened_urls: openedUrls,
         auth_status: asJson(auth.status),
         instructions:
