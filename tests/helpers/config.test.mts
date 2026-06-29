@@ -295,6 +295,51 @@ describe("config helpers", () => {
     ).toMatchObject({ enabled: false });
   });
 
+  test("writes browser preferences from the template when requested", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-"));
+    const targetPath = path.join(workdir, "config.json");
+    const templatePath = path.join(workdir, "config.json.example");
+
+    fs.writeFileSync(
+      targetPath,
+      `${JSON.stringify({
+        user_preferences: {
+          sources: [{ name: "x", capture: { browser: { headed: true } } }],
+        },
+      })}\n`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      templatePath,
+      `${JSON.stringify({
+        user_preferences: {
+          sources: [
+            { name: "x", capture: { default_limit: 12, browser: {} } },
+            { name: "linkedin", capture: { browser: { headed: true } } },
+          ],
+        },
+      })}\n`,
+      "utf8",
+    );
+
+    writeConfigFromPreferences({
+      targetPath,
+      templatePath,
+      overwrite: true,
+      useExistingTargetAsTemplate: false,
+      browser: { cdp: "9223" },
+    });
+
+    expect(JSON.parse(fs.readFileSync(targetPath, "utf8"))).toMatchObject({
+      user_preferences: {
+        sources: [
+          { capture: { default_limit: 12, browser: { cdp: "9223" } } },
+          { capture: { browser: { cdp: "9223" } } },
+        ],
+      },
+    });
+  });
+
   test("reads raw config documents from the config owner", () => {
     const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-read-"));
     const targetPath = path.join(workdir, "config.json");

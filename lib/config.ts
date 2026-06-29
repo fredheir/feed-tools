@@ -33,6 +33,7 @@ export interface ConfigWriteOptions {
   targetPath: string;
   templatePath: string;
   overwrite?: boolean;
+  useExistingTargetAsTemplate?: boolean;
   sources?: unknown;
   browser?: unknown;
   render?: unknown;
@@ -170,6 +171,7 @@ export function writeConfigFromPreferences({
   targetPath,
   templatePath,
   overwrite = false,
+  useExistingTargetAsTemplate = true,
   sources: sourceInput,
   browser: browserInput,
   render,
@@ -187,7 +189,9 @@ export function writeConfigFromPreferences({
   }
 
   const resolvedTemplatePath =
-    fs.existsSync(resolvedTargetPath) && overwrite
+    useExistingTargetAsTemplate &&
+    fs.existsSync(resolvedTargetPath) &&
+    overwrite
       ? resolvedTargetPath
       : path.resolve(templatePath);
   if (!fs.existsSync(resolvedTemplatePath)) {
