@@ -374,7 +374,11 @@ function defaultSaveDir(config: FeedConfig): string {
   return path.join(configBaseDir(config), "var", "feed-archive");
 }
 
-function resolveSaveDir(
+function defaultAssetsDir(config: FeedConfig): string {
+  return path.join(configBaseDir(config), "var", "feed-assets");
+}
+
+function resolveConfigRelativePath(
   value: string | null | undefined,
   config: FeedConfig,
 ): string {
@@ -390,7 +394,10 @@ export function resolveCanonicalSaveDir(
   requestedSaveDir: string | null = null,
   sourceName: string | null = null,
 ): string {
-  const normalizedRequested = resolveSaveDir(requestedSaveDir, config);
+  const normalizedRequested = resolveConfigRelativePath(
+    requestedSaveDir,
+    config,
+  );
   const legacySaveDir = path.join(configBaseDir(config), "var");
 
   if (
@@ -482,7 +489,16 @@ export function getCaptureDefaults(
   sourceName: string,
 ): SourceCaptureConfig {
   const source = getSourcePreferences(config, sourceName);
-  return source?.capture || { browser: {} };
+  const capture = source?.capture || { browser: {} };
+  return {
+    ...capture,
+    assets_dir: capture.assets_dir
+      ? resolveConfigRelativePath(capture.assets_dir, config)
+      : undefined,
+    save_dir: capture.save_dir
+      ? resolveConfigRelativePath(capture.save_dir, config)
+      : undefined,
+  };
 }
 
 export function getCaptureBrowserOptions(
@@ -497,18 +513,37 @@ export function getSaveDir(
   sourceName: string | null = null,
 ): string {
   if (sourceName) {
-    return resolveSaveDir(
+    return resolveConfigRelativePath(
       getCaptureDefaults(config, sourceName).save_dir || defaultSaveDir(config),
       config,
     );
   }
 
-  return resolveSaveDir(
+  return resolveConfigRelativePath(
     getEnabledSources(config)[0]?.capture?.save_dir ||
       getSources(config)[0]?.capture?.save_dir ||
       defaultSaveDir(config),
     config,
   );
+}
+
+export function getAssetsDir(
+  config: FeedConfig,
+  sourceName: string | null = null,
+): string {
+  if (sourceName) {
+    return (
+      getCaptureDefaults(config, sourceName).assets_dir ||
+      defaultAssetsDir(config)
+    );
+  }
+
+  const configuredAssetsDir =
+    getEnabledSources(config)[0]?.capture?.assets_dir ||
+    getSources(config)[0]?.capture?.assets_dir;
+  return configuredAssetsDir
+    ? resolveConfigRelativePath(configuredAssetsDir, config)
+    : defaultAssetsDir(config);
 }
 
 export function getCurationPreferences(

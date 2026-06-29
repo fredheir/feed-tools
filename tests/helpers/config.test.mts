@@ -8,6 +8,7 @@ import {
   DEFAULT_SAVE_DIR,
   defaultConfigTemplatePath,
   findConfigTemplatePath,
+  getAssetsDir,
   getCaptureBrowserOptions,
   getCaptureDefaults,
   getCurationPreferences,
@@ -67,7 +68,8 @@ describe("config helpers", () => {
     expect(getEnabledSourceNames(config)).toEqual(["x"]);
     expect(getDefaultSource(config)).toBe("x");
     expect(getCaptureDefaults(config, "x")).toEqual({
-      save_dir: "./var/x-archive",
+      assets_dir: undefined,
+      save_dir: path.join(repoRoot, "var/x-archive"),
       default_limit: 20,
       browser: { session: "feed-x" },
     });
@@ -388,6 +390,9 @@ describe("config helpers", () => {
       expect(getEnabledSourceNames(config)).toEqual(["youtube"]);
       expect(getSaveDir(config, "youtube")).toBe(
         path.join(workdir, "var", "feed-archive"),
+      );
+      expect(getAssetsDir(config, "youtube")).toBe(
+        path.join(workdir, "var", "feed-assets"),
       );
     } finally {
       if (previousWorkdir === undefined) {

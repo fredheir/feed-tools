@@ -3,8 +3,8 @@ import {
   loadConfig,
   getCaptureDefaults,
   getCaptureBrowserOptions,
+  getAssetsDir,
   resolveCanonicalSaveDir,
-  DEFAULT_ASSETS_DIR,
 } from "./config.ts";
 import { hasNewUnclassifiedItems } from "./allocation.ts";
 import { requireArgValue } from "./cli-args.ts";
@@ -60,7 +60,7 @@ function parseCaptureCliArgs(
 
   const defaults = getCaptureDefaults(config, primarySource);
   let limit = defaults.default_limit ?? 12;
-  let assetsDir = defaults.assets_dir ?? DEFAULT_ASSETS_DIR;
+  let assetsDir = getAssetsDir(config, primarySource);
   let saveDir = resolveCanonicalSaveDir(
     config,
     defaults.save_dir,
@@ -193,7 +193,7 @@ for (const sourceName of sourceNames) {
   }
   const document = await captureHandler({
     limit,
-    assetsDir: assetsDir || sourceDefaults.assets_dir || DEFAULT_ASSETS_DIR,
+    assetsDir: assetsDir || getAssetsDir(config, sourceName),
     saveDir: sourceSaveDir,
     browserOptions: sourceBrowserOptions,
   });
