@@ -194,6 +194,7 @@ describe("feed-render", () => {
     const siblingAssetPath = path.join(siblingAssetDir, "render-shadow.jpg");
     const repoAssetPath = path.join(repoRoot, "var", "render-shadow.jpg");
     fs.mkdirSync(siblingAssetDir, { recursive: true });
+    fs.mkdirSync(path.dirname(repoAssetPath), { recursive: true });
     fs.writeFileSync(siblingAssetPath, "sibling");
     fs.writeFileSync(repoAssetPath, "repo");
     tempFiles.push(repoAssetPath);
