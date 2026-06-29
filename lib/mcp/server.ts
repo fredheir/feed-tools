@@ -1,10 +1,13 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { getBrowserStatus } from "../browser-status.ts";
 import { startBrowser } from "../browser-launch-service.ts";
 import {
+  type ConfigReadResult,
   type ConfigWriteResult,
+  defaultConfigTemplatePath,
+  readConfigDocument,
+  resolveConfigPath,
   writeConfigFromPreferences,
 } from "../config.ts";
 import { type DoctorResult, runDoctor } from "../doctor-service.ts";
@@ -16,8 +19,6 @@ const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const DEFAULT_WORKDIR = path.resolve(
   process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
 );
-const DEFAULT_CONFIG_PATH = path.join(DEFAULT_WORKDIR, "config.json");
-const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
 const DEFAULT_CHROME_PROFILE = path.join(DEFAULT_WORKDIR, "chrome-profile");
 const DEFAULT_CHROME_LOG = path.join(DEFAULT_WORKDIR, "chrome.log");
 
@@ -91,15 +92,7 @@ function sourceList(value: unknown): FeedSourceName[] {
 }
 
 function configPath(args: JsonRecord): string {
-  return path.resolve(
-    stringValue(args.config_path) ||
-      process.env.FEED_TOOLS_CONFIG ||
-      DEFAULT_CONFIG_PATH,
-  );
-}
-
-function readJsonFile(filePath: string): JsonValue {
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonValue;
+  return resolveConfigPath(stringValue(args.config_path));
 }
 
 function profileDir(args: JsonRecord): string {
@@ -166,11 +159,21 @@ function configWriteMcpResult(result: ConfigWriteResult): JsonObject {
   };
 }
 
+function configReadMcpResult(result: ConfigReadResult): JsonObject {
+  return {
+    ok: result.ok,
+    path: result.path,
+    exists: result.exists,
+    config: asJson(result.config),
+  };
+}
+
 function writeConfig(args: JsonRecord): JsonValue {
+  const targetPath = configPath(args);
   return configWriteMcpResult(
     writeConfigFromPreferences({
-      targetPath: configPath(args),
-      templatePath: EXAMPLE_CONFIG_PATH,
+      targetPath,
+      templatePath: defaultConfigTemplatePath(targetPath, DEFAULT_WORKDIR),
       overwrite: booleanValue(args.overwrite) === true,
       sources: args.sources,
       browser: args.browser,
@@ -361,15 +364,8 @@ const TOOLS: McpToolDefinition[] = [
       type: "object",
       properties: { config_path: { type: "string" } },
     },
-    handler: (args) => {
-      const pathToRead = configPath(args);
-      return {
-        ok: true,
-        path: pathToRead,
-        exists: fs.existsSync(pathToRead),
-        config: fs.existsSync(pathToRead) ? readJsonFile(pathToRead) : null,
-      };
-    },
+    handler: (args) =>
+      configReadMcpResult(readConfigDocument(configPath(args))),
   },
   {
     name: "feed_config_write",

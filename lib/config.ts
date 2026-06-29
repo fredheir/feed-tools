@@ -24,15 +24,52 @@ import { SOURCE_NAME_SET } from "./source-metadata.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 export const DEFAULT_SAVE_DIR = path.join(REPO_ROOT, "var", "feed-archive");
-export const DEFAULT_ASSETS_DIR = path.join(REPO_ROOT, "var", "feed-assets");
 const LEGACY_SAVE_DIR = path.join(REPO_ROOT, "var");
-const DEFAULT_CONFIG_PATH = path.join(REPO_ROOT, "config.json");
 const EXAMPLE_CONFIG_PATH = path.join(REPO_ROOT, "config.json.example");
+const CONFIG_BASE_DIR = new WeakMap<FeedConfig, string>();
+
+export function defaultConfigPath(
+  workdir = process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
+): string {
+  return path.join(path.resolve(workdir), "config.json");
+}
+
+export function resolveConfigPath(
+  configPath: string | null | undefined,
+): string {
+  return path.resolve(
+    configPath || process.env.FEED_TOOLS_CONFIG || defaultConfigPath(),
+  );
+}
+
+export function findConfigTemplatePath(
+  targetPath: string,
+  workdir = process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
+): string | null {
+  const resolvedTargetPath = path.resolve(targetPath);
+  const candidates = [
+    path.join(path.dirname(resolvedTargetPath), "config.json.example"),
+    path.join(path.resolve(workdir), "config.json.example"),
+    EXAMPLE_CONFIG_PATH,
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+export function defaultConfigTemplatePath(
+  targetPath: string,
+  workdir = process.env.FEED_TOOLS_WORKDIR || REPO_ROOT,
+): string {
+  return (
+    findConfigTemplatePath(targetPath, workdir) ??
+    path.join(path.resolve(workdir), "config.json.example")
+  );
+}
 
 export interface ConfigWriteOptions {
   targetPath: string;
   templatePath: string;
   overwrite?: boolean;
+  useExistingTargetAsTemplate?: boolean;
   sources?: unknown;
   browser?: unknown;
   render?: unknown;
@@ -48,6 +85,13 @@ export interface ConfigWriteResult {
   sourcesEnabled?: string[];
   preferenceSectionsWritten?: number;
   browser?: Record<string, unknown>;
+}
+
+export interface ConfigReadResult {
+  ok: true;
+  path: string;
+  exists: boolean;
+  config: unknown | null;
 }
 
 function normalizeBrowserConfig(value: unknown): FeedBrowserConfig {
@@ -163,6 +207,7 @@ export function writeConfigFromPreferences({
   targetPath,
   templatePath,
   overwrite = false,
+  useExistingTargetAsTemplate = true,
   sources: sourceInput,
   browser: browserInput,
   render,
@@ -180,7 +225,9 @@ export function writeConfigFromPreferences({
   }
 
   const resolvedTemplatePath =
-    fs.existsSync(resolvedTargetPath) && overwrite
+    useExistingTargetAsTemplate &&
+    fs.existsSync(resolvedTargetPath) &&
+    overwrite
       ? resolvedTargetPath
       : path.resolve(templatePath);
   if (!fs.existsSync(resolvedTemplatePath)) {
@@ -248,6 +295,25 @@ export function writeConfigFromPreferences({
   };
 }
 
+export function readConfigDocument(targetPath: string): ConfigReadResult {
+  const resolvedTargetPath = path.resolve(targetPath);
+  if (!fs.existsSync(resolvedTargetPath)) {
+    return {
+      ok: true,
+      path: resolvedTargetPath,
+      exists: false,
+      config: null,
+    };
+  }
+
+  return {
+    ok: true,
+    path: resolvedTargetPath,
+    exists: true,
+    config: JSON.parse(fs.readFileSync(resolvedTargetPath, "utf8")),
+  };
+}
+
 function normalizeUserPreferences(
   value: unknown,
   configPath: string,
@@ -281,7 +347,7 @@ export function parseConfigPayload(
   }
   const raw = parsed as RawFeedConfig;
 
-  return {
+  const config: FeedConfig = {
     version: typeof raw.version === "number" ? raw.version : undefined,
     user_preferences: normalizeUserPreferences(
       raw.user_preferences,
@@ -291,16 +357,58 @@ export function parseConfigPayload(
       ? { notes: toOptionalString(raw.summary.notes) ?? undefined }
       : {},
   };
+  CONFIG_BASE_DIR.set(config, path.dirname(path.resolve(configPath)));
+  return config;
 }
 
 function getConfigPath(): string {
-  const override = process.env.FEED_TOOLS_CONFIG;
-  return override ? path.resolve(override) : DEFAULT_CONFIG_PATH;
+  return resolveConfigPath(null);
 }
 
-function resolveSaveDir(value: string | null | undefined): string {
+function configBaseDir(config: FeedConfig): string {
+  return CONFIG_BASE_DIR.get(config) ?? REPO_ROOT;
+}
+
+function defaultSaveDir(config: FeedConfig): string {
+  return path.join(configBaseDir(config), "var", "feed-archive");
+}
+
+function defaultAssetsDir(config: FeedConfig): string {
+  return path.join(configBaseDir(config), "var", "feed-assets");
+}
+
+function resolveConfigRelativePath(
+  value: string | null | undefined,
+  config: FeedConfig,
+): string {
   const candidate = String(value || "").trim();
-  return candidate ? path.resolve(REPO_ROOT, candidate) : "";
+  if (!candidate) return "";
+  return path.isAbsolute(candidate)
+    ? candidate
+    : path.resolve(configBaseDir(config), candidate);
+}
+
+function resolveConfigRelativeBrowserPaths(
+  browser: FeedBrowserConfig,
+  config: FeedConfig,
+): FeedBrowserConfig {
+  return {
+    ...browser,
+    profile:
+      browser.profile === null
+        ? null
+        : resolveConfigRelativePath(browser.profile, config) || browser.profile,
+    statePath:
+      browser.statePath === null
+        ? null
+        : resolveConfigRelativePath(browser.statePath, config) ||
+          browser.statePath,
+    executablePath:
+      browser.executablePath === null
+        ? null
+        : resolveConfigRelativePath(browser.executablePath, config) ||
+          browser.executablePath,
+  };
 }
 
 export function resolveCanonicalSaveDir(
@@ -308,9 +416,17 @@ export function resolveCanonicalSaveDir(
   requestedSaveDir: string | null = null,
   sourceName: string | null = null,
 ): string {
-  const normalizedRequested = resolveSaveDir(requestedSaveDir);
+  const normalizedRequested = resolveConfigRelativePath(
+    requestedSaveDir,
+    config,
+  );
+  const legacySaveDir = path.join(configBaseDir(config), "var");
 
-  if (normalizedRequested && normalizedRequested === LEGACY_SAVE_DIR) {
+  if (
+    normalizedRequested &&
+    (normalizedRequested === LEGACY_SAVE_DIR ||
+      normalizedRequested === legacySaveDir)
+  ) {
     return getSaveDir(config, sourceName);
   }
 
@@ -321,20 +437,24 @@ function readConfigFile(configPath: string): FeedConfig {
   return parseConfigPayload(fs.readFileSync(configPath, "utf8"), configPath);
 }
 
+function fallbackConfigTemplatePath(configPath: string): string | null {
+  return process.env.FEED_TOOLS_CONFIG
+    ? null
+    : findConfigTemplatePath(configPath);
+}
+
 export function loadConfig(): FeedConfig {
   const configPath = getConfigPath();
   try {
     return readConfigFile(configPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      if (
-        !process.env.FEED_TOOLS_CONFIG &&
-        fs.existsSync(EXAMPLE_CONFIG_PATH)
-      ) {
+      const templatePath = fallbackConfigTemplatePath(configPath);
+      if (templatePath) {
         process.stderr.write(
-          `Warning: ${configPath} not found; using ${EXAMPLE_CONFIG_PATH}. Copy it to config.json and tailor sources, render, curation, and summary preferences before live capture.\n`,
+          `Warning: ${configPath} not found; using ${templatePath}. Copy it to config.json and tailor sources, render, curation, and summary preferences before live capture.\n`,
         );
-        return readConfigFile(EXAMPLE_CONFIG_PATH);
+        return readConfigFile(templatePath);
       }
       throw new Error(`Missing config: ${configPath}`);
     }
@@ -348,12 +468,8 @@ export function loadOptionalConfig(): FeedConfig | null {
     return readConfigFile(configPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      if (
-        !process.env.FEED_TOOLS_CONFIG &&
-        fs.existsSync(EXAMPLE_CONFIG_PATH)
-      ) {
-        return readConfigFile(EXAMPLE_CONFIG_PATH);
-      }
+      const templatePath = fallbackConfigTemplatePath(configPath);
+      if (templatePath) return readConfigFile(templatePath);
       return null;
     }
     throw error;
@@ -395,7 +511,20 @@ export function getCaptureDefaults(
   sourceName: string,
 ): SourceCaptureConfig {
   const source = getSourcePreferences(config, sourceName);
-  return source?.capture || { browser: {} };
+  const capture = source?.capture || { browser: {} };
+  const browser = capture.browser
+    ? resolveConfigRelativeBrowserPaths(capture.browser, config)
+    : capture.browser;
+  return {
+    ...capture,
+    browser,
+    assets_dir: capture.assets_dir
+      ? resolveConfigRelativePath(capture.assets_dir, config)
+      : undefined,
+    save_dir: capture.save_dir
+      ? resolveConfigRelativePath(capture.save_dir, config)
+      : undefined,
+  };
 }
 
 export function getCaptureBrowserOptions(
@@ -410,16 +539,37 @@ export function getSaveDir(
   sourceName: string | null = null,
 ): string {
   if (sourceName) {
-    return resolveSaveDir(
-      getCaptureDefaults(config, sourceName).save_dir || DEFAULT_SAVE_DIR,
+    return resolveConfigRelativePath(
+      getCaptureDefaults(config, sourceName).save_dir || defaultSaveDir(config),
+      config,
     );
   }
 
-  return resolveSaveDir(
+  return resolveConfigRelativePath(
     getEnabledSources(config)[0]?.capture?.save_dir ||
       getSources(config)[0]?.capture?.save_dir ||
-      DEFAULT_SAVE_DIR,
+      defaultSaveDir(config),
+    config,
   );
+}
+
+export function getAssetsDir(
+  config: FeedConfig,
+  sourceName: string | null = null,
+): string {
+  if (sourceName) {
+    return (
+      getCaptureDefaults(config, sourceName).assets_dir ||
+      defaultAssetsDir(config)
+    );
+  }
+
+  const configuredAssetsDir =
+    getEnabledSources(config)[0]?.capture?.assets_dir ||
+    getSources(config)[0]?.capture?.assets_dir;
+  return configuredAssetsDir
+    ? resolveConfigRelativePath(configuredAssetsDir, config)
+    : defaultAssetsDir(config);
 }
 
 export function getCurationPreferences(

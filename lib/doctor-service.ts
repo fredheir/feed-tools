@@ -5,15 +5,15 @@ import path from "node:path";
 
 import { getBrowserStatus } from "./browser-status.ts";
 import { listCicSources } from "./cic/source-config.ts";
+import {
+  defaultConfigPath,
+  findConfigTemplatePath,
+  writeConfigFromPreferences,
+} from "./config.ts";
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..");
 const WORKDIR = path.resolve(process.env.FEED_TOOLS_WORKDIR || PACKAGE_ROOT);
-const DEFAULT_CONFIG_PATH = path.join(WORKDIR, "config.json");
-const WORKDIR_CONFIG_EXAMPLE_PATH = path.join(WORKDIR, "config.json.example");
-const PACKAGE_CONFIG_EXAMPLE_PATH = path.join(
-  PACKAGE_ROOT,
-  "config.json.example",
-);
+const DEFAULT_CONFIG_PATH = defaultConfigPath(WORKDIR);
 const WORKSPACE_CHROME_BIN = path.join(
   WORKDIR,
   "chrome-install",
@@ -379,36 +379,6 @@ export function recommendedBrowserConfig(
   return null;
 }
 
-export function applyBrowserConfigToPayload(
-  payload: string,
-  browser: RecommendedBrowserConfig,
-): string {
-  const parsed = JSON.parse(payload) as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("Invalid config template");
-  }
-  const config = parsed as {
-    user_preferences?: { sources?: unknown[] };
-  };
-  const sources = config.user_preferences?.sources;
-  if (!Array.isArray(sources)) {
-    throw new Error("Config template is missing user_preferences.sources");
-  }
-
-  for (const source of sources) {
-    if (!source || typeof source !== "object" || Array.isArray(source)) {
-      continue;
-    }
-    const entry = source as {
-      capture?: { browser?: RecommendedBrowserConfig };
-    };
-    entry.capture = entry.capture || {};
-    entry.capture.browser = { ...browser };
-  }
-
-  return `${JSON.stringify(config, null, 2)}\n`;
-}
-
 function maybeWriteConfig(
   results: CheckResult[],
   forceConfig: boolean,
@@ -422,16 +392,8 @@ function maybeWriteConfig(
       path: targetConfigPath,
     };
   }
-  const targetExamplePath = path.join(
-    path.dirname(targetConfigPath),
-    "config.json.example",
-  );
-  const examplePath = fs.existsSync(WORKDIR_CONFIG_EXAMPLE_PATH)
-    ? WORKDIR_CONFIG_EXAMPLE_PATH
-    : fs.existsSync(targetExamplePath)
-      ? targetExamplePath
-      : PACKAGE_CONFIG_EXAMPLE_PATH;
-  if (!fs.existsSync(examplePath)) {
+  const examplePath = findConfigTemplatePath(targetConfigPath, WORKDIR);
+  if (!examplePath) {
     return {
       status: "unavailable",
       detail: "config.json.example is missing; could not create config.json.",
@@ -445,12 +407,13 @@ function maybeWriteConfig(
         "No usable agent-browser or CDP path was detected; config.json was not changed.",
     };
   }
-  const payload = applyBrowserConfigToPayload(
-    fs.readFileSync(examplePath, "utf8"),
+  writeConfigFromPreferences({
+    targetPath: targetConfigPath,
+    templatePath: examplePath,
+    overwrite: true,
+    useExistingTargetAsTemplate: false,
     browser,
-  );
-  fs.mkdirSync(path.dirname(targetConfigPath), { recursive: true });
-  fs.writeFileSync(targetConfigPath, payload);
+  });
   return {
     status: "created",
     detail:

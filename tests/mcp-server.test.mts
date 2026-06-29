@@ -167,6 +167,72 @@ describe("feed-tools MCP server", () => {
     });
   });
 
+  test("feed_config_write uses the workdir config template", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-config-"));
+    const configPath = path.join(workdir, "config.json");
+    fs.writeFileSync(
+      path.join(workdir, "config.json.example"),
+      `${JSON.stringify({
+        user_preferences: {
+          sources: [{ name: "x" }],
+          render: { show_summary: true },
+        },
+      })}\n`,
+      "utf8",
+    );
+
+    const payload = callMcpTool(
+      "feed_config_write",
+      { overwrite: true },
+      {
+        FEED_TOOLS_WORKDIR: workdir,
+        FEED_TOOLS_CONFIG: "",
+      },
+    );
+
+    expect(payload).toMatchObject({ ok: true, written: true });
+    expect(JSON.parse(fs.readFileSync(configPath, "utf8"))).toMatchObject({
+      user_preferences: {
+        sources: [{ name: "x" }],
+        render: { show_summary: true },
+      },
+    });
+  });
+
+  test("feed_config_write prefers explicit config directory template", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-config-"));
+    const configDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "feed-mcp-custom-config-"),
+    );
+    const configPath = path.join(configDir, "custom-config.json");
+    fs.writeFileSync(
+      path.join(workdir, "config.json.example"),
+      `${JSON.stringify({ user_preferences: { sources: [{ name: "x" }] } })}\n`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(configDir, "config.json.example"),
+      `${JSON.stringify({ user_preferences: { sources: [{ name: "youtube" }] } })}\n`,
+      "utf8",
+    );
+
+    const payload = callMcpTool(
+      "feed_config_write",
+      { config_path: configPath, overwrite: true },
+      {
+        FEED_TOOLS_WORKDIR: workdir,
+        FEED_TOOLS_CONFIG: "",
+      },
+    );
+
+    expect(payload).toMatchObject({ ok: true, written: true });
+    expect(JSON.parse(fs.readFileSync(configPath, "utf8"))).toMatchObject({
+      user_preferences: {
+        sources: [{ name: "youtube" }],
+      },
+    });
+  });
+
   test("feed_doctor writes config under FEED_TOOLS_WORKDIR", () => {
     const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-mcp-doctor-"));
     const configPath = path.join(workdir, "config.json");

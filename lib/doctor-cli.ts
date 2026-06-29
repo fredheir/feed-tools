@@ -4,7 +4,6 @@ import {
   DEFAULT_CDP_PORTS,
   type CheckResult,
   type ConfigResult,
-  applyBrowserConfigToPayload,
   detectSandboxSignals,
   isSshPrivateKeyFilename,
   isSshRemote,
@@ -14,7 +13,6 @@ import {
 } from "./doctor-service.ts";
 
 export {
-  applyBrowserConfigToPayload,
   detectSandboxSignals,
   isSshPrivateKeyFilename,
   isSshRemote,

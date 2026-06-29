@@ -1,9 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  applyBrowserConfigToPayload,
-  recommendedBrowserConfig,
-} from "../lib/doctor-service.ts";
+import { recommendedBrowserConfig } from "../lib/doctor-service.ts";
 
 describe("doctor service helpers", () => {
   test("prefers a working CDP endpoint over agent-browser", () => {
@@ -39,27 +36,5 @@ describe("doctor service helpers", () => {
         },
       ]),
     ).toEqual({});
-  });
-
-  test("applies the recommended browser config to all source entries", () => {
-    const payload = JSON.stringify({
-      user_preferences: {
-        sources: [
-          { name: "x", capture: { default_limit: 12, browser: {} } },
-          { name: "linkedin", capture: { browser: { headed: true } } },
-        ],
-      },
-    });
-
-    expect(
-      JSON.parse(applyBrowserConfigToPayload(payload, { cdp: "9223" })),
-    ).toMatchObject({
-      user_preferences: {
-        sources: [
-          { capture: { browser: { cdp: "9223" } } },
-          { capture: { browser: { cdp: "9223" } } },
-        ],
-      },
-    });
   });
 });

@@ -25,6 +25,7 @@ import { requireArgValue } from "./cli-args.ts";
 import {
   loadOptionalConfig,
   getCaptureDefaults,
+  getAssetsDir,
   resolveCanonicalSaveDir,
 } from "./config.ts";
 import { getSourceConfig, listCicSources } from "./cic/source-config.ts";
@@ -137,7 +138,8 @@ async function cmdIngest(
   }
   const appConfig = loadOptionalConfig();
   const defaults = appConfig ? getCaptureDefaults(appConfig, sourceName) : null;
-  const assetsDir = flags.assetsDir || defaults?.assets_dir || "";
+  const assetsDir =
+    flags.assetsDir || (appConfig ? getAssetsDir(appConfig, sourceName) : "");
   const saveDir = appConfig
     ? resolveCanonicalSaveDir(
         appConfig,

@@ -6,13 +6,18 @@ import { describe, expect, test } from "vitest";
 
 import {
   DEFAULT_SAVE_DIR,
+  defaultConfigTemplatePath,
+  findConfigTemplatePath,
+  getAssetsDir,
   getCaptureBrowserOptions,
   getCaptureDefaults,
   getCurationPreferences,
   getDefaultSource,
   getEnabledSourceNames,
   parseConfigPayload,
+  readConfigDocument,
   getSaveDir,
+  loadOptionalConfig,
   resolveCanonicalSaveDir,
   writeConfigFromPreferences,
 } from "../../lib/config.ts";
@@ -63,7 +68,8 @@ describe("config helpers", () => {
     expect(getEnabledSourceNames(config)).toEqual(["x"]);
     expect(getDefaultSource(config)).toBe("x");
     expect(getCaptureDefaults(config, "x")).toEqual({
-      save_dir: "./var/x-archive",
+      assets_dir: undefined,
+      save_dir: path.join(repoRoot, "var/x-archive"),
       default_limit: 20,
       browser: { session: "feed-x" },
     });
@@ -173,14 +179,44 @@ describe("config helpers", () => {
         sessionName: "feed-session",
         session: null,
         profile: null,
-        statePath: "./tmp/browser-state.json",
+        statePath: "/tmp/tmp/browser-state.json",
         headed: undefined,
         allowFileAccess: true,
         colorScheme: "dark",
-        executablePath: "./chrome",
+        executablePath: "/tmp/chrome",
       },
       default_limit: undefined,
       save_dir: undefined,
+    });
+  });
+
+  test("resolves browser path defaults from the config file directory", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-base-"));
+    const configPath = path.join(workdir, "profiles", "config.json");
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: {
+          sources: [
+            {
+              name: "x",
+              capture: {
+                browser: {
+                  profile: "./chrome-profile",
+                  statePath: "../state/x.json",
+                  executablePath: "/opt/chrome/chrome",
+                },
+              },
+            },
+          ],
+        },
+      }),
+      configPath,
+    );
+
+    expect(getCaptureBrowserOptions(config, "x")).toMatchObject({
+      profile: path.join(workdir, "profiles", "chrome-profile"),
+      statePath: path.join(workdir, "state/x.json"),
+      executablePath: "/opt/chrome/chrome",
     });
   });
 
@@ -208,7 +244,7 @@ describe("config helpers", () => {
     expect(getCaptureBrowserOptions(config, "x")).toMatchObject({
       cdp: "9222",
       session: "123",
-      profile: "false",
+      profile: "/tmp/false",
     });
   });
 
@@ -292,5 +328,138 @@ describe("config helpers", () => {
         (source: { name?: string }) => source.name === "bluesky",
       ),
     ).toMatchObject({ enabled: false });
+  });
+
+  test("writes browser preferences from the template when requested", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-"));
+    const targetPath = path.join(workdir, "config.json");
+    const templatePath = path.join(workdir, "config.json.example");
+
+    fs.writeFileSync(
+      targetPath,
+      `${JSON.stringify({
+        user_preferences: {
+          sources: [{ name: "x", capture: { browser: { headed: true } } }],
+        },
+      })}\n`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      templatePath,
+      `${JSON.stringify({
+        user_preferences: {
+          sources: [
+            { name: "x", capture: { default_limit: 12, browser: {} } },
+            { name: "linkedin", capture: { browser: { headed: true } } },
+          ],
+        },
+      })}\n`,
+      "utf8",
+    );
+
+    writeConfigFromPreferences({
+      targetPath,
+      templatePath,
+      overwrite: true,
+      useExistingTargetAsTemplate: false,
+      browser: { cdp: "9223" },
+    });
+
+    expect(JSON.parse(fs.readFileSync(targetPath, "utf8"))).toMatchObject({
+      user_preferences: {
+        sources: [
+          { capture: { default_limit: 12, browser: { cdp: "9223" } } },
+          { capture: { browser: { cdp: "9223" } } },
+        ],
+      },
+    });
+  });
+
+  test("selects config templates from the config owner", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-"));
+    const targetPath = path.join(workdir, "nested", "config.json");
+    const workdirTemplatePath = path.join(workdir, "config.json.example");
+    const targetTemplatePath = path.join(
+      path.dirname(targetPath),
+      "config.json.example",
+    );
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+
+    fs.writeFileSync(targetTemplatePath, "{}\n", "utf8");
+    expect(findConfigTemplatePath(targetPath, workdir)).toBe(
+      targetTemplatePath,
+    );
+    expect(defaultConfigTemplatePath(targetPath, workdir)).toBe(
+      targetTemplatePath,
+    );
+
+    fs.writeFileSync(workdirTemplatePath, "{}\n", "utf8");
+    expect(findConfigTemplatePath(targetPath, workdir)).toBe(
+      targetTemplatePath,
+    );
+  });
+
+  test("loads missing workdir config from the workdir template", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-"));
+    const previousWorkdir = process.env.FEED_TOOLS_WORKDIR;
+    const previousConfig = process.env.FEED_TOOLS_CONFIG;
+    fs.writeFileSync(
+      path.join(workdir, "config.json.example"),
+      `${JSON.stringify({
+        user_preferences: { sources: [{ name: "youtube" }] },
+      })}\n`,
+      "utf8",
+    );
+
+    try {
+      process.env.FEED_TOOLS_WORKDIR = workdir;
+      delete process.env.FEED_TOOLS_CONFIG;
+
+      const config = loadOptionalConfig();
+      if (!config) throw new Error("Expected workdir template config");
+      expect(getEnabledSourceNames(config)).toEqual(["youtube"]);
+      expect(getSaveDir(config, "youtube")).toBe(
+        path.join(workdir, "var", "feed-archive"),
+      );
+      expect(getAssetsDir(config, "youtube")).toBe(
+        path.join(workdir, "var", "feed-assets"),
+      );
+    } finally {
+      if (previousWorkdir === undefined) {
+        delete process.env.FEED_TOOLS_WORKDIR;
+      } else {
+        process.env.FEED_TOOLS_WORKDIR = previousWorkdir;
+      }
+      if (previousConfig === undefined) {
+        delete process.env.FEED_TOOLS_CONFIG;
+      } else {
+        process.env.FEED_TOOLS_CONFIG = previousConfig;
+      }
+    }
+  });
+
+  test("reads raw config documents from the config owner", () => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-read-"));
+    const targetPath = path.join(workdir, "config.json");
+
+    expect(readConfigDocument(targetPath)).toMatchObject({
+      ok: true,
+      path: targetPath,
+      exists: false,
+      config: null,
+    });
+
+    fs.writeFileSync(
+      targetPath,
+      `${JSON.stringify({ user_preferences: { sources: [{ name: "x" }] } })}\n`,
+      "utf8",
+    );
+
+    expect(readConfigDocument(targetPath)).toMatchObject({
+      ok: true,
+      path: targetPath,
+      exists: true,
+      config: { user_preferences: { sources: [{ name: "x" }] } },
+    });
   });
 });
