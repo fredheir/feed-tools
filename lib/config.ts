@@ -48,8 +48,8 @@ export function findConfigTemplatePath(
 ): string | null {
   const resolvedTargetPath = path.resolve(targetPath);
   const candidates = [
-    path.join(path.resolve(workdir), "config.json.example"),
     path.join(path.dirname(resolvedTargetPath), "config.json.example"),
+    path.join(path.resolve(workdir), "config.json.example"),
     EXAMPLE_CONFIG_PATH,
   ];
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;

@@ -395,7 +395,7 @@ describe("config helpers", () => {
 
     fs.writeFileSync(workdirTemplatePath, "{}\n", "utf8");
     expect(findConfigTemplatePath(targetPath, workdir)).toBe(
-      workdirTemplatePath,
+      targetTemplatePath,
     );
   });
 
