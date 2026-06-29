@@ -63,7 +63,7 @@ function parseCaptureCliArgs(
   let limit = defaults.default_limit ?? 12;
   let assetsDir = "";
   let saveDir = sourceNames.length > 1 ? getSaveDir(config) : "";
-  let browserOptions = getCaptureBrowserOptions(config, primarySource);
+  let browserOptions: FeedBrowserConfig = {};
   let args = remainingArgs;
 
   if (args[0] && !args[0].startsWith("--")) {
@@ -180,9 +180,15 @@ for (const sourceName of sourceNames) {
     saveDir || sourceDefaults.save_dir,
     sourceName,
   );
+  const sourceBrowserDefaults = getCaptureBrowserOptions(config, sourceName);
+  const sourceBrowserArgs = [
+    ...(sourceBrowserDefaults.args || []),
+    ...(browserOptions.args || []),
+  ];
   const sourceBrowserOptions = {
-    ...getCaptureBrowserOptions(config, sourceName),
+    ...sourceBrowserDefaults,
     ...browserOptions,
+    ...(sourceBrowserArgs.length > 0 ? { args: sourceBrowserArgs } : {}),
   };
   const captureHandler = getCaptureHandler(sourceName);
   if (!captureHandler) {

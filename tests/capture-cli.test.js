@@ -9,7 +9,7 @@ import {
 } from "./helpers/cli-config.mts";
 
 describe("feed-capture", () => {
-  test("keeps single-source defaults source-owned and multi-source worksets shared", () => {
+  test("keeps source defaults source-owned and CLI overrides explicit", () => {
     const cli = fs.readFileSync(
       path.join(repoRoot, "lib/capture-cli.ts"),
       "utf8",
@@ -17,10 +17,16 @@ describe("feed-capture", () => {
 
     expect(cli).not.toContain("let saveDir = resolveCanonicalSaveDir(");
     expect(cli).not.toContain("let assetsDir = getAssetsDir(");
+    expect(cli).not.toContain(
+      "let browserOptions = getCaptureBrowserOptions(config, primarySource);",
+    );
     expect(cli).toContain(
       'let saveDir = sourceNames.length > 1 ? getSaveDir(config) : "";',
     );
     expect(cli).toContain('let assetsDir = "";');
+    expect(cli).toContain("let browserOptions: FeedBrowserConfig = {};");
+    expect(cli).toContain("...(sourceBrowserDefaults.args || []),");
+    expect(cli).toContain("...(browserOptions.args || []),");
   });
 
   test("prints usage for help", () => {
