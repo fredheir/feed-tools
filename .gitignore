@@ -30,4 +30,5 @@ apm_modules/
 !.agents/skills/.gitkeep
 
 # dependency-scan scratch output
+.dep-scan-baseline.json
 tmp/
