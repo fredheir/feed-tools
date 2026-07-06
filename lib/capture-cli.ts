@@ -39,14 +39,14 @@ function parseSourceNames(argv: string[]): {
   return { sourceNames, remainingArgs: args };
 }
 
-function parseCaptureCliArgs(
+export function parseCaptureCliArgs(
   argv: string[],
   config: FeedConfig,
 ): {
   sourceNames: FeedSourceName[];
   limit: number;
   assetsDir: string;
-  saveDir: string;
+  saveDir?: string;
   browserOptions: FeedBrowserConfig;
 } {
   const { sourceNames, remainingArgs } = parseSourceNames(argv);
@@ -61,11 +61,7 @@ function parseCaptureCliArgs(
   const defaults = getCaptureDefaults(config, primarySource);
   let limit = defaults.default_limit ?? 12;
   let assetsDir = getAssetsDir(config, primarySource);
-  let saveDir = resolveCanonicalSaveDir(
-    config,
-    defaults.save_dir,
-    primarySource,
-  );
+  let saveDir: string | undefined;
   let browserOptions = getCaptureBrowserOptions(config, primarySource);
   let args = remainingArgs;
 
@@ -160,48 +156,46 @@ function printCategorizationHint(sourceName: string): void {
   process.stderr.write(`./bin/feed-curate --sources ${sourceName}\n`);
 }
 
-if (
-  process.argv[2] === "-h" ||
-  process.argv[2] === "--help" ||
-  process.argv.length < 3
-) {
-  console.log(
-    "Usage: feed-capture <source>... [limit] [--assets-dir DIR] [--save-dir DIR] [--session NAME] [--state FILE] [--profile DIR] [--browser-arg ARG] [--headed] [--auto-connect|--no-auto-connect]",
-  );
-  process.exit(0);
-}
-
-const config = loadConfig();
-const { sourceNames, limit, assetsDir, saveDir, browserOptions } =
-  parseCaptureCliArgs(process.argv, config);
-
-const documents: FeedDocument[] = [];
-for (const sourceName of sourceNames) {
-  const sourceDefaults = getCaptureDefaults(config, sourceName);
-  const sourceSaveDir = resolveCanonicalSaveDir(
-    config,
-    saveDir || sourceDefaults.save_dir,
-    sourceName,
-  );
-  const sourceBrowserOptions = {
-    ...getCaptureBrowserOptions(config, sourceName),
-    ...browserOptions,
-  };
-  const captureHandler = getCaptureHandler(sourceName);
-  if (!captureHandler) {
-    throw new Error(`Unsupported source: ${sourceName}`);
+export async function main(argv: string[] = process.argv): Promise<void> {
+  if (argv[2] === "-h" || argv[2] === "--help" || argv.length < 3) {
+    console.log(
+      "Usage: feed-capture <source>... [limit] [--assets-dir DIR] [--save-dir DIR] [--session NAME] [--state FILE] [--profile DIR] [--browser-arg ARG] [--headed] [--auto-connect|--no-auto-connect]",
+    );
+    return;
   }
-  const document = await captureHandler({
-    limit,
-    assetsDir: assetsDir || getAssetsDir(config, sourceName),
-    saveDir: sourceSaveDir,
-    browserOptions: sourceBrowserOptions,
-  });
-  if (hasNewUnclassifiedItems(document, sourceSaveDir)) {
-    printCategorizationHint(sourceName);
+
+  const config = loadConfig();
+  const { sourceNames, limit, assetsDir, saveDir, browserOptions } =
+    parseCaptureCliArgs(argv, config);
+
+  const documents: FeedDocument[] = [];
+  for (const sourceName of sourceNames) {
+    const sourceDefaults = getCaptureDefaults(config, sourceName);
+    const sourceSaveDir = resolveCanonicalSaveDir(
+      config,
+      saveDir || sourceDefaults.save_dir,
+      sourceName,
+    );
+    const sourceBrowserOptions = {
+      ...getCaptureBrowserOptions(config, sourceName),
+      ...browserOptions,
+    };
+    const captureHandler = getCaptureHandler(sourceName);
+    if (!captureHandler) {
+      throw new Error(`Unsupported source: ${sourceName}`);
+    }
+    const document = await captureHandler({
+      limit,
+      assetsDir: assetsDir || getAssetsDir(config, sourceName),
+      saveDir: sourceSaveDir,
+      browserOptions: sourceBrowserOptions,
+    });
+    if (hasNewUnclassifiedItems(document, sourceSaveDir)) {
+      printCategorizationHint(sourceName);
+    }
+    documents.push(document);
   }
-  documents.push(document);
+  const document =
+    documents.length === 1 ? documents[0] : combineDocuments(documents);
+  process.stdout.write(`${JSON.stringify(document, null, 2)}\n`);
 }
-const document =
-  documents.length === 1 ? documents[0] : combineDocuments(documents);
-process.stdout.write(`${JSON.stringify(document, null, 2)}\n`);
