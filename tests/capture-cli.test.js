@@ -6,6 +6,8 @@ import {
   withConfigEnv,
   writeTestConfig,
 } from "./helpers/cli-config.mts";
+import { loadConfig } from "../lib/config.ts";
+import { parseCaptureCliArgs } from "../lib/capture-cli.ts";
 
 describe("feed-capture", () => {
   test("prints usage for help", () => {
@@ -37,5 +39,49 @@ describe("feed-capture", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Unsupported source: mastodon");
+  });
+
+  test("keeps per-source save dirs unless save dir is explicit", () => {
+    const configPath = writeTestConfig(repoRoot, {
+      user_preferences: {
+        sources: [
+          {
+            name: "x",
+            enabled: true,
+            default: true,
+            capture: {
+              save_dir: "./var/x-archive",
+              default_limit: 12,
+              browser: {},
+            },
+          },
+          {
+            name: "bluesky",
+            enabled: true,
+            capture: {
+              save_dir: "./var/bluesky-archive",
+              default_limit: 12,
+              browser: {},
+            },
+          },
+        ],
+      },
+    });
+    const previousConfigPath = process.env.FEED_TOOLS_CONFIG;
+    process.env.FEED_TOOLS_CONFIG = configPath;
+    try {
+      const parsed = parseCaptureCliArgs(
+        ["node", "feed-capture", "x", "bluesky"],
+        loadConfig(),
+      );
+
+      expect(parsed.saveDir).toBeUndefined();
+    } finally {
+      if (previousConfigPath === undefined) {
+        delete process.env.FEED_TOOLS_CONFIG;
+      } else {
+        process.env.FEED_TOOLS_CONFIG = previousConfigPath;
+      }
+    }
   });
 });

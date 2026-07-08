@@ -1,3 +1,5 @@
 #!/usr/bin/env node
 
-import "../lib/capture-cli.ts";
+import { main } from "../lib/capture-cli.ts";
+
+await main(process.argv);
