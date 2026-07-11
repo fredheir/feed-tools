@@ -10,6 +10,7 @@ All notable changes to this repo will be documented in this file.
 
 ### Fixed
 
+- Kept each capture source's save directory scoped to that source when the capture CLI resolves configuration, preventing one source's output path from leaking into subsequent captures in the same process (PR [#94](https://github.com/fredheir/feed-tools/pull/94)).
 - Fixed stale video asset cleanup to propagate errors instead of swallowing them; `removeStaleVideoDownload` previously caught all `fs.rmSync` failures silently with a best-effort comment, meaning corrupted or locked files could silently block a fresh yt-dlp download without surfacing any failure (PR [#69](https://github.com/fredheir/feed-tools/pull/69)).
 - Made the slop-scan baseline job run for manual workflow dispatches, so operator-triggered CI checks no longer complete as a misleading skipped workflow.
 - Routed feed-tools GitHub Actions directly to GitHub-hosted runners, removing the inherited self-hosted label that left push checks queued indefinitely.
