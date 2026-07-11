@@ -4,6 +4,8 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-11
+
 ### Changed
 
 - Added `workflow_dispatch` triggers to all CI workflows, so operators can manually rerun any individual check (tests, lint, typecheck, commitlint, dead-code, format, slop-scan, dependency, contract, secrets, actions-hygiene) without waiting for a push or pull request event (commits [8a32a82](https://github.com/fredheir/feed-tools/commit/8a32a8282a395cc1e332a872c8093e2eafe9d16d), [3b4acb3](https://github.com/fredheir/feed-tools/commit/3b4acb3f642c943fb3b429acf3bed7b703d79de3)).
