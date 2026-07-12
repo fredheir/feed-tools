@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "type": "module",
   "engines": {
-    "node": ">=22.12 <25"
+    "node": ">=26 <27"
   },
   "packageManager": "pnpm@10.14.0",
   "scripts": {
@@ -60,7 +60,7 @@
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@eslint/js": "^10.0.1",
-    "@types/node": "24",
+    "@types/node": "26",
     "agent-browser": "^0.26.0",
     "eslint": "^10.2.1",
     "globals": "^17.5.0",
