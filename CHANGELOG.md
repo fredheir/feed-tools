@@ -4,6 +4,10 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Raised the supported runtime, CI, and type-definition baseline from Node 24 to Node 26, keeping local and hosted execution on one current runtime contract (PR [#96](https://github.com/fredheir/feed-tools/pull/96)).
+
 ## [0.5.1] - 2026-07-11
 
 ### Changed
