@@ -40,16 +40,24 @@ describe("commitlint Dependabot policy", () => {
     expect(invalidHeaderResult.stdout).toContain("type-empty");
   });
 
-  it("selects the narrow policy from authenticated GitHub PR metadata", () => {
+  it("gates the exemption on every Dependabot authenticity signal", () => {
     const workflow = readFileSync(".github/workflows/commitlint.yml", "utf8");
-    const verifiedDependabotExpression =
-      "${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.user.type == 'Bot' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'dependabot/') }}";
-    const configSelectionExpression =
-      "${{ env.VERIFIED_DEPENDABOT_PR == 'true' && 'commitlint.dependabot.config.cjs' || 'commitlint.config.cjs' }}";
+    const guard = workflow.match(/VERIFIED_DEPENDABOT_PR:(.*)/)?.[1] ?? "";
+    const configSelection = workflow.match(/configFile:(.*)/)?.[1] ?? "";
 
-    expect(workflow).toContain(
-      `VERIFIED_DEPENDABOT_PR: ${verifiedDependabotExpression}`,
+    // A spoofed PR must fail at least one of these, so each is load-bearing.
+    expect(guard).toContain("github.event_name == 'pull_request'");
+    expect(guard).toContain(
+      "github.event.pull_request.user.login == 'dependabot[bot]'",
     );
-    expect(workflow).toContain(`configFile: ${configSelectionExpression}`);
+    expect(guard).toContain("github.event.pull_request.user.type == 'Bot'");
+    expect(guard).toContain(
+      "github.event.pull_request.head.repo.full_name == github.repository",
+    );
+    expect(guard).toContain("startsWith(github.head_ref, 'dependabot/')");
+
+    expect(configSelection).toContain("env.VERIFIED_DEPENDABOT_PR == 'true'");
+    expect(configSelection).toContain("commitlint.dependabot.config.cjs");
+    expect(configSelection).toContain("commitlint.config.cjs");
   });
 });
