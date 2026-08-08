@@ -18,7 +18,23 @@ function lint(configFile: string, message: string) {
 }
 
 function normalizeExpression(expression: string) {
-  return expression.replace(/\s+/g, "");
+  let quote: "'" | '"' | undefined;
+
+  return [...expression]
+    .filter((character) => {
+      if (quote !== undefined) {
+        if (character === quote) quote = undefined;
+        return true;
+      }
+
+      if (character === "'" || character === '"') {
+        quote = character;
+        return true;
+      }
+
+      return !/\s/.test(character);
+    })
+    .join("");
 }
 
 function extractSingleWorkflowValue(
@@ -32,6 +48,27 @@ function extractSingleWorkflowValue(
 }
 
 describe("commitlint Dependabot policy", () => {
+  it("preserves quoted branch prefixes and config paths while ignoring layout whitespace", () => {
+    const branchGuard = "startsWith(github.head_ref, 'dependabot/')";
+    const configSelection =
+      "env.VERIFIED_DEPENDABOT_PR == 'true' && 'commitlint.dependabot.config.cjs'";
+
+    expect(normalizeExpression(`  ${branchGuard}\n`)).toBe(
+      normalizeExpression(branchGuard),
+    );
+    expect(
+      normalizeExpression(branchGuard.replace("dependabot/", "dependabot /")),
+    ).not.toBe(normalizeExpression(branchGuard));
+    expect(
+      normalizeExpression(
+        configSelection.replace(
+          "commitlint.dependabot.config.cjs",
+          "commitlint.dependabot.config .cjs",
+        ),
+      ),
+    ).not.toBe(normalizeExpression(configSelection));
+  });
+
   it("rejects a human-spoofable Dependabot message under the normal policy", () => {
     const result = lint("commitlint.config.cjs", dependabotLikeMessage);
 
