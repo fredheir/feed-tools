@@ -17,6 +17,20 @@ function lint(configFile: string, message: string) {
   });
 }
 
+function normalizeExpression(expression: string) {
+  return expression.replace(/\s+/g, "");
+}
+
+function extractSingleWorkflowValue(
+  workflow: string,
+  field: string,
+  pattern: RegExp,
+) {
+  const matches = [...workflow.matchAll(pattern)];
+  expect(matches, `${field} must occur exactly once`).toHaveLength(1);
+  return matches[0]?.[1] ?? "";
+}
+
 describe("commitlint Dependabot policy", () => {
   it("rejects a human-spoofable Dependabot message under the normal policy", () => {
     const result = lint("commitlint.config.cjs", dependabotLikeMessage);
@@ -42,22 +56,24 @@ describe("commitlint Dependabot policy", () => {
 
   it("gates the exemption on every Dependabot authenticity signal", () => {
     const workflow = readFileSync(".github/workflows/commitlint.yml", "utf8");
-    const guard = workflow.match(/VERIFIED_DEPENDABOT_PR:(.*)/)?.[1] ?? "";
-    const configSelection = workflow.match(/configFile:(.*)/)?.[1] ?? "";
-
-    // A spoofed PR must fail at least one of these, so each is load-bearing.
-    expect(guard).toContain("github.event_name == 'pull_request'");
-    expect(guard).toContain(
-      "github.event.pull_request.user.login == 'dependabot[bot]'",
+    const guard = extractSingleWorkflowValue(
+      workflow,
+      "VERIFIED_DEPENDABOT_PR",
+      /^\s{6}VERIFIED_DEPENDABOT_PR:\s*(.+)$/gm,
     );
-    expect(guard).toContain("github.event.pull_request.user.type == 'Bot'");
-    expect(guard).toContain(
-      "github.event.pull_request.head.repo.full_name == github.repository",
+    const configSelection = extractSingleWorkflowValue(
+      workflow,
+      "configFile",
+      /^\s{10}configFile:\s*(.+)$/gm,
     );
-    expect(guard).toContain("startsWith(github.head_ref, 'dependabot/')");
+    const expectedGuard =
+      "${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.user.type == 'Bot' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'dependabot/') }}";
+    const expectedConfigSelection =
+      "${{ env.VERIFIED_DEPENDABOT_PR == 'true' && 'commitlint.dependabot.config.cjs' || 'commitlint.config.cjs' }}";
 
-    expect(configSelection).toContain("env.VERIFIED_DEPENDABOT_PR == 'true'");
-    expect(configSelection).toContain("commitlint.dependabot.config.cjs");
-    expect(configSelection).toContain("commitlint.config.cjs");
+    expect(normalizeExpression(guard)).toBe(normalizeExpression(expectedGuard));
+    expect(normalizeExpression(configSelection)).toBe(
+      normalizeExpression(expectedConfigSelection),
+    );
   });
 });
