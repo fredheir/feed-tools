@@ -3,12 +3,13 @@ packages:
 
 overrides:
   vite: ^8.0.16
-  js-yaml: ">=4.3.0"
-  nanoid: 3.3.12
+  js-yaml: ">=4.3.1"
+  nanoid: 3.3.18
   axios: ">=1.12.0"
   follow-redirects: ">=1.15.6"
-  fast-uri: ">=3.1.4"
-  brace-expansion: ">=5.0.8"
+  "fast-uri@>=3.0.0 <4.0.0": "3.1.5"
+  "fast-uri@>=4.0.0 <5.0.0": "4.1.2"
+  "minimatch@10>brace-expansion": "5.0.9"
   esbuild: ^0.28.1
 
 minimumReleaseAge: 4320

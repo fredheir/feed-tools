@@ -1,0 +1,47 @@
+{
+  "schema_version": 2,
+  "repo": "feed_tools",
+  "scan_date": "2026-08-12",
+  "generated_at": "2026-08-12T14:20:13+00:00",
+  "source": "pre-computed audit 2026-08-12 plus targeted post-remediation validation",
+  "guard": {
+    "uv_exclude_newer_days": 3,
+    "bypass_env": "UV_NO_EXCLUDE_NEWER=1"
+  },
+  "summary": {
+    "python_findings": 0,
+    "node_findings": 0,
+    "critical_findings": 0,
+    "direct_findings": 0
+  },
+  "delta": {
+    "new": [
+      "GHSA-7p8r-x3mc-p8w7",
+      "GHSA-rgw5-rvv9-x895",
+      "GHSA-28wg-ghj8-5hjv",
+      "GHSA-2v37-7h3g-55p8"
+    ],
+    "resolved": [
+      "fast-uri 4.1.1 broad override -> patched compatible 3.1.5 selector",
+      "brace-expansion 5.0.8 -> 5.0.9",
+      "nanoid 3.3.12 -> 3.3.18",
+      "Previously deferred esbuild finding no longer returned"
+    ],
+    "unchanged": []
+  },
+  "findings": [],
+  "remediation_applied": [
+    "Added version-scoped overrides for fast-uri, brace-expansion, js-yaml, and nanoid."
+  ],
+  "guard_assessment": [
+    "No Python security upgrade was recommended for this repository."
+  ],
+  "thinning_candidates": [],
+  "decisions_needed": [],
+  "validation": [
+    "Supplied pre-computed audit reconciled against the previous baseline",
+    "Targeted post-remediation dependency audit reports no remediable findings",
+    "Repository check-changed gate passed before baseline update"
+  ],
+  "notes": ["No additional dependency risk or thinning candidate identified."]
+}
