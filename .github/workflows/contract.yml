@@ -48,7 +48,7 @@ jobs:
           git clone --depth 1 git@github.com:Markolo-Research/markolo-shared.git "$standards_dir"
           git -C "$standards_dir" fetch --depth 1 origin "$MARKOLO_SHARED_STANDARDS_REF"
           git -C "$standards_dir" checkout --detach FETCH_HEAD
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: false
       - run: |
