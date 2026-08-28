@@ -1,26 +1,18 @@
+min_version: 2.1.12
+glob_matcher: doublestar
+
 pre-commit:
   parallel: true
   commands:
-    biome-root:
-      glob: "*.{js,jsx,cjs,mjs,ts,tsx,cts,mts,json,jsonc,css,html}"
-      run: pnpm exec biome format --write {staged_files}
-      stage_fixed: true
-    biome-nested:
+    biome:
       glob: "**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts,json,jsonc,css,html}"
       run: pnpm exec biome format --write {staged_files}
       stage_fixed: true
-    prettier-root:
-      glob: "*.{md,yml,yaml}"
-      run: pnpm exec prettier --write {staged_files}
-      stage_fixed: true
-    prettier-nested:
+    prettier:
       glob: "**/*.{md,yml,yaml}"
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
-    eslint-root:
-      glob: "*.{js,jsx,ts,tsx}"
-      run: pnpm exec eslint {staged_files}
-    eslint-nested:
+    eslint:
       glob: "**/*.{js,jsx,ts,tsx}"
       run: pnpm exec eslint {staged_files}
     gitleaks:
