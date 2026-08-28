@@ -23,5 +23,3 @@ onlyBuiltDependencies:
   - agent-browser
   - esbuild
   - slop-scan
-ignoredBuiltDependencies:
-  - lefthook

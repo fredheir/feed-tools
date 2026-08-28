@@ -48,8 +48,7 @@
     ],
     "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
-      "agent-browser",
-      "lefthook"
+      "agent-browser"
     ],
     "ignoreBinaries": [
       "uv"
@@ -65,7 +64,6 @@
     "eslint": "^10.2.1",
     "globals": "^17.5.0",
     "knip": "^6.9.0",
-    "lefthook": "2.1.12",
     "prettier": "^3.8.3",
     "slop-scan": "github:modem-dev/slop-scan#v0.4.0",
     "typescript": "^6.0.3",

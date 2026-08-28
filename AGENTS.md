@@ -43,7 +43,7 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 
 - SSH clone requires a GitHub SSH key; in sandboxed or keyless environments use the HTTPS-with-token method from the Cloning section above.
 - If `corepack enable` fails in a read-only environment, install pnpm with npm into the repo-local `.local` directory and prepend `.local/bin` to `PATH`.
-- `pnpm install` is expected to work in non-interactive agent/sandbox environments: `agent-browser` and `esbuild` are allowlisted in `pnpm-workspace.yaml`, while `lefthook` remains ignored.
+- `pnpm install` is expected to work in non-interactive agent/sandbox environments: `agent-browser` and `esbuild` are allowlisted in `pnpm-workspace.yaml`.
 - If pnpm still reports blocked builds because an older pnpm version ignored the repo policy, run `node node_modules/agent-browser/scripts/postinstall.js` and `pnpm rebuild esbuild`.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
 - In Cowork sandboxes, run `./bin/feed-signin <source>...` before capture when auth is uncertain; it relaunches workspace Chrome, opens the platform pages, and waits until source-specific auth cookies are visible on disk.
