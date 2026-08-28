@@ -13,6 +13,7 @@
     "format": "biome format --write . && prettier --write \"**/*.{md,yml,yaml}\"",
     "format:check": "biome format . && prettier --check \"**/*.{md,yml,yaml}\"",
     "test": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --disable-warning=ExperimentalWarning\" vitest run",
+    "commitlint": "commitlint --config commitlint.config.cjs",
     "doctor": "./bin/feed-doctor",
     "mcp": "node --experimental-strip-types ./bin/feed-mcp",
     "mcp:config": "node --experimental-strip-types ./bin/feed-mcp-config",
