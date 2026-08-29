@@ -359,12 +359,10 @@ const source = {
   name: "bluesky",
   captureDocument,
 } satisfies CaptureAdapter;
-const prepareFeed = prepareBlueskyFeed;
 
 export {
   buildExtractionScript,
   normalizeBlueskyExtractionDocument,
   source,
-  prepareFeed,
   extractBlueskySourceItemId,
 };

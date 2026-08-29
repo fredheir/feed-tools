@@ -1,5 +1,4 @@
 import { runSourceCapture } from "../lib/source-capture.ts";
-import type { SourceManifest } from "../lib/source-manifest.ts";
 import type {
   FeedBrowserConfig,
   FeedDocument,
@@ -22,10 +21,4 @@ export function getCaptureHandler(
   return function capture(options: CaptureOptions): Promise<FeedDocument> {
     return runSourceCapture(manifest.capture, options);
   };
-}
-
-export function getBootstrapHandler(
-  sourceName: FeedSourceName,
-): SourceManifest["prepareFeed"] {
-  return getSourceManifest(sourceName)?.prepareFeed || null;
 }
