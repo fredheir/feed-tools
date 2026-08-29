@@ -499,13 +499,6 @@ function getSourcePreferences(
   );
 }
 
-export function getDefaultSource(config: FeedConfig): string | null {
-  const sources = getEnabledSources(config);
-  return (
-    sources.find((source) => source.default)?.name || sources[0]?.name || null
-  );
-}
-
 export function getCaptureDefaults(
   config: FeedConfig,
   sourceName: string,

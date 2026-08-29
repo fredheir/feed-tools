@@ -101,4 +101,4 @@ function listSourceManifests(): SourceManifest[] {
   return Object.values(SOURCE_MANIFESTS);
 }
 
-export { getSourceManifest, listSourceManifests, SOURCE_MANIFESTS };
+export { getSourceManifest, listSourceManifests };

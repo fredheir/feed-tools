@@ -12,7 +12,6 @@ import {
   getCaptureBrowserOptions,
   getCaptureDefaults,
   getCurationPreferences,
-  getDefaultSource,
   getEnabledSourceNames,
   parseConfigPayload,
   readConfigDocument,
@@ -66,7 +65,6 @@ describe("config helpers", () => {
     };
 
     expect(getEnabledSourceNames(config)).toEqual(["x"]);
-    expect(getDefaultSource(config)).toBe("x");
     expect(getCaptureDefaults(config, "x")).toEqual({
       assets_dir: undefined,
       save_dir: path.join(repoRoot, "var/x-archive"),
