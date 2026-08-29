@@ -1,10 +1,5 @@
 import type { FeedDocument } from "./types.ts";
 
-export function getDocumentSource(document: FeedDocument): string | null {
-  const source = document?.source || null;
-  return source === "combined" ? null : source;
-}
-
 export function getDocumentSources(document: FeedDocument): string[] {
   const source = document?.source || null;
   if (source === "combined") {

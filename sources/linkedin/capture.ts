@@ -578,12 +578,10 @@ const source = {
   name: "linkedin",
   captureDocument,
 } satisfies CaptureAdapter;
-const prepareFeed = prepareLinkedInFeed;
 
 export {
   buildExtractionScript,
   source,
-  prepareFeed,
   extractLinkedInSourceItemId,
   isLinkedInItemWorthKeeping,
   scoreLinkedInItemQuality,

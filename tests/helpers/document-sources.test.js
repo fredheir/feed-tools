@@ -1,12 +1,8 @@
 import { describe, expect, test } from "vitest";
-import {
-  getDocumentSource,
-  getDocumentSources,
-} from "../../lib/document-sources.ts";
+import { getDocumentSources } from "../../lib/document-sources.ts";
 
 describe("document source helpers", () => {
   test("returns the direct source for non-combined documents", () => {
-    expect(getDocumentSource({ source: "x" })).toBe("x");
     expect(getDocumentSources({ source: "x" })).toEqual(["x"]);
   });
 
@@ -21,7 +17,6 @@ describe("document source helpers", () => {
       ],
     };
 
-    expect(getDocumentSource(document)).toBeNull();
     expect(getDocumentSources(document)).toEqual(["linkedin", "x"]);
   });
 });

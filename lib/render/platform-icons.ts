@@ -15,8 +15,6 @@ const PLATFORM_ICON_SET = {
   linkedin: { key: "linkedin", label: "LinkedIn" },
   x: { key: "x", label: "X" },
   twitter: { key: "x", label: "X" },
-  telegram: { key: "tg", label: "Telegram" },
-  tg: { key: "tg", label: "Telegram" },
 } as const;
 
 type PlatformIconKey = keyof typeof PLATFORM_ICON_SET;
