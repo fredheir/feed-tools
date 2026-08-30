@@ -195,7 +195,7 @@ function toolResult(value: JsonValue): JsonObject {
   };
 }
 
-function toolError(error: unknown): JsonObject {
+function toolError(error: unknown, code = "unexpected"): JsonObject {
   const message =
     error instanceof Error
       ? error.message
@@ -208,7 +208,7 @@ function toolError(error: unknown): JsonObject {
         text: `${JSON.stringify(
           {
             error: {
-              code: "unexpected",
+              code,
               message,
               next_actions: [],
             },
@@ -397,6 +397,12 @@ async function callTool(params: unknown): Promise<JsonObject> {
   const tool = TOOLS.find((candidate) => candidate.name === name);
   if (!tool) throw new Error(`Unknown tool: ${name}`);
   try {
+    if (params.arguments !== undefined && !isRecord(params.arguments)) {
+      return toolError(
+        new Error("tools/call arguments must be an object"),
+        "invalid_params",
+      );
+    }
     return toolResult(await tool.handler(asArgs(params.arguments)));
   } catch (error) {
     return toolError(error);

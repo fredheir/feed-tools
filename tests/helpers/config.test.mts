@@ -188,6 +188,35 @@ describe("config helpers", () => {
     });
   });
 
+  test.each([
+    0,
+    -1,
+    1.5,
+    "12foo",
+  ])("rejects invalid capture default_limit %p", (defaultLimit) => {
+    expect(() =>
+      parseConfigPayload(
+        JSON.stringify({
+          user_preferences: {
+            sources: [{ name: "x", capture: { default_limit: defaultLimit } }],
+          },
+        }),
+        "/tmp/config.json",
+      ),
+    ).toThrow(`Invalid default_limit: ${String(defaultLimit)}`);
+  });
+
+  test("preserves the default capture limit when config omits it", () => {
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: { sources: [{ name: "x" }] },
+      }),
+      "/tmp/config.json",
+    );
+
+    expect(getCaptureDefaults(config, "x").default_limit).toBeUndefined();
+  });
+
   test("resolves browser path defaults from the config file directory", () => {
     const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-config-base-"));
     const configPath = path.join(workdir, "profiles", "config.json");

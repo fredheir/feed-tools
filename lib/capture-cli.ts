@@ -9,6 +9,7 @@ import {
 import { hasNewUnclassifiedItems } from "./allocation.ts";
 import { requireArgValue } from "./cli-args.ts";
 import { combineDocuments } from "./document-ops.ts";
+import { DEFAULT_CAPTURE_LIMIT, parseCaptureLimit } from "./capture-limit.ts";
 import { getCaptureHandler } from "../sources/registry.ts";
 import { SOURCE_NAME_SET } from "./source-metadata.ts";
 import type {
@@ -24,17 +25,20 @@ function parseSourceNames(argv: string[]): {
 } {
   const args = argv.slice(2);
   const sourceNames: FeedSourceName[] = [];
-  while (
-    args[0] &&
-    !args[0].startsWith("--") &&
-    Number.isNaN(Number(args[0]))
-  ) {
-    const candidate = args.shift();
-    if (candidate && SOURCE_NAME_SET.has(candidate)) {
+  while (args[0] && !args[0].startsWith("--")) {
+    const candidate = args[0];
+    if (SOURCE_NAME_SET.has(candidate)) {
+      args.shift();
       sourceNames.push(candidate as FeedSourceName);
-    } else if (candidate) {
-      throw new Error(`Unsupported source: ${candidate}`);
+      continue;
     }
+    if (
+      !Number.isNaN(Number(candidate)) ||
+      /^[+-]?(?:\d|\.\d)/.test(candidate)
+    ) {
+      break;
+    }
+    throw new Error(`Unsupported source: ${candidate}`);
   }
   return { sourceNames, remainingArgs: args };
 }
@@ -59,17 +63,17 @@ export function parseCaptureCliArgs(
   }
 
   const defaults = getCaptureDefaults(config, primarySource);
-  let limit = defaults.default_limit ?? 12;
+  let limit =
+    defaults.default_limit === undefined
+      ? DEFAULT_CAPTURE_LIMIT
+      : parseCaptureLimit(defaults.default_limit, "default_limit");
   let assetsDir = getAssetsDir(config, primarySource);
   let saveDir: string | undefined;
   let browserOptions = getCaptureBrowserOptions(config, primarySource);
   let args = remainingArgs;
 
   if (args[0] && !args[0].startsWith("--")) {
-    limit = Number.parseInt(args[0], 10);
-    if (Number.isNaN(limit)) {
-      throw new Error(`Invalid limit: ${args[0]}`);
-    }
+    limit = parseCaptureLimit(args[0]);
     args = args.slice(1);
   }
 
