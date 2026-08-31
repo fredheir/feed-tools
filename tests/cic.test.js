@@ -104,6 +104,20 @@ describe("feed-capture-cic extract", () => {
     expect(script).toContain("const limit = 12");
   });
 
+  test.each([
+    "0",
+    "-1",
+    "1.5",
+    "12foo",
+  ])("rejects invalid capture limit %s", (limit) => {
+    const result = spawnSync("node", [CLI, "extract", "x", limit], {
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`Invalid limit: ${limit}`);
+  });
+
   test("can wrap extraction as a browser download", () => {
     const script = run(["extract", "x", "7", "--download"]);
     expect(script).toContain("new Promise");

@@ -1,4 +1,3 @@
-import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
@@ -6,7 +5,7 @@ import {
   withConfigEnv,
   writeTestConfig,
 } from "./helpers/cli-config.mts";
-import { loadConfig } from "../lib/config.ts";
+import { loadConfig, parseConfigPayload } from "../lib/config.ts";
 import { parseCaptureCliArgs } from "../lib/capture-cli.ts";
 
 describe("feed-capture", () => {
@@ -39,6 +38,41 @@ describe("feed-capture", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Unsupported source: mastodon");
+  });
+
+  test.each([
+    "0",
+    "-1",
+    "1.5",
+    "12foo",
+  ])("rejects invalid positional capture limit %s", (limit) => {
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: {
+          sources: [{ name: "x", capture: { browser: {} } }],
+        },
+      }),
+      "/tmp/config.json",
+    );
+
+    expect(() =>
+      parseCaptureCliArgs(["node", "feed-capture", "x", limit], config),
+    ).toThrow(`Invalid limit: ${limit}`);
+  });
+
+  test("uses the default capture limit when config omits it", () => {
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: {
+          sources: [{ name: "x", capture: { browser: {} } }],
+        },
+      }),
+      "/tmp/config.json",
+    );
+
+    expect(
+      parseCaptureCliArgs(["node", "feed-capture", "x"], config).limit,
+    ).toBe(12);
   });
 
   test("keeps per-source save dirs unless save dir is explicit", () => {

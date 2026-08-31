@@ -20,6 +20,7 @@ import {
   toOptionalString,
   toStringArray,
 } from "./coerce.ts";
+import { parseCaptureLimit } from "./capture-limit.ts";
 import { SOURCE_NAME_SET } from "./source-metadata.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
@@ -118,7 +119,9 @@ function normalizeCaptureConfig(
   if (!isRecord(value)) return undefined;
   return {
     default_limit:
-      typeof value.default_limit === "number" ? value.default_limit : undefined,
+      value.default_limit === undefined
+        ? undefined
+        : parseCaptureLimit(value.default_limit, "default_limit"),
     assets_dir: toOptionalString(value.assets_dir) ?? undefined,
     save_dir: toOptionalString(value.save_dir) ?? undefined,
     browser: normalizeBrowserConfig(value.browser),
@@ -273,8 +276,11 @@ export function writeConfigFromPreferences({
     }
     const capture = isRecord(source.capture) ? source.capture : {};
     source.capture = capture;
-    if (spec && typeof spec.default_limit === "number") {
-      capture.default_limit = spec.default_limit;
+    if (spec && spec.default_limit !== undefined) {
+      capture.default_limit = parseCaptureLimit(
+        spec.default_limit,
+        "default_limit",
+      );
     }
     if (browser) capture.browser = { ...browser };
   }

@@ -9,6 +9,29 @@ import { framedMessage, listMcpTools } from "../lib/mcp/server.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
+function dispatchMcpToolCall(
+  name: string,
+  argumentsValue: unknown,
+  env: NodeJS.ProcessEnv = {},
+): Record<string, unknown> {
+  const input = `${JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "tools/call",
+    params: { name, arguments: argumentsValue },
+  })}\n`;
+
+  const result = spawnSync(process.execPath, ["./bin/feed-mcp"], {
+    cwd: REPO_ROOT,
+    input,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+  });
+
+  expect(result.status, result.stderr).toBe(0);
+  return JSON.parse(result.stdout.trim()) as Record<string, unknown>;
+}
+
 function callMcpTool(
   name: string,
   args: Record<string, unknown> = {},
@@ -50,6 +73,37 @@ describe("feed-tools MCP server", () => {
     for (const tool of listMcpTools()) {
       expect(tool.inputSchema).toMatchObject({ type: "object" });
     }
+  });
+
+  test.each([
+    ["null", null],
+    ["array", []],
+    ["string", "not-an-object"],
+    ["number", 42],
+    ["boolean", true],
+  ])("rejects %s tool arguments before invoking the handler", (_kind, argumentsValue) => {
+    const workdir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "feed-mcp-invalid-args-"),
+    );
+    const response = dispatchMcpToolCall("feed_config_write", argumentsValue, {
+      FEED_TOOLS_WORKDIR: workdir,
+      FEED_TOOLS_CONFIG: "",
+    });
+    const result = response.result as Record<string, unknown>;
+    const content = result.content as Array<Record<string, unknown>>;
+    const payload = JSON.parse(String(content[0]?.text)) as Record<
+      string,
+      unknown
+    >;
+
+    expect(result).toMatchObject({ isError: true });
+    expect(payload).toMatchObject({
+      error: {
+        code: "invalid_params",
+        message: "tools/call arguments must be an object",
+      },
+    });
+    expect(fs.existsSync(path.join(workdir, "config.json"))).toBe(false);
   });
 
   test("parses framed MCP messages by byte length", () => {
