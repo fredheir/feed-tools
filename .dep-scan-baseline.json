@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "repo": "feed_tools",
-  "scan_date": "2026-08-31",
-  "generated_at": "2026-08-31T09:02:33.763764+00:00",
-  "source": "pre-computed audit 2026-08-31 plus targeted dependency-gate validation",
+  "scan_date": "2026-09-01",
+  "generated_at": "2026-09-01T12:06:43.770413+00:00",
+  "source": "pre-computed audit 2026-09-01 plus targeted dependency-gate validation",
   "guard": {
     "bypass_env": "UV_NO_EXCLUDE_NEWER=1",
     "uv_exclude_newer_days": 3
@@ -28,7 +28,7 @@
   "thinning_candidates": [],
   "decisions_needed": [],
   "validation": [
-    "Supplied pre-computed audit reconciled against the 2026-08-17 repository baseline.",
+    "Supplied pre-computed audit reconciled against the 2026-08-31 repository baseline.",
     "just deps-check-fast passed.",
     "No stale repo-level exclude-newer or exclude-newer-package configuration was present.",
     "2026-08-31: supplied audit reported zero vulnerabilities across the pnpm workspace.",
@@ -39,6 +39,7 @@
     "No additional dependency risk or thinning candidate identified.",
     "2026-08-17: pnpm audit returned no vulnerabilities and the dependency gate passed.",
     "2026-08-24: pnpm audit returned no vulnerabilities and the dependency gate passed.",
-    "2026-08-31: pnpm audit remained clean; no dependency or thinning change was needed."
+    "2026-08-31: pnpm audit remained clean; no dependency or thinning change was needed.",
+    "2026-09-01: supplied pnpm audit remained clean; dependency and thinning conclusions were unchanged."
   ]
 }
