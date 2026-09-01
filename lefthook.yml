@@ -48,4 +48,4 @@ pre-push:
     dependency-shape:
       run: just deps-check-fast
     deadcode:
-      run: pnpm run deadcode
+      run: just deadcode

@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+changed_paths=()
+while IFS= read -r -d '' changed_path; do
+  changed_paths+=("$changed_path")
+done < <(scripts/dev/worktree-paths)
+
+biome_paths=()
+eslint_paths=()
+prettier_paths=()
+ignored_paths=()
+for changed_path in "${changed_paths[@]}"; do
+  if [[ "$changed_path" == tests/fixtures/*.html ]]; then
+    ignored_paths+=("$changed_path")
+    continue
+  fi
+  if [[ -d "$changed_path" ]]; then
+    biome_paths+=("$changed_path")
+    eslint_paths+=("$changed_path")
+    prettier_paths+=("$changed_path")
+    continue
+  fi
+
+  case "$changed_path" in
+    *.cjs|*.cts|*.css|*.html|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
+      biome_paths+=("$changed_path")
+      ;;
+  esac
+  case "$changed_path" in
+    *.cjs|*.cts|*.js|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
+      eslint_paths+=("$changed_path")
+      ;;
+  esac
+  case "$changed_path" in
+    *.md|*.yml|*.yaml)
+      prettier_paths+=("$changed_path")
+      ;;
+  esac
+done
+
+if ((${#biome_paths[@]} > 0)); then
+  pnpm exec biome format --write -- "${biome_paths[@]}"
+fi
+if ((${#eslint_paths[@]} > 0)); then
+  pnpm exec eslint --fix --no-warn-ignored -- "${eslint_paths[@]}"
+fi
+if ((${#prettier_paths[@]} > 0)); then
+  pnpm exec prettier --write -- "${prettier_paths[@]}"
+fi
+
+if ((${#biome_paths[@]} == 0 && ${#eslint_paths[@]} == 0 && ${#prettier_paths[@]} == 0)); then
+  echo "No changed files have a supported fixer."
+fi
+if ((${#ignored_paths[@]} > 0)); then
+  printf 'Skipped formatter-ignored paths: %s\n' "${ignored_paths[*]}"
+fi

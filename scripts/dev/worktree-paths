@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+changed_paths=()
+
+append_changed_path() {
+  local candidate="$1"
+  local existing
+
+  if [[ ! -e "$candidate" && ! -L "$candidate" ]]; then
+    return 0
+  fi
+  for existing in "${changed_paths[@]}"; do
+    if [[ "$existing" == "$candidate" ]]; then
+      return 0
+    fi
+  done
+  changed_paths+=("$candidate")
+}
+
+status_entries=()
+while IFS= read -r -d '' status_entry; do
+  status_entries+=("$status_entry")
+done < <(git status --porcelain=v1 -z --untracked-files=all)
+
+for ((index = 0; index < ${#status_entries[@]}; index += 1)); do
+  entry="${status_entries[index]}"
+  if [[ ${#entry} -lt 4 ]]; then
+    continue
+  fi
+
+  status_code="${entry:0:2}"
+  append_changed_path "${entry:3}"
+
+  if [[ "$status_code" == *R* || "$status_code" == *C* ]]; then
+    index=$((index + 1))
+    if ((index >= ${#status_entries[@]})); then
+      echo "git status returned an incomplete rename record" >&2
+      exit 1
+    fi
+    append_changed_path "${status_entries[index]}"
+  fi
+done
+
+for changed_path in "${changed_paths[@]}"; do
+  printf '%s\0' "$changed_path"
+done

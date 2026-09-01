@@ -1,35 +1,117 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
-JUST_VERSION="${JUST_VERSION:-1.43.0}"
-RG_VERSION="${RG_VERSION:-14.1.1}"
+readonly JUST_VERSION="1.58.0"
+readonly JUST_ARCHIVE="just-${JUST_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+readonly JUST_SHA256="4a5cc2f53e6f0f8c59092a6cc38291eb729d46a7dd95d3ae582008881b84931d"
+readonly RG_VERSION="14.1.1"
+readonly RG_ARCHIVE="ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+readonly RG_SHA256="4cf9f2741e6c465ffdb7c26f38056a59e2a2544b51f7cc128ef28337eeae4d8e"
+readonly BIN_DIR="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/markolo-ci-bin"
 
-bin_dir="${RUNNER_TEMP:-/tmp}/ci-bin"
-mkdir -p "$bin_dir"
+mkdir -p "$BIN_DIR"
+chmod 700 "$BIN_DIR"
 
-if ! command -v rg >/dev/null 2>&1; then
-  rg_bin="$bin_dir/rg"
-  if [ ! -x "$rg_bin" ]; then
-    archive="ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-    curl -fsSL "https://github.com/BurntSushi/ripgrep/releases/download/${RG_VERSION}/${archive}" \
-      | tar -xz -C "$bin_dir" --strip-components=1 "ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl/rg"
+fail() {
+  echo "scripts/ci/just: $1" >&2
+  exit 1
+}
+
+sha256_matches() {
+  local expected="$1"
+  local file="$2"
+  local actual
+
+  actual="$(sha256sum "$file")" || return 1
+  actual="${actual%% *}"
+  [[ "$actual" == "$expected" ]]
+}
+
+download_verified() {
+  local url="$1"
+  local destination="$2"
+  local expected="$3"
+  local temporary
+
+  temporary="$(mktemp "${destination}.download.XXXXXX")" || return 1
+  if ! curl --fail --silent --show-error --location --proto '=https' \
+    --tlsv1.2 --retry 3 --retry-all-errors "$url" -o "$temporary"; then
+    rm -f -- "$temporary"
+    return 1
   fi
+  if ! sha256_matches "$expected" "$temporary"; then
+    rm -f -- "$temporary"
+    echo "checksum mismatch for $(basename "$destination")" >&2
+    return 1
+  fi
+  chmod 600 "$temporary"
+  mv -f -- "$temporary" "$destination"
+}
+
+extract_binary() {
+  local archive="$1"
+  local member="$2"
+  local destination="$3"
+  local extract_dir
+  local binary_tmp
+  local extracted
+
+  extract_dir="$(mktemp -d "${BIN_DIR}/.extract.XXXXXX")" || return 1
+  binary_tmp="$(mktemp "${BIN_DIR}/.binary.XXXXXX")" || {
+    rm -rf -- "$extract_dir"
+    return 1
+  }
+  extracted="$extract_dir/$member"
+  if ! tar -xzf "$archive" -C "$extract_dir" --no-same-owner --no-same-permissions "$member" ||
+    [[ ! -f "$extracted" || -L "$extracted" ]]; then
+    rm -f -- "$binary_tmp"
+    rm -rf -- "$extract_dir"
+    return 1
+  fi
+  cp -- "$extracted" "$binary_tmp" || {
+    rm -f -- "$binary_tmp"
+    rm -rf -- "$extract_dir"
+    return 1
+  }
+  chmod 755 "$binary_tmp"
+  mv -f -- "$binary_tmp" "$destination"
+  rm -rf -- "$extract_dir"
+}
+
+ensure_ripgrep() {
+  if command -v rg >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local archive="$BIN_DIR/$RG_ARCHIVE"
+  if [[ ! -f "$archive" ]] || ! sha256_matches "$RG_SHA256" "$archive"; then
+    download_verified \
+      "https://github.com/BurntSushi/ripgrep/releases/download/${RG_VERSION}/${RG_ARCHIVE}" \
+      "$archive" "$RG_SHA256" || fail "could not download verified ripgrep"
+  fi
+  extract_binary \
+    "$archive" \
+    "ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl/rg" \
+    "$BIN_DIR/rg" || fail "could not extract verified ripgrep"
+}
+
+ensure_just() {
+  local archive="$BIN_DIR/$JUST_ARCHIVE"
+  if [[ ! -f "$archive" ]] || ! sha256_matches "$JUST_SHA256" "$archive"; then
+    download_verified \
+      "https://github.com/casey/just/releases/download/${JUST_VERSION}/${JUST_ARCHIVE}" \
+      "$archive" "$JUST_SHA256" || fail "could not download verified Just"
+  fi
+  extract_binary "$archive" just "$BIN_DIR/just" ||
+    fail "could not extract verified Just"
+}
+
+ensure_ripgrep
+export PATH="$BIN_DIR:$PATH"
+if [[ -n "${GITHUB_PATH:-}" ]]; then
+  printf '%s\n' "$BIN_DIR" >>"$GITHUB_PATH"
 fi
 
-export PATH="$bin_dir:$PATH"
-if [ -n "${GITHUB_PATH:-}" ]; then
-  echo "$bin_dir" >> "$GITHUB_PATH"
-fi
-
-if command -v just >/dev/null 2>&1; then
-  exec just "$@"
-fi
-
-just_bin="$bin_dir/just"
-if [ ! -x "$just_bin" ]; then
-  archive="just-${JUST_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-  curl -fsSL "https://github.com/casey/just/releases/download/${JUST_VERSION}/${archive}" \
-    | tar -xz -C "$bin_dir" just
-fi
-
-exec "$just_bin" "$@"
+ensure_just
+exec "$BIN_DIR/just" "$@"

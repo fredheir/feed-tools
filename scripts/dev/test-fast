@@ -4,4 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+# The suite is deterministic and has no live browser/feed integrations, so the
+# complete Vitest run is the bounded local lane until a slower lane is added.
 pnpm run test

@@ -16,6 +16,7 @@
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
+    ".repo-standards-ref",
     ".env.example",
     ".github/workflows/actions-hygiene.yml",
     ".github/workflows/contract.yml",
@@ -41,13 +42,15 @@
   ],
   "requiredJustRecipes": [
     "fmt",
-    "fix",
+    "fix-all",
+    "fix-worktree",
     "fmt-check",
     "lint",
     "actions-hygiene",
     "typecheck",
     "test",
     "test-fast",
+    "test-one",
     "secrets",
     "secrets-staged",
     "deps-check",
@@ -56,9 +59,11 @@
     "doctor-staged",
     "sync",
     "sync-if-needed",
-    "check-changed",
+    "check-paths",
+    "check-worktree",
     "check"
   ],
+  "managedScripts": ["scripts/ci/just", "scripts/guards/_repo-standards"],
   "allowBarePythonIn": [],
   "suppressionBudget": {
     "total": 0
@@ -66,5 +71,13 @@
   "hooks": {
     "lefthookCommand": "lefthook"
   },
-  "requiredExecutableFiles": []
+  "requiredExecutableFiles": [
+    "scripts/ci/just",
+    "scripts/dev/check-paths",
+    "scripts/dev/check-worktree",
+    "scripts/dev/fix-all",
+    "scripts/dev/fix-worktree",
+    "scripts/dev/test-one",
+    "scripts/dev/worktree-paths"
+  ]
 }

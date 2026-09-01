@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+if (($# == 0)); then
+  echo "Usage: scripts/dev/check-paths <path> [<path> ...]" >&2
+  exit 2
+fi
+
+repo_root="$(realpath -m -- "$ROOT_DIR")"
+checked_paths=()
+biome_paths=()
+eslint_paths=()
+prettier_paths=()
+test_paths=()
+skipped_paths=()
+ignored_paths=()
+
+directory_contains_code() {
+  local search_path="$1"
+
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( \
+        -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' -o \
+        -path 'tests/fixtures/*.html' -o -path '*/tests/fixtures/*.html' \
+      \) -prune -o \
+      -type f \( \
+        -name '*.cjs' -o -name '*.cts' -o -name '*.css' -o -name '*.html' -o \
+        -name '*.js' -o -name '*.json' -o -name '*.jsonc' -o -name '*.jsx' -o \
+        -name '*.mjs' -o -name '*.mts' -o -name '*.ts' -o -name '*.tsx' \
+      \) -print0
+  )
+  return 1
+}
+
+directory_contains_lintable_code() {
+  local search_path="$1"
+
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( \
+        -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' -o \
+        -path 'tests/fixtures/*.html' -o -path '*/tests/fixtures/*.html' \
+      \) -prune -o \
+      -type f \( \
+        -name '*.cjs' -o -name '*.cts' -o -name '*.js' -o -name '*.jsx' -o \
+        -name '*.mjs' -o -name '*.mts' -o -name '*.ts' -o -name '*.tsx' \
+      \) -print0
+  )
+  return 1
+}
+
+directory_contains_docs() {
+  local search_path="$1"
+
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' \) -prune -o \
+      -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' \) -print0
+  )
+  return 1
+}
+
+directory_contains_tests() {
+  local search_path="$1"
+
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' \) -prune -o \
+      -type f \( \
+        -name '*.test.cjs' -o -name '*.test.js' -o -name '*.test.mjs' -o \
+        -name '*.test.mts' -o -name '*.test.ts' -o -name '*.test.tsx' \
+      \) -print0
+  )
+  return 1
+}
+
+for raw_path in "$@"; do
+  resolved_path="$(realpath -m -- "$raw_path")"
+  if [[ "$resolved_path" == "$repo_root" ]]; then
+    relative_path="."
+  elif [[ "$resolved_path" == "$repo_root"/* ]]; then
+    relative_path="${resolved_path#"$repo_root"/}"
+  else
+    echo "Path escapes repository root: $raw_path" >&2
+    exit 2
+  fi
+
+  if [[ ! -e "$relative_path" && ! -L "$relative_path" ]]; then
+    echo "Path does not exist: $raw_path" >&2
+    exit 2
+  fi
+  checked_paths+=("$relative_path")
+
+  if [[ -d "$relative_path" ]]; then
+    if directory_contains_code "$relative_path"; then
+      biome_paths+=("$relative_path")
+    fi
+    if directory_contains_lintable_code "$relative_path"; then
+      eslint_paths+=("$relative_path")
+    fi
+    if directory_contains_docs "$relative_path"; then
+      prettier_paths+=("$relative_path")
+    fi
+    if [[ "$relative_path" == tests || "$relative_path" == tests/* ]] &&
+      directory_contains_tests "$relative_path"; then
+      test_paths+=("$relative_path")
+    fi
+    continue
+  fi
+
+  case "$relative_path" in
+    tests/fixtures/*.html)
+      ignored_paths+=("$relative_path")
+      ;;
+    *.cjs|*.cts|*.css|*.html|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
+      biome_paths+=("$relative_path")
+      ;;
+  esac
+  case "$relative_path" in
+    *.cjs|*.cts|*.js|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
+      eslint_paths+=("$relative_path")
+      ;;
+  esac
+  case "$relative_path" in
+    *.md|*.yml|*.yaml)
+      prettier_paths+=("$relative_path")
+      ;;
+  esac
+  case "$relative_path" in
+    tests/*.test.cjs|tests/*.test.js|tests/*.test.mjs|tests/*.test.mts|tests/*.test.ts|tests/*.test.tsx)
+      test_paths+=("$relative_path")
+      ;;
+    *)
+      case "$relative_path" in
+        *.cjs|*.cts|*.css|*.html|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx|*.md|*.yml|*.yaml)
+          ;;
+        *)
+          skipped_paths+=("$relative_path")
+          ;;
+      esac
+      ;;
+  esac
+done
+
+if ((${#biome_paths[@]} > 0)); then
+  pnpm exec biome format -- "${biome_paths[@]}"
+fi
+if ((${#eslint_paths[@]} > 0)); then
+  pnpm exec eslint --no-warn-ignored -- "${eslint_paths[@]}"
+fi
+if ((${#prettier_paths[@]} > 0)); then
+  pnpm exec prettier --check -- "${prettier_paths[@]}"
+fi
+if ((${#test_paths[@]} > 0)); then
+  scripts/dev/test-one "${test_paths[@]}"
+fi
+if ((${#skipped_paths[@]} > 0)); then
+  printf 'Skipped unsupported paths: %s\n' "${skipped_paths[*]}"
+fi
+if ((${#ignored_paths[@]} > 0)); then
+  printf 'Skipped formatter-ignored paths: %s\n' "${ignored_paths[*]}"
+fi
+
+printf 'Checked %d path(s).\n' "${#checked_paths[@]}"

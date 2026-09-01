@@ -8,13 +8,14 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  MARKOLO_SHARED_STANDARDS_REF: standards/stable
+  MARKOLO_SHARED_STANDARDS_REF: 292e07694d059d9049744bb6ad0c078b15d3a491
 
 jobs:
   actions-hygiene:
