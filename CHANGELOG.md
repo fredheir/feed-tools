@@ -7,7 +7,7 @@ All notable changes to this repo will be documented in this file.
 ### Changed
 
 - Raised the supported runtime, CI, and type-definition baseline from Node 24 to Node 26, keeping local and hosted execution on one current runtime contract (PR [#96](https://github.com/fredheir/feed-tools/pull/96)).
-- Added the Just agent API v2 surface with an explicit safe default, read-only worktree/path checks, changed-only fixes, and targeted Vitest support; `test-fast` remains the complete deterministic local suite because this repository has no live integration lane.
+- Replaced the mutating `check-changed` workflow and PATH-dependent CI Just bootstrap with the Just agent API v2: bare `just` now lists a safe command surface, `fix-worktree`/`fix-all`, read-only `check-worktree`/`check-paths`, targeted Vitest runs, and CI now uses checksum-verified Just 1.58.0 with pinned shared standards (PR [#117](https://github.com/fredheir/feed-tools/pull/117)).
 
 ## [0.5.1] - 2026-07-11
 
