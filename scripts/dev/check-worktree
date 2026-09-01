@@ -15,4 +15,5 @@ else
   echo "No changed paths; skipped path checks."
 fi
 
+just typecheck
 just test-fast

@@ -102,7 +102,7 @@ curl -sf http://127.0.0.1:9222/json/version || curl -sf http://localhost:9222/js
 
 ## Git / PRs
 
-- Start with bare `just` to discover the safe, documented recipe list. Use `just check-paths PATH...` and `just test-one TARGET` for focused work, `just check-worktree` for read-only staged/unstaged/renamed/untracked verification, and `just check` before commit/CI handoff. Mutation is explicit through `just fix-worktree` or intentional whole-repository `just fix-all`; there is no legacy `fix` or `check-changed` recipe.
+- Start with bare `just` to discover the safe, documented recipe list. Use `just check-paths PATH...` and `just test-one TARGET` for focused work, `just check-worktree` for read-only staged/unstaged/renamed/untracked verification (including TypeScript typecheck), and `just check` before commit/CI handoff. Mutation is explicit through `just fix-worktree` or intentional whole-repository `just fix-all`; there is no legacy `fix` or `check-changed` recipe.
 - `just test-fast` runs the complete deterministic Vitest suite. It is the bounded local lane because the suite has no live browser/feed integrations; `just test` currently has the same scope for CI.
 - Normal feed commands and `pnpm install` only need this repository's dependencies; consumers do not need `markolo-shared`. Maintainer-only standards recipes such as `just doctor`, `just check`, and `just hooks-install` use the pinned `.repo-standards-ref` cache by default, or an explicit `REPO_STANDARDS_LOCAL` checkout. They fail loudly when the pinned tooling is unavailable; use `just sync-if-needed` only after the standards cache is available.
 - Run `just hooks-install` after clone or after hook migration changes.
