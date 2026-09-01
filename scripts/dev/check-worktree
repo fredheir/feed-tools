@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+worktree_paths=()
+while IFS= read -r -d '' worktree_path; do
+  worktree_paths+=("$worktree_path")
+done < <(scripts/dev/worktree-paths)
+
+if ((${#worktree_paths[@]} > 0)); then
+  scripts/dev/check-paths "${worktree_paths[@]}"
+else
+  echo "No changed paths; skipped path checks."
+fi
+
+just test-fast

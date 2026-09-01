@@ -7,6 +7,7 @@ All notable changes to this repo will be documented in this file.
 ### Changed
 
 - Raised the supported runtime, CI, and type-definition baseline from Node 24 to Node 26, keeping local and hosted execution on one current runtime contract (PR [#96](https://github.com/fredheir/feed-tools/pull/96)).
+- Added the Just agent API v2 surface with an explicit safe default, read-only worktree/path checks, changed-only fixes, and targeted Vitest support; `test-fast` remains the complete deterministic local suite because this repository has no live integration lane.
 
 ## [0.5.1] - 2026-07-11
 

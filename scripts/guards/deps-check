@@ -4,5 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-pnpm install --frozen-lockfile
+scripts/guards/deps-check-fast
+
+# Dependency installation belongs to the explicit `just sync` recipe; this
+# proof only inspects the existing lockfile and installed package graph.
+if [[ ! -f node_modules/.modules.yaml ]]; then
+  echo "node_modules is incomplete; run: just sync" >&2
+  exit 1
+fi
+
+pnpm list --depth=Infinity --json >/dev/null
 pnpm ignored-builds

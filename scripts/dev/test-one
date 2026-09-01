@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+if (($# == 0)); then
+  echo "Usage: scripts/dev/test-one <file-or-vitest-selector> [<selector> ...]" >&2
+  exit 2
+fi
+
+pnpm exec vitest run "$@"
