@@ -62,6 +62,7 @@
     "check-worktree",
     "check"
   ],
+  "managedScripts": ["scripts/ci/just", "scripts/guards/_repo-standards"],
   "allowBarePythonIn": [],
   "suppressionBudget": {
     "total": 0

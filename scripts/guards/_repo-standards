@@ -1,66 +1,246 @@
-#!/usr/bin/env bash
+#!/bin/bash -p
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-cd "$ROOT_DIR"
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$root_dir"
 
-standards_root="${REPO_STANDARDS_LOCAL:-}"
-if [[ -z "$standards_root" && -f "$HOME/Projects/markolo-shared/packages/repo-standards/dist/cli.js" ]]; then
-  standards_root="$HOME/Projects/markolo-shared"
-fi
-if [[ -z "$standards_root" && -f "$ROOT_DIR/../markolo-shared/packages/repo-standards/dist/cli.js" ]]; then
-  standards_root="$ROOT_DIR/../markolo-shared"
-fi
+fail() {
+  echo "repo-standards unavailable: $1" >&2
+  cat >&2 <<'MSG'
+Set REPO_STANDARDS_LOCAL to a markolo-shared checkout for explicit local development.
+For normal checks, commit a full 40-character SHA to .repo-standards-ref and let
+this wrapper populate REPO_STANDARDS_CACHE_DIR/<sha> with that detached shared
+checkout. MARKOLO_SHARED_STANDARDS_REF may repeat the same pin in CI. Set
+REPO_STANDARDS_OFFLINE=1 to require an existing cache entry.
+MSG
+  exit 1
+}
 
-if [[ -z "$standards_root" && "${CI:-}" == "true" ]]; then
-  standards_root="$(mktemp -d "${RUNNER_TEMP:-/tmp}/markolo-shared.XXXXXX")"
-  git init "$standards_root"
-  git -C "$standards_root" remote add origin git@github.com:Markolo-Research/markolo-shared.git
-  git -C "$standards_root" fetch --depth 1 origin "${MARKOLO_SHARED_STANDARDS_REF:-standards/stable}"
-  git -C "$standards_root" checkout --detach FETCH_HEAD
-fi
+git_bin="${REPO_STANDARDS_GIT_BIN:-git}"
+shared_repository="${MARKOLO_SHARED_STANDARDS_REPOSITORY:-git@github.com:Markolo-Research/markolo-shared.git}"
 
-if [[ -n "$standards_root" ]]; then
-  cli="$standards_root/packages/repo-standards/dist/cli.js"
-  if [[ ! -f "$cli" ]]; then
-    echo "repo-standards CLI not found at $cli" >&2
-    exit 1
+run_git() {
+  env \
+    -u GIT_ALTERNATE_OBJECT_DIRECTORIES \
+    -u GIT_COMMON_DIR \
+    -u GIT_CONFIG \
+    -u GIT_CONFIG_COUNT \
+    -u GIT_CONFIG_PARAMETERS \
+    -u GIT_DIR \
+    -u GIT_GRAFT_FILE \
+    -u GIT_IMPLICIT_WORK_TREE \
+    -u GIT_INDEX_FILE \
+    -u GIT_OBJECT_DIRECTORY \
+    -u GIT_PREFIX \
+    -u GIT_REPLACE_REF_BASE \
+    -u GIT_SHALLOW_FILE \
+    -u GIT_TEMPLATE_DIR \
+    -u GIT_WORK_TREE \
+    "$git_bin" "$@"
+}
+
+verify_git() {
+  GIT_CONFIG_GLOBAL=/dev/null \
+    GIT_CONFIG_SYSTEM=/dev/null \
+    GIT_NO_REPLACE_OBJECTS=1 \
+    run_git \
+      -c core.attributesFile=/dev/null \
+      -c core.hooksPath=/dev/null \
+      -c core.fsmonitor=false \
+      "$@"
+}
+
+is_valid_cached_checkout() {
+  local checkout="$1"
+  local expected_ref="$2"
+  local actual_ref
+  local actual_branch
+  local checkout_status
+  local config_status
+  local expected_cli_blob
+  local actual_cli_blob
+  local cli_path="$checkout/packages/repo-standards/dist/cli.js"
+
+  [[ -d "$checkout" ]] || return 1
+  actual_ref="$(verify_git -C "$checkout" rev-parse HEAD 2>/dev/null || true)"
+  [[ "$actual_ref" == "$expected_ref" ]] || return 1
+  actual_branch="$(verify_git -C "$checkout" symbolic-ref --short -q HEAD 2>/dev/null || true)"
+  [[ -z "$actual_branch" ]] || return 1
+  if verify_git -C "$checkout" config --local --includes --get-regexp '^(filter\.|core\.attributesfile$)' >/dev/null 2>&1; then
+    return 1
+  else
+    config_status=$?
+    [[ "$config_status" -eq 1 ]] || return 1
   fi
-  exec node "$cli" "$@" --root "$ROOT_DIR" --config repo-standards.config.json
+  checkout_status="$(verify_git -C "$checkout" status --porcelain=v1 --untracked-files=all 2>/dev/null)" || return 1
+  [[ -z "$checkout_status" && -f "$cli_path" ]] || return 1
+  expected_cli_blob="$(verify_git -C "$checkout" rev-parse "$expected_ref:packages/repo-standards/dist/cli.js" 2>/dev/null)" || return 1
+  actual_cli_blob="$(verify_git -C "$checkout" hash-object -- "$cli_path" 2>/dev/null)" || return 1
+  [[ "$actual_cli_blob" == "$expected_cli_blob" ]]
+}
+
+release_bootstrap_lock() {
+  local lock_dir="$1"
+  local owner="$2"
+  [[ -d "$lock_dir" && ! -L "$lock_dir" && -f "$lock_dir/owner" && ! -L "$lock_dir/owner" ]] || return 1
+  [[ "$(<"$lock_dir/owner")" == "$owner" ]] || return 1
+  rm -- "$lock_dir/owner"
+  rmdir "$lock_dir"
+}
+
+run_bootstrap_git() {
+  local action="$1"
+  shift
+  local output
+  local status
+  if output="$(verify_git "$@" 2>&1)"; then
+    return 0
+  else
+    status=$?
+  fi
+  fail "$action (git exit $status): ${output:-no output}"
+}
+
+bootstrap_cached_checkout() {
+  local target="$1"
+  local cache_dir="$2"
+  local expected_ref="$3"
+  local lock_dir="$cache_dir/.${expected_ref}.lock"
+  local lock_owner="$$.$RANDOM"
+  local tmp_dir=""
+  local actual_ref
+  local actual_branch
+  local wait_attempt
+
+  mkdir -p "$cache_dir" || fail "could not create cache directory at $cache_dir"
+  if is_valid_cached_checkout "$target" "$expected_ref"; then
+    return 0
+  fi
+  if [[ "${REPO_STANDARDS_OFFLINE:-}" == "1" ]]; then
+    fail "pinned cache checkout not found or failed verification at $target while offline"
+  fi
+  if [[ -e "$target" || -L "$target" ]]; then
+    actual_ref="$(verify_git -C "$target" rev-parse HEAD 2>/dev/null || true)"
+    actual_branch="$(verify_git -C "$target" symbolic-ref --short -q HEAD 2>/dev/null || true)"
+    fail "pinned cache checkout at $target failed verification; expected $expected_ref, found ${actual_ref:-not a git checkout}${actual_branch:+ on branch $actual_branch}; remove it or set REPO_STANDARDS_LOCAL explicitly"
+  fi
+
+  for ((wait_attempt = 0; wait_attempt < 300; wait_attempt += 1)); do
+    if mkdir "$lock_dir" 2>/dev/null; then
+      printf '%s\n' "$lock_owner" >"$lock_dir/owner" || {
+        rmdir "$lock_dir"
+        fail "could not record bootstrap lock ownership"
+      }
+      break
+    fi
+    if is_valid_cached_checkout "$target" "$expected_ref"; then
+      return 0
+    fi
+    sleep 0.1
+  done
+  if [[ ! -f "$lock_dir/owner" ]] || [[ "$(<"$lock_dir/owner")" != "$lock_owner" ]]; then
+    fail "timed out waiting for another process to populate pinned standards cache at $target; if no bootstrap is running, remove stale lock $lock_dir"
+  fi
+
+  (
+    cleanup() {
+      if [[ -n "$tmp_dir" && -d "$tmp_dir" ]]; then
+        rm -rf -- "$tmp_dir"
+      fi
+      release_bootstrap_lock "$lock_dir" "$lock_owner" 2>/dev/null || true
+    }
+    trap cleanup EXIT
+
+    if is_valid_cached_checkout "$target" "$expected_ref"; then
+      exit 0
+    fi
+    tmp_dir="$(mktemp -d "$cache_dir/.${expected_ref}.tmp.XXXXXX")" || fail "could not create an atomic cache staging directory under $cache_dir"
+    run_bootstrap_git "failed to initialize pinned standards cache" -C "$tmp_dir" -c init.defaultBranch=main init
+    run_bootstrap_git "failed to configure pinned standards cache remote" -C "$tmp_dir" remote add origin "$shared_repository"
+    run_bootstrap_git "failed to fetch pinned standards commit $expected_ref" -C "$tmp_dir" fetch --depth 1 origin "$expected_ref"
+    run_bootstrap_git "failed to checkout pinned standards commit $expected_ref" -C "$tmp_dir" checkout --detach "$expected_ref"
+
+    is_valid_cached_checkout "$tmp_dir" "$expected_ref" || fail "fetched standards checkout failed verification for commit $expected_ref"
+    if [[ -e "$target" || -L "$target" ]]; then
+      is_valid_cached_checkout "$target" "$expected_ref" && exit 0
+      fail "pinned cache checkout appeared at $target but failed verification"
+    fi
+    mv -- "$tmp_dir" "$target" || fail "could not atomically install pinned standards cache at $target"
+    tmp_dir=""
+  )
+}
+
+if [[ -n "${REPO_STANDARDS_LOCAL:-}" ]]; then
+  standards_root="$REPO_STANDARDS_LOCAL"
+  standards_resolution="explicit-local"
+  [[ -d "$standards_root" ]] || fail "REPO_STANDARDS_LOCAL is not a directory: $standards_root"
+elif [[ -f "$root_dir/packages/repo-standards/dist/cli.js" ]]; then
+  standards_root="$root_dir"
+  standards_resolution="in-repository"
+else
+  standards_resolution="pinned-cache"
+  standards_ref="${MARKOLO_SHARED_STANDARDS_REF:-}"
+  pin_file="$root_dir/.repo-standards-ref"
+  if [[ -f "$pin_file" ]]; then
+    pin_line_count=0
+    pinned_ref=""
+    while IFS= read -r pin_line || [[ -n "$pin_line" ]]; do
+      pin_line_count=$((pin_line_count + 1))
+      pinned_ref="$pin_line"
+    done <"$pin_file"
+    if ((pin_line_count != 1)) || [[ ! "$pinned_ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
+      fail "$pin_file must contain exactly one full 40-character commit SHA"
+    fi
+    pinned_ref="$(printf '%s' "$pinned_ref" | tr '[:upper:]' '[:lower:]')"
+    normalized_standards_ref="$(printf '%s' "$standards_ref" | tr '[:upper:]' '[:lower:]')"
+    if [[ -n "$standards_ref" && "$normalized_standards_ref" != "$pinned_ref" ]]; then
+      fail "MARKOLO_SHARED_STANDARDS_REF does not match $pin_file"
+    fi
+    standards_ref="$pinned_ref"
+  fi
+  if [[ ! "$standards_ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    fail ".repo-standards-ref or MARKOLO_SHARED_STANDARDS_REF must provide a full commit SHA when REPO_STANDARDS_LOCAL is unset"
+  fi
+  standards_ref="$(printf '%s' "$standards_ref" | tr '[:upper:]' '[:lower:]')"
+  cache_dir="${REPO_STANDARDS_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME:-$root_dir}/.cache}/markolo/repo-standards}"
+  standards_root="$cache_dir/$standards_ref"
+  bootstrap_cached_checkout "$standards_root" "$cache_dir" "$standards_ref"
+  export MARKOLO_SHARED_STANDARDS_REF="$standards_ref"
+  export REPO_STANDARDS_CACHE_DIR="$cache_dir"
 fi
 
-if command -v repo-standards >/dev/null 2>&1; then
-  exec repo-standards "$@" --root "$ROOT_DIR" --config repo-standards.config.json
+export REPO_STANDARDS_RESOLUTION="$standards_resolution"
+
+cli="$standards_root/packages/repo-standards/dist/cli.js"
+[[ -f "$cli" ]] || fail "CLI not found at $cli"
+
+if [[ "$standards_resolution" == "pinned-cache" ]]; then
+  expected_cli_blob="$(verify_git -C "$standards_root" rev-parse "$standards_ref:packages/repo-standards/dist/cli.js" 2>/dev/null)" || fail "could not resolve the pinned CLI blob"
+  verified_cli="$(mktemp "${TMPDIR:-/tmp}/repo-standards-cli.XXXXXX")" || fail "could not create a private verified CLI copy"
+  if ! verify_git -C "$standards_root" cat-file blob "$expected_cli_blob" >"$verified_cli"; then
+    rm -- "$verified_cli"
+    fail "could not materialize the pinned CLI blob"
+  fi
+  actual_cli_blob="$(verify_git hash-object -- "$verified_cli")" || {
+    rm -- "$verified_cli"
+    fail "could not verify the private CLI copy"
+  }
+  if [[ "$actual_cli_blob" != "$expected_cli_blob" ]]; then
+    rm -- "$verified_cli"
+    fail "private CLI copy does not match the pinned commit"
+  fi
+  chmod 400 "$verified_cli" || {
+    rm -- "$verified_cli"
+    fail "could not protect the private CLI copy"
+  }
+  if REPO_STANDARDS_LOGICAL_CLI="$cli" REPO_STANDARDS_VERIFIED_CLI="$verified_cli" node -e 'process.argv.splice(1, 0, process.env.REPO_STANDARDS_LOGICAL_CLI); require(process.env.REPO_STANDARDS_VERIFIED_CLI);' "$@" --root "$root_dir" --config repo-standards.config.json; then
+    cli_status=0
+  else
+    cli_status=$?
+  fi
+  chmod 600 "$verified_cli" || true
+  rm -- "$verified_cli"
+  exit "$cli_status"
 fi
 
-case "${1:-}" in
-sync-if-needed)
-  cat >&2 <<'MSG'
-repo-standards is unavailable; skipping maintainer-only sync-if-needed.
-Normal consumers can run pnpm install and the feed-* commands without markolo-shared access.
-MSG
-  exit 0
-  ;;
-doctor)
-  cat >&2 <<'MSG'
-repo-standards is unavailable; skipping maintainer-only repo contract check.
-Normal consumers can run pnpm install, feed-* commands, lint, typecheck, and tests without markolo-shared access.
-MSG
-  exit 0
-  ;;
-secrets | secrets-staged)
-  cat >&2 <<'MSG'
-repo-standards is unavailable; skipping maintainer-only secret pattern check.
-Normal consumers can run pnpm install, feed-* commands, lint, typecheck, and tests without markolo-shared access.
-MSG
-  exit 0
-  ;;
-esac
-
-cat >&2 <<'MSG'
-repo-standards is maintainer-only tooling and is not required for normal feed-tools use.
-
-To run this guard, set REPO_STANDARDS_LOCAL to a markolo-shared checkout or install a repo-standards binary on PATH.
-Normal consumers can run pnpm install and the feed-* commands without markolo-shared access.
-MSG
-exit 1
+exec node "$cli" "$@" --root "$root_dir" --config repo-standards.config.json

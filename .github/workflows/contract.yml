@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  MARKOLO_SHARED_STANDARDS_REF: standards/stable
+  MARKOLO_SHARED_STANDARDS_REF: 0e360fa45f96701eed10085161dc5bc653ba81a2
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
