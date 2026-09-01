@@ -180,7 +180,6 @@ Tool failures should use this shape:
       | "chrome_not_found"
       | "chrome_profile_locked"
       | "config_missing"
-      | "invalid_params"
       | "unexpected";
     message: string;
     detail?: string;

@@ -89,20 +89,13 @@ describe("feed-tools MCP server", () => {
       FEED_TOOLS_WORKDIR: workdir,
       FEED_TOOLS_CONFIG: "",
     });
-    const result = response.result as Record<string, unknown>;
-    const content = result.content as Array<Record<string, unknown>>;
-    const payload = JSON.parse(String(content[0]?.text)) as Record<
-      string,
-      unknown
-    >;
-
-    expect(result).toMatchObject({ isError: true });
-    expect(payload).toMatchObject({
+    expect(response).toMatchObject({
       error: {
-        code: "invalid_params",
+        code: -32602,
         message: "tools/call arguments must be an object",
       },
     });
+    expect(response).not.toHaveProperty("result");
     expect(fs.existsSync(path.join(workdir, "config.json"))).toBe(false);
   });
 
