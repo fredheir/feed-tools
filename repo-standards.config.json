@@ -16,6 +16,7 @@
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
+    ".repo-standards-ref",
     ".env.example",
     ".github/workflows/actions-hygiene.yml",
     ".github/workflows/contract.yml",
