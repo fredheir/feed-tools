@@ -12,7 +12,12 @@ done < <(scripts/dev/worktree-paths)
 biome_paths=()
 eslint_paths=()
 prettier_paths=()
+ignored_paths=()
 for changed_path in "${changed_paths[@]}"; do
+  if [[ "$changed_path" == tests/fixtures/*.html ]]; then
+    ignored_paths+=("$changed_path")
+    continue
+  fi
   if [[ -d "$changed_path" ]]; then
     biome_paths+=("$changed_path")
     eslint_paths+=("$changed_path")
@@ -49,4 +54,7 @@ fi
 
 if ((${#biome_paths[@]} == 0 && ${#eslint_paths[@]} == 0 && ${#prettier_paths[@]} == 0)); then
   echo "No changed files have a supported fixer."
+fi
+if ((${#ignored_paths[@]} > 0)); then
+  printf 'Skipped formatter-ignored paths: %s\n' "${ignored_paths[*]}"
 fi

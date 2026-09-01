@@ -16,6 +16,7 @@ eslint_paths=()
 prettier_paths=()
 test_paths=()
 skipped_paths=()
+ignored_paths=()
 
 directory_contains_code() {
   local search_path="$1"
@@ -24,11 +25,33 @@ directory_contains_code() {
     return 0
   done < <(
     find "$search_path" \
-      \( -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' \) -prune -o \
+      \( \
+        -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' -o \
+        -path 'tests/fixtures/*.html' -o -path '*/tests/fixtures/*.html' \
+      \) -prune -o \
       -type f \( \
-        -name '*.cjs' -o -name '*.cts' -o -name '*.js' -o -name '*.json' -o \
-        -name '*.jsonc' -o -name '*.jsx' -o -name '*.mjs' -o -name '*.mts' -o \
-        -name '*.ts' -o -name '*.tsx' \
+        -name '*.cjs' -o -name '*.cts' -o -name '*.css' -o -name '*.html' -o \
+        -name '*.js' -o -name '*.json' -o -name '*.jsonc' -o -name '*.jsx' -o \
+        -name '*.mjs' -o -name '*.mts' -o -name '*.ts' -o -name '*.tsx' \
+      \) -print0
+  )
+  return 1
+}
+
+directory_contains_lintable_code() {
+  local search_path="$1"
+
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( \
+        -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' -o \
+        -path 'tests/fixtures/*.html' -o -path '*/tests/fixtures/*.html' \
+      \) -prune -o \
+      -type f \( \
+        -name '*.cjs' -o -name '*.cts' -o -name '*.js' -o -name '*.jsx' -o \
+        -name '*.mjs' -o -name '*.mts' -o -name '*.ts' -o -name '*.tsx' \
       \) -print0
   )
   return 1
@@ -83,6 +106,8 @@ for raw_path in "$@"; do
   if [[ -d "$relative_path" ]]; then
     if directory_contains_code "$relative_path"; then
       biome_paths+=("$relative_path")
+    fi
+    if directory_contains_lintable_code "$relative_path"; then
       eslint_paths+=("$relative_path")
     fi
     if directory_contains_docs "$relative_path"; then
@@ -96,7 +121,10 @@ for raw_path in "$@"; do
   fi
 
   case "$relative_path" in
-    *.cjs|*.cts|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
+    tests/fixtures/*.html)
+      ignored_paths+=("$relative_path")
+      ;;
+    *.cjs|*.cts|*.css|*.html|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
       biome_paths+=("$relative_path")
       ;;
   esac
@@ -116,7 +144,7 @@ for raw_path in "$@"; do
       ;;
     *)
       case "$relative_path" in
-        *.cjs|*.cts|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx|*.md|*.yml|*.yaml)
+        *.cjs|*.cts|*.css|*.html|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx|*.md|*.yml|*.yaml)
           ;;
         *)
           skipped_paths+=("$relative_path")
@@ -140,6 +168,9 @@ if ((${#test_paths[@]} > 0)); then
 fi
 if ((${#skipped_paths[@]} > 0)); then
   printf 'Skipped unsupported paths: %s\n' "${skipped_paths[*]}"
+fi
+if ((${#ignored_paths[@]} > 0)); then
+  printf 'Skipped formatter-ignored paths: %s\n' "${ignored_paths[*]}"
 fi
 
 printf 'Checked %d path(s).\n' "${#checked_paths[@]}"
