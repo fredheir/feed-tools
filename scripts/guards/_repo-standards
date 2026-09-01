@@ -170,10 +170,38 @@ bootstrap_cached_checkout() {
   )
 }
 
+read_repository_pin() {
+  local pin_file="$1"
+  local pin_line_count=0
+  local pinned_ref=""
+  local pin_line=""
+
+  [[ -f "$pin_file" ]] || return 1
+  while IFS= read -r pin_line || [[ -n "$pin_line" ]]; do
+    pin_line_count=$((pin_line_count + 1))
+    pinned_ref="$pin_line"
+  done <"$pin_file"
+  if ((pin_line_count != 1)) || [[ ! "$pinned_ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    return 1
+  fi
+  printf '%s' "$pinned_ref" | tr '[:upper:]' '[:lower:]'
+}
+
 if [[ -n "${REPO_STANDARDS_LOCAL:-}" ]]; then
   standards_root="$REPO_STANDARDS_LOCAL"
   standards_resolution="explicit-local"
   [[ -d "$standards_root" ]] || fail "REPO_STANDARDS_LOCAL is not a directory: $standards_root"
+  if [[ -n "${MARKOLO_SHARED_STANDARDS_REF:-}" ]]; then
+    pin_file="$root_dir/.repo-standards-ref"
+    [[ -f "$pin_file" ]] || fail "$pin_file must contain exactly one full 40-character commit SHA when MARKOLO_SHARED_STANDARDS_REF is set"
+    pinned_ref="$(read_repository_pin "$pin_file")" || fail "$pin_file must contain exactly one full 40-character commit SHA"
+    standards_ref="${MARKOLO_SHARED_STANDARDS_REF}"
+    [[ "$standards_ref" =~ ^[0-9a-fA-F]{40}$ ]] || fail "MARKOLO_SHARED_STANDARDS_REF must provide a full 40-character commit SHA"
+    standards_ref="$(printf '%s' "$standards_ref" | tr '[:upper:]' '[:lower:]')"
+    [[ "$standards_ref" == "$pinned_ref" ]] || fail "MARKOLO_SHARED_STANDARDS_REF does not match $pin_file"
+    local_head="$(verify_git -C "$standards_root" rev-parse HEAD 2>/dev/null || true)"
+    [[ "$local_head" == "$pinned_ref" ]] || fail "REPO_STANDARDS_LOCAL checkout does not match $pin_file; expected $pinned_ref, found ${local_head:-not a git checkout}"
+  fi
 elif [[ -f "$root_dir/packages/repo-standards/dist/cli.js" ]]; then
   standards_root="$root_dir"
   standards_resolution="in-repository"
@@ -182,16 +210,7 @@ else
   standards_ref="${MARKOLO_SHARED_STANDARDS_REF:-}"
   pin_file="$root_dir/.repo-standards-ref"
   if [[ -f "$pin_file" ]]; then
-    pin_line_count=0
-    pinned_ref=""
-    while IFS= read -r pin_line || [[ -n "$pin_line" ]]; do
-      pin_line_count=$((pin_line_count + 1))
-      pinned_ref="$pin_line"
-    done <"$pin_file"
-    if ((pin_line_count != 1)) || [[ ! "$pinned_ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
-      fail "$pin_file must contain exactly one full 40-character commit SHA"
-    fi
-    pinned_ref="$(printf '%s' "$pinned_ref" | tr '[:upper:]' '[:lower:]')"
+    pinned_ref="$(read_repository_pin "$pin_file")" || fail "$pin_file must contain exactly one full 40-character commit SHA"
     normalized_standards_ref="$(printf '%s' "$standards_ref" | tr '[:upper:]' '[:lower:]')"
     if [[ -n "$standards_ref" && "$normalized_standards_ref" != "$pinned_ref" ]]; then
       fail "MARKOLO_SHARED_STANDARDS_REF does not match $pin_file"

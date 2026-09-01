@@ -35,7 +35,7 @@ permissions:
   packages: read
 
 env:
-  MARKOLO_SHARED_STANDARDS_REF: 0e360fa45f96701eed10085161dc5bc653ba81a2
+  MARKOLO_SHARED_STANDARDS_REF: 292e07694d059d9049744bb6ad0c078b15d3a491
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
