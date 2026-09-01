@@ -76,7 +76,9 @@ jobs:
         run: echo "REPO_STANDARDS_LOCAL=$GITHUB_WORKSPACE/head/.repo-standards/markolo-shared" >> "$GITHUB_ENV"
       - name: Install Safe Chain
         working-directory: head
-        run: scripts/guards/_repo-standards safe-chain-install
+        run: |
+          scripts/guards/_repo-standards safe-chain-install
+          git clean -ffdx -- .repo-standards
       - name: Install Bun for git-hosted slop-scan
         run: |
           bun_target=1.3.13
@@ -130,7 +132,9 @@ jobs:
       - name: Set shared repo standards path
         run: echo "REPO_STANDARDS_LOCAL=$GITHUB_WORKSPACE/.repo-standards/markolo-shared" >> "$GITHUB_ENV"
       - name: Install Safe Chain
-        run: scripts/guards/_repo-standards safe-chain-install
+        run: |
+          scripts/guards/_repo-standards safe-chain-install
+          git clean -ffdx -- .repo-standards
       - name: Install Bun for git-hosted slop-scan
         run: |
           bun_target=1.3.13
