@@ -9,6 +9,9 @@ const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
+const standardsConfig = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, "repo-standards.config.json"), "utf8"),
+) as { managedScripts?: string[] };
 const temporaryDirectories: string[] = [];
 
 function makeTemporaryDirectory(prefix: string): string {
@@ -285,6 +288,16 @@ fi
     nodeArgv: readArgumentLog(nodeLogPath),
   };
 }
+
+describe("consumer-owned standards bootstrap", () => {
+  it("de-manages only the auth-aware wrapper from shared script syncing", () => {
+    expect(standardsConfig.managedScripts).toEqual(["scripts/ci/just"]);
+    expect(
+      fs.statSync(path.join(repoRoot, "scripts", "guards", "_repo-standards"))
+        .mode & 0o111,
+    ).not.toBe(0);
+  });
+});
 
 describe("check-paths wrapper contract", () => {
   it("uses Biome's non-mutating CI check and forwards tool failures", () => {
