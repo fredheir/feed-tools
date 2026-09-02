@@ -155,7 +155,7 @@ for raw_path in "$@"; do
 done
 
 if ((${#biome_paths[@]} > 0)); then
-  pnpm exec biome format -- "${biome_paths[@]}"
+  pnpm exec biome ci -- "${biome_paths[@]}"
 fi
 if ((${#eslint_paths[@]} > 0)); then
   pnpm exec eslint --no-warn-ignored -- "${eslint_paths[@]}"

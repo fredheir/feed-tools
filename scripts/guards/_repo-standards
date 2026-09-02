@@ -17,7 +17,7 @@ MSG
 }
 
 git_bin="${REPO_STANDARDS_GIT_BIN:-git}"
-shared_repository="${MARKOLO_SHARED_STANDARDS_REPOSITORY:-git@github.com:Markolo-Research/markolo-shared.git}"
+shared_repository="${MARKOLO_SHARED_STANDARDS_REPOSITORY:-https://github.com/Markolo-Research/markolo-shared.git}"
 
 run_git() {
   env \
@@ -40,8 +40,7 @@ run_git() {
 }
 
 verify_git() {
-  GIT_CONFIG_GLOBAL=/dev/null \
-    GIT_CONFIG_SYSTEM=/dev/null \
+  GIT_CONFIG_SYSTEM=/dev/null \
     GIT_NO_REPLACE_OBJECTS=1 \
     run_git \
       -c core.attributesFile=/dev/null \
