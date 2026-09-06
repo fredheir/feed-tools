@@ -53,6 +53,8 @@ type JsonRpcId = string | number | null;
 
 let outputMode: OutputMode = "jsonl";
 
+class InvalidParamsError extends Error {}
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -195,7 +197,7 @@ function toolResult(value: JsonValue): JsonObject {
   };
 }
 
-function toolError(error: unknown, code = "unexpected"): JsonObject {
+function toolError(error: unknown): JsonObject {
   const message =
     error instanceof Error
       ? error.message
@@ -208,7 +210,7 @@ function toolError(error: unknown, code = "unexpected"): JsonObject {
         text: `${JSON.stringify(
           {
             error: {
-              code,
+              code: "unexpected",
               message,
               next_actions: [],
             },
@@ -396,13 +398,10 @@ async function callTool(params: unknown): Promise<JsonObject> {
   if (!name) throw new Error("tools/call requires a tool name");
   const tool = TOOLS.find((candidate) => candidate.name === name);
   if (!tool) throw new Error(`Unknown tool: ${name}`);
+  if (params.arguments !== undefined && !isRecord(params.arguments)) {
+    throw new InvalidParamsError("tools/call arguments must be an object");
+  }
   try {
-    if (params.arguments !== undefined && !isRecord(params.arguments)) {
-      return toolError(
-        new Error("tools/call arguments must be an object"),
-        "invalid_params",
-      );
-    }
     return toolResult(await tool.handler(asArgs(params.arguments)));
   } catch (error) {
     return toolError(error);
@@ -464,7 +463,7 @@ async function handleMessage(message: JsonRpcMessage): Promise<void> {
   } catch (error) {
     failure(
       message.id,
-      -32603,
+      error instanceof InvalidParamsError ? -32602 : -32603,
       error instanceof Error
         ? error.message
         : "Non-Error thrown while handling MCP message",
