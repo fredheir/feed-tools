@@ -399,3 +399,7 @@ feed-curate --sources x,bluesky
 # feed-classify --category "Tech & AI:1,3" --category "Politics:5,8,12"
 feed-render --pick 8,5,12,1,3,all --tab
 ```
+
+## Releases
+
+Do not edit `CHANGELOG.md` in feature branches or PRs; the changelog is written at release time. PR titles and commit messages are the source; use the `changelog-audit` skill and `parse-changelog --release X.Y.Z` when cutting a release.
