@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "repo": "feed_tools",
-  "scan_date": "2026-09-07",
-  "generated_at": "2026-09-07T09:35:19.962754+00:00",
-  "source": "pre-computed audit 2026-09-07 plus targeted security remediation and validation",
+  "scan_date": "2026-09-14",
+  "generated_at": "2026-09-14T09:04:05.883099+00:00",
+  "source": "pre-computed audit 2026-09-14 plus targeted security remediation and validation",
   "guard": {
     "bypass_env": "UV_NO_EXCLUDE_NEWER=1",
     "uv_exclude_newer_days": 3
@@ -15,8 +15,8 @@
     "direct_findings": 0
   },
   "delta": {
-    "new": ["fast-uri 3.1.5 advisory family"],
-    "resolved": ["fast-uri 3.1.5 -> 3.1.6"],
+    "new": ["Vitest arbitrary file read", "smol-toml denial of service"],
+    "resolved": ["vitest 4.1.5 -> 4.1.11", "smol-toml 1.6.1 -> 1.8.0"],
     "unchanged": []
   },
   "findings": [],
@@ -35,26 +35,29 @@
       "status": "remediated",
       "verified_url": "https://github.com/advisories/GHSA-5jgf-p345-68v8",
       "verified_at": "2026-09-07"
+    },
+    {
+      "package": "smol-toml",
+      "installed_version": "1.6.1/1.7.0",
+      "fixed_version": "1.8.0",
+      "severity": "high",
+      "ids": ["GHSA-7w5x-hrqm-74c2"],
+      "status": "remediated",
+      "verified_url": "https://github.com/advisories/GHSA-7w5x-hrqm-74c2",
+      "verified_at": "2026-09-14"
     }
   ],
-  "remediation_applied": [
-    "Upgraded the commitlint tooling chain to fast-uri 3.1.6."
-  ],
+  "remediation_applied": ["Upgraded Vitest and pinned smol-toml 1.8.0."],
   "guard_assessment": [
-    "No Python security upgrade was recommended; no uv guard bypass was used."
+    "No Python security upgrade was recommended; no uv guard bypass was needed."
   ],
   "thinning_candidates": [],
   "decisions_needed": [],
   "validation": [
-    "Verified the new fast-uri high-severity advisory family on GitHub.",
-    "just deps-check-fast passed."
+    "Supplied audit contained no unresolved findings after remediation.",
+    "No stale repo-level uv exclude-newer or exclude-newer-package configuration was present."
   ],
   "notes": [
-    "2026-08-17: pnpm audit returned no vulnerabilities and the dependency gate passed.",
-    "2026-08-24: pnpm audit returned no vulnerabilities and the dependency gate passed.",
-    "2026-08-31: pnpm audit remained clean; no dependency or thinning change was needed.",
-    "2026-09-01: supplied pnpm audit remained clean; dependency and thinning conclusions were unchanged.",
-    "2026-09-07: all supplied findings remediated.",
-    "No additional dependency risk or thinning candidate identified."
+    "2026-09-14: consumed the supplied normalized audit, remediated every fixable Node finding, retained only unpatched Python findings, and found no thinning candidate."
   ]
 }
