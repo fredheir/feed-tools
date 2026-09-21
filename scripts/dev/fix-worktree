@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+changed_paths=()
+
+append_changed_path() {
+  local candidate="$1"
+  local existing
+
+  if [[ ! -e "$candidate" && ! -L "$candidate" ]]; then
+    return 0
+  fi
+  for existing in "${changed_paths[@]}"; do
+    if [[ "$existing" == "$candidate" ]]; then
+      return 0
+    fi
+  done
+  changed_paths+=("$candidate")
+}
+
+collect_changed_paths() {
+  local status_file
+  local entry
+  local status_code
+  local changed_path
+  local index
+  local -a status_entries=()
+
+  status_file="$(mktemp "${TMPDIR:-/tmp}/repo-standards-status.XXXXXX")" || return 1
+  if ! git status --porcelain=v1 -z --untracked-files=all >"$status_file"; then
+    rm -f -- "$status_file"
+    return 1
+  fi
+  mapfile -d '' -t status_entries <"$status_file"
+  rm -f -- "$status_file"
+
+  for ((index = 0; index < ${#status_entries[@]}; index += 1)); do
+    entry="${status_entries[index]}"
+    if [[ ${#entry} -lt 4 ]]; then
+      continue
+    fi
+    status_code="${entry:0:2}"
+    changed_path="${entry:3}"
+    append_changed_path "$changed_path"
+
+    if [[ "$status_code" == *R* || "$status_code" == *C* ]]; then
+      index=$((index + 1))
+      if ((index >= ${#status_entries[@]})); then
+        echo "git status returned an incomplete rename record" >&2
+        return 1
+      fi
+      append_changed_path "${status_entries[index]}"
+    fi
+  done
+}
+
+collect_changed_paths
+
+python_paths=()
+for changed_path in "${changed_paths[@]}"; do
+  name="$(basename "$changed_path")"
+  if [[ -L "$changed_path" ]]; then
+    echo "Refusing to fix symbolic-link path: $changed_path" >&2
+    exit 2
+  fi
+  if [[ -d "$changed_path" || "$name" == *.py ]]; then
+    python_paths+=("$changed_path")
+  fi
+done
+
+if [[ ${#python_paths[@]} -eq 0 ]]; then
+  echo "No changed Python paths; skipped Ruff fixes."
+  exit 0
+fi
+
+ruff_status=0
+format_status=0
+uv run ruff check --fix -- "${python_paths[@]}" || ruff_status=$?
+uv run ruff format -- "${python_paths[@]}" || format_status=$?
+
+if ((ruff_status != 0)); then
+  exit "$ruff_status"
+fi
+exit "$format_status"

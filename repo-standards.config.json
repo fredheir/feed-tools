@@ -59,6 +59,12 @@
     "check-changed",
     "check"
   ],
+  "managedScripts": [
+    "scripts/dev/_check-paths-lib",
+    "scripts/dev/check-paths",
+    "scripts/dev/check-worktree",
+    "scripts/dev/fix-worktree"
+  ],
   "allowBarePythonIn": [],
   "suppressionBudget": {
     "total": 0

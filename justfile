@@ -1,10 +1,18 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
+set minimum-version := "1.58.0"
+set default-list := true
+set positional-arguments := true
 
 fmt:
     scripts/dev/fmt
 
 fix:
     scripts/dev/fmt
+
+fix-all: fix
+
+fix-worktree:
+    scripts/dev/fix-worktree
 
 fmt-check:
     scripts/dev/fmt-check
@@ -54,6 +62,12 @@ check-changed:
     just lint
     just typecheck
     just test-fast
+
+check-paths +paths:
+    scripts/dev/check-paths "$@"
+
+check-worktree:
+    scripts/dev/check-worktree
 
 check: doctor fmt-check lint actions-hygiene typecheck test secrets deps-check
 

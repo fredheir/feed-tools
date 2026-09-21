@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(realpath "$PWD")"
+
+canonicalize_path() {
+  local raw="$1"
+  local candidate component physical resolved="$root"
+  local -a parts
+
+  if [[ "$raw" == /* ]]; then
+    resolved="/"
+  fi
+
+  IFS="/" read -r -a parts <<< "$raw"
+  for component in "${parts[@]}"; do
+    case "$component" in
+      ""|.) ;;
+      ..)
+        if [[ "$resolved" != "/" ]]; then
+          resolved="${resolved%/*}"
+          [[ -n "$resolved" ]] || resolved="/"
+        fi
+        ;;
+      *)
+        if [[ "$resolved" == "/" ]]; then
+          candidate="/$component"
+        else
+          candidate="$resolved/$component"
+        fi
+
+        if [[ -e "$candidate" ]] &&
+          physical="$(realpath "$candidate" 2>/dev/null)"; then
+          resolved="$physical"
+        else
+          resolved="$candidate"
+        fi
+        ;;
+    esac
+  done
+
+  printf '%s\n' "$resolved"
+}
+
+check_paths_select() {
+  local raw resolved path
+
+  if [ "$#" -eq 0 ]; then
+    echo "Usage: scripts/dev/check-paths <path> [<path> ...]" >&2
+    exit 2
+  fi
+
+  paths=()
+  for raw in "$@"; do
+    resolved="$(canonicalize_path "$raw")"
+    if [[ "$resolved" == "$root" ]]; then
+      paths+=(".")
+    elif [[ "$resolved" == "$root"/* ]]; then
+      paths+=("${resolved#"$root"/}")
+    else
+      echo "Path escapes repository root: $raw" >&2
+      exit 2
+    fi
+  done
+
+  # Existence is validated before any routing so a mistyped configuration
+  # path is rejected instead of silently widening to the full suite. The
+  # change collector sets REPO_STANDARDS_FULL_CHECK=1 for tracked deletions.
+  for path in "${paths[@]}"; do
+    if [[ ! -e "$path" && "${REPO_STANDARDS_FULL_CHECK:-}" != 1 ]]; then
+      echo "Path does not exist: $path; use check-worktree or check-branch for deletions" >&2
+      exit 2
+    fi
+  done
+}
+
+check_paths_select "$@"
+
+python_paths=()
+test_paths=()
+shell_paths=()
+full_check=false
+workflow_check=false
+for path in "${paths[@]}"; do
+  name="$(basename "$path")"
+  if [[ -d "$path" ]]; then
+    echo "Directory scope: $path -> full local suite (just check)"
+    full_check=true
+    continue
+  fi
+  case "$path" in
+    *.py) python_paths+=("$path") ;;
+    *.md|*.txt)
+      echo "Exempt: $path (prose; review content and links manually)" ;;
+    *.sh|scripts/ci/*|scripts/dev/*|scripts/guards/*)
+      if [[ -e "$path" ]] && head -n 1 "$path" | grep -q python; then
+        python_paths+=("$path")
+      else
+        shell_paths+=("$path")
+      fi ;;
+    .github/workflows/*.yml|.github/workflows/*.yaml)
+      workflow_check=true ;;
+    *.yaml|*.yml|*.json|*.toml|*.lock|*.xml|justfile|.python-version|.gitignore|.repo-standards-ref)
+      echo "Configuration scope: $path -> full local suite (just check)"
+      full_check=true ;;
+    *) echo "Unhandled path: $path; add a routing rule or explicit exemption" >&2; exit 2 ;;
+  esac
+  if [[ "$path" == tests/* && ( "$name" == test_*.py || "$name" == *_test.py ) ]]; then
+    test_paths+=("$path")
+  fi
+done
+
+if [[ "${REPO_STANDARDS_FULL_CHECK:-}" == 1 ]]; then
+  echo "All changed paths routed; the change collector will run the full suite."
+  exit 0
+fi
+if [[ "$full_check" == true ]]; then
+  exec just check
+fi
+if [[ "$workflow_check" == true ]]; then
+  just actions-hygiene
+fi
+if [[ "${#shell_paths[@]}" -gt 0 ]]; then
+  shellcheck -- "${shell_paths[@]}"
+fi
+
+if [ "${#python_paths[@]}" -gt 0 ]; then
+  printf 'Python lint/format/types: %s\n' "${python_paths[@]}"
+  uv run --locked ruff check -- "${python_paths[@]}"
+  uv run --locked ruff format --check -- "${python_paths[@]}"
+  uv run --locked ty check --force-exclude -- "${python_paths[@]}"
+else
+  echo "No Python paths passed; skipped ruff and ty."
+fi
+
+if [ "${#test_paths[@]}" -gt 0 ]; then
+  printf 'Selected pytest target: %s\n' "${test_paths[@]}"
+  uv run --locked -m pytest -q -- "${test_paths[@]}"
+else
+  echo "No test paths passed; skipped pytest."
+fi

@@ -1,0 +1,76 @@
+# shellcheck shell=bash
+# Managed by @markolo-research/repo-standards; do not edit by hand.
+# Source from a scripts/dev/check-paths router, then call check_paths_select "$@".
+
+root="$(realpath "$PWD")"
+
+canonicalize_path() {
+  local raw="$1"
+  local candidate component physical resolved="$root"
+  local -a parts
+
+  if [[ "$raw" == /* ]]; then
+    resolved="/"
+  fi
+
+  IFS="/" read -r -a parts <<< "$raw"
+  for component in "${parts[@]}"; do
+    case "$component" in
+      ""|.) ;;
+      ..)
+        if [[ "$resolved" != "/" ]]; then
+          resolved="${resolved%/*}"
+          [[ -n "$resolved" ]] || resolved="/"
+        fi
+        ;;
+      *)
+        if [[ "$resolved" == "/" ]]; then
+          candidate="/$component"
+        else
+          candidate="$resolved/$component"
+        fi
+
+        if [[ -e "$candidate" ]] &&
+          physical="$(realpath "$candidate" 2>/dev/null)"; then
+          resolved="$physical"
+        else
+          resolved="$candidate"
+        fi
+        ;;
+    esac
+  done
+
+  printf '%s\n' "$resolved"
+}
+
+check_paths_select() {
+  local raw resolved path
+
+  if [ "$#" -eq 0 ]; then
+    echo "Usage: scripts/dev/check-paths <path> [<path> ...]" >&2
+    exit 2
+  fi
+
+  paths=()
+  for raw in "$@"; do
+    resolved="$(canonicalize_path "$raw")"
+    if [[ "$resolved" == "$root" ]]; then
+      paths+=(".")
+    elif [[ "$resolved" == "$root"/* ]]; then
+      paths+=("${resolved#"$root"/}")
+    else
+      echo "Path escapes repository root: $raw" >&2
+      exit 2
+    fi
+  done
+
+  # Existence is validated before any routing so a mistyped configuration
+  # path is rejected instead of silently widening to the full suite. The
+  # change collector sets REPO_STANDARDS_FULL_CHECK=1 for tracked deletions.
+  for path in "${paths[@]}"; do
+    if [[ ! -e "$path" && "${REPO_STANDARDS_FULL_CHECK:-}" != 1 ]]; then
+      echo "Path does not exist: $path; use check-worktree or check-branch for deletions" >&2
+      exit 2
+    fi
+  done
+}

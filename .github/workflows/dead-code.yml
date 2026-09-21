@@ -60,5 +60,6 @@ jobs:
         run: |
           bun_target=1.3.13
           if [[ "$(bun --version 2>/dev/null)" != "$bun_target" ]]; then npm install -g "bun@$bun_target"; fi
+      - run: scripts/guards/_repo-standards safe-chain-install
       - run: pnpm install --frozen-lockfile
       - run: pnpm run deadcode
