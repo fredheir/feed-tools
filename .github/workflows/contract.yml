@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Markolo-Research/markolo-shared
-          ref: 53f3dc7b59598cffd1181530742eac59248fd7a8
+          ref: c510be80b51b4039a97f3f2d448793b1ad2c2999
           path: .repo-standards/private-github
           sparse-checkout: scripts/ci/private-github
           sparse-checkout-cone-mode: false
