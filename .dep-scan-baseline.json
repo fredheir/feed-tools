@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "repo": "feed_tools",
-  "scan_date": "2026-09-21",
-  "generated_at": "2026-09-21T09:03:01.297584+00:00",
-  "source": "pre-computed audit 2026-09-21 plus targeted security remediation and validation",
+  "scan_date": "2026-09-28",
+  "generated_at": "2026-09-28T09:11:37.582125+00:00",
+  "source": "supplied normalized audit 2026-09-28; patched lock graph inspected after targeted validation",
   "guard": {
     "bypass_env": "UV_NO_EXCLUDE_NEWER=1",
     "uv_exclude_newer_days": 3
@@ -48,16 +48,15 @@
     }
   ],
   "remediation_applied": [],
-  "guard_assessment": [
-    "No Python security upgrade was recommended; no uv guard bypass was needed."
-  ],
+  "guard_assessment": [],
   "thinning_candidates": [],
   "decisions_needed": [],
   "validation": [
-    "Supplied audit contained no findings.",
-    "No stale repo-level exclude-newer configuration was present."
+    "Supplied audit parsed and baseline compared; no dependency changes needed.",
+    "No stale repo-level uv exclude-newer configuration was found."
   ],
   "notes": [
-    "2026-09-21: consumed the supplied normalized audit, remediated every fixable finding, retained only unpatched findings, and found no thinning candidate."
+    "2026-09-21: consumed the supplied normalized audit, remediated every fixable finding, retained only unpatched findings, and found no thinning candidate.",
+    "2026-09-28: supplied audit consumed; no trivial-use or disproportionate dependency suitable for safe removal."
   ]
 }
