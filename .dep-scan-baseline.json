@@ -1,25 +1,41 @@
 {
   "schema_version": 2,
   "repo": "feed_tools",
-  "scan_date": "2026-09-28",
-  "generated_at": "2026-09-28T09:11:37.582125+00:00",
-  "source": "supplied normalized audit 2026-09-28; patched lock graph inspected after targeted validation",
+  "scan_date": "2026-10-05",
+  "generated_at": "2026-10-05T09:42:27.285424+00:00",
+  "source": "supplied normalized audit 2026-10-05; patched lock graph inspected after targeted validation",
   "guard": {
     "bypass_env": "UV_NO_EXCLUDE_NEWER=1",
     "uv_exclude_newer_days": 3
   },
   "summary": {
     "python_findings": 0,
-    "node_findings": 0,
+    "node_findings": 1,
     "critical_findings": 0,
     "direct_findings": 0
   },
   "delta": {
-    "new": [],
+    "new": ["braces"],
     "resolved": [],
     "unchanged": []
   },
-  "findings": [],
+  "source_audit_packages": ["fast-uri", "js-yaml", "brace-expansion", "braces"],
+  "findings": [
+    {
+      "package": "braces",
+      "ecosystem": "node",
+      "installed_version": "3.0.3",
+      "severity": "high",
+      "ids": ["GHSA-vfj7-8cjw-p6xm"],
+      "fixed_version": null,
+      "direct": false,
+      "status": "deferred-no-patch",
+      "dependency_path": "slop-scan > globby > fast-glob > micromatch",
+      "exposure": "Development tooling only; no app input reaches the affected glob parser in the audited path.",
+      "recommendation": "Do not pass untrusted glob patterns to tooling; monitor the parent chain for a patched release.",
+      "verified_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+    }
+  ],
   "verified_advisories": [
     {
       "package": "fast-uri",
@@ -45,18 +61,44 @@
       "status": "remediated",
       "verified_url": "https://github.com/advisories/GHSA-7w5x-hrqm-74c2",
       "verified_at": "2026-09-14"
+    },
+    {
+      "package": "fast-uri",
+      "verified_url": "https://github.com/fastify/fast-uri/security/advisories/GHSA-qw65-cvwx-89v3",
+      "verified_at": "2026-10-05",
+      "status": "remediated"
+    },
+    {
+      "package": "js-yaml",
+      "verified_url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj",
+      "verified_at": "2026-10-05",
+      "status": "remediated"
+    },
+    {
+      "package": "brace-expansion",
+      "verified_url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+      "verified_at": "2026-10-05",
+      "status": "remediated"
+    },
+    {
+      "package": "braces",
+      "verified_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "verified_at": "2026-10-05",
+      "status": "residual"
     }
   ],
-  "remediation_applied": [],
+  "remediation_applied": [
+    "fast-uri 3.1.8",
+    "brace-expansion 5.0.12",
+    "js-yaml 5.4.2"
+  ],
   "guard_assessment": [],
   "thinning_candidates": [],
   "decisions_needed": [],
   "validation": [
-    "Supplied audit parsed and baseline compared; no dependency changes needed.",
-    "No stale repo-level uv exclude-newer configuration was found."
+    "Supplied normalized audit compared to the prior baseline; no audit collector was rerun.",
+    "Updated lock graph inspected against published patched ranges; remote CI pending.",
+    "Frozen pnpm install and pnpm run typecheck passed."
   ],
-  "notes": [
-    "2026-09-21: consumed the supplied normalized audit, remediated every fixable finding, retained only unpatched findings, and found no thinning candidate.",
-    "2026-09-28: supplied audit consumed; no trivial-use or disproportionate dependency suitable for safe removal."
-  ]
+  "notes": []
 }
