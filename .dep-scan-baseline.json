@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "repo": "feed_tools",
-  "scan_date": "2026-10-05",
+  "scan_date": "2026-10-12",
   "generated_at": "2026-10-05T09:42:27.285424+00:00",
-  "source": "supplied normalized audit 2026-10-05; patched lock graph inspected after targeted validation",
+  "source": "Supplied normalized audit 2026-10-12; affected lock graph verified after remediation; audit tools not rerun.",
   "guard": {
     "bypass_env": "UV_NO_EXCLUDE_NEWER=1",
     "uv_exclude_newer_days": 3
@@ -15,25 +15,25 @@
     "direct_findings": 0
   },
   "delta": {
-    "new": ["braces"],
+    "new": ["smol-toml", "source-map-js"],
     "resolved": [],
-    "unchanged": []
+    "unchanged": ["braces"]
   },
-  "source_audit_packages": ["fast-uri", "js-yaml", "brace-expansion", "braces"],
+  "source_audit_packages": ["braces", "smol-toml", "source-map-js"],
   "findings": [
     {
       "package": "braces",
       "ecosystem": "node",
-      "installed_version": "3.0.3",
+      "manifest": ".",
+      "installed_versions": ["3.0.3"],
       "severity": "high",
       "ids": ["GHSA-vfj7-8cjw-p6xm"],
-      "fixed_version": null,
+      "fixed_versions": ["<0.0.0"],
       "direct": false,
-      "status": "deferred-no-patch",
-      "dependency_path": "slop-scan > globby > fast-glob > micromatch",
-      "exposure": "Development tooling only; no app input reaches the affected glob parser in the audited path.",
-      "recommendation": "Do not pass untrusted glob patterns to tooling; monitor the parent chain for a patched release.",
-      "verified_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+      "runtime": false,
+      "status": "deferred",
+      "verified_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "dependency_path": ".>slop-scan>globby>fast-glob>micromatch>braces"
     }
   ],
   "verified_advisories": [
@@ -85,20 +85,58 @@
       "verified_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
       "verified_at": "2026-10-05",
       "status": "residual"
+    },
+    {
+      "package": "smol-toml",
+      "ids": ["GHSA-r4xh-jqrq-34v2"],
+      "severity": "moderate",
+      "verified_url": "https://github.com/advisories/GHSA-r4xh-jqrq-34v2",
+      "verified_at": "2026-10-12",
+      "status": "remediated"
+    },
+    {
+      "package": "source-map-js",
+      "ids": ["GHSA-68fv-2mgg-jv7q"],
+      "severity": "high",
+      "verified_url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+      "verified_at": "2026-10-12",
+      "status": "remediated"
     }
   ],
   "remediation_applied": [
-    "fast-uri 3.1.8",
-    "brace-expansion 5.0.12",
-    "js-yaml 5.4.2"
+    {
+      "package": "smol-toml",
+      "ecosystem": "node",
+      "manifest": ".",
+      "from": ["1.8.0"],
+      "to": ["1.9.0"],
+      "ids": ["GHSA-r4xh-jqrq-34v2"]
+    },
+    {
+      "package": "source-map-js",
+      "ecosystem": "node",
+      "manifest": ".",
+      "from": ["1.2.1"],
+      "to": ["1.2.2"],
+      "ids": ["GHSA-68fv-2mgg-jv7q"]
+    }
   ],
   "guard_assessment": [],
   "thinning_candidates": [],
   "decisions_needed": [],
   "validation": [
-    "Supplied normalized audit compared to the prior baseline; no audit collector was rerun.",
-    "Updated lock graph inspected against published patched ranges; remote CI pending.",
-    "Frozen pnpm install and pnpm run typecheck passed."
+    "Supplied audit compared with baseline; installed locked graph checked against advisory affected ranges.",
+    "Targeted lock/install, changed dependency boundary checks and applicable app build passed; mandatory commit hooks retained."
   ],
-  "notes": []
+  "notes": [
+    "Successful supplied collectors were not rerun. No stale repo-level exclude-newer or exclude-newer-package configuration was found.",
+    "Remote CI is pending for the pushed remediation commit."
+  ],
+  "coverage": [
+    {
+      "ecosystem": "node",
+      "manifest": ".",
+      "status": "supplied audit; changed locked graph checked against supplied advisory ranges"
+    }
+  ]
 }
