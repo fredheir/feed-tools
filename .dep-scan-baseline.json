@@ -1,12 +1,14 @@
 {
   "schema_version": 2,
   "repo": "feed_tools",
-  "scan_date": "2026-10-12",
-  "generated_at": "2026-10-05T09:42:27.285424+00:00",
-  "source": "Supplied normalized audit 2026-10-12; affected lock graph verified after remediation; audit tools not rerun.",
+  "scan_date": "2026-10-13",
+  "generated_at": "2026-10-13T07:36:56.113827+00:00",
+  "source": "Fresh dep-scan-repo audit of canonical worktree; affected roots re-audited after remediation.",
+  "canonical_base": "d37dc30333e031f0132312895fe2b2eb7c842ea2",
+  "scan_head": "0af80b2aa211b301aaac090be2c5d2bc6972e5e2",
   "guard": {
-    "bypass_env": "UV_NO_EXCLUDE_NEWER=1",
-    "uv_exclude_newer_days": 3
+    "uv_exclude_newer_days": 3,
+    "bypass_env": "UV_NO_EXCLUDE_NEWER=1"
   },
   "summary": {
     "python_findings": 0,
@@ -15,25 +17,22 @@
     "direct_findings": 0
   },
   "delta": {
-    "new": ["smol-toml", "source-map-js"],
+    "new": [],
     "resolved": [],
     "unchanged": ["braces"]
   },
-  "source_audit_packages": ["braces", "smol-toml", "source-map-js"],
   "findings": [
     {
       "package": "braces",
-      "ecosystem": "node",
-      "manifest": ".",
-      "installed_versions": ["3.0.3"],
-      "severity": "high",
+      "installed_version": "3.0.3",
       "ids": ["GHSA-vfj7-8cjw-p6xm"],
+      "severity": "high",
       "fixed_versions": ["<0.0.0"],
+      "ecosystem": "node",
+      "path": ".",
       "direct": false,
-      "runtime": false,
-      "status": "deferred",
-      "verified_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
-      "dependency_path": ".>slop-scan>globby>fast-glob>micromatch>braces"
+      "exposure": "transitive/tooling",
+      "paths": [".>slop-scan>globby>fast-glob>micromatch>braces"]
     }
   ],
   "verified_advisories": [
@@ -103,40 +102,27 @@
       "status": "remediated"
     }
   ],
-  "remediation_applied": [
-    {
-      "package": "smol-toml",
-      "ecosystem": "node",
-      "manifest": ".",
-      "from": ["1.8.0"],
-      "to": ["1.9.0"],
-      "ids": ["GHSA-r4xh-jqrq-34v2"]
-    },
-    {
-      "package": "source-map-js",
-      "ecosystem": "node",
-      "manifest": ".",
-      "from": ["1.2.1"],
-      "to": ["1.2.2"],
-      "ids": ["GHSA-68fv-2mgg-jv7q"]
-    }
-  ],
+  "remediation_applied": [],
   "guard_assessment": [],
   "thinning_candidates": [],
   "decisions_needed": [],
   "validation": [
-    "Supplied audit compared with baseline; installed locked graph checked against advisory affected ranges.",
-    "Targeted lock/install, changed dependency boundary checks and applicable app build passed; mandatory commit hooks retained."
+    "Fresh affected-package audit passed; JSON baseline parsed; git diff --check passed."
   ],
   "notes": [
-    "Successful supplied collectors were not rerun. No stale repo-level exclude-newer or exclude-newer-package configuration was found.",
-    "Remote CI is pending for the pushed remediation commit."
+    "Configured checkout and old scan branches preserved. Remote CI is pending after push. No deployed checkout build or deployment performed."
   ],
   "coverage": [
     {
+      "ecosystem": "python",
+      "scanner": null,
+      "error": null
+    },
+    {
       "ecosystem": "node",
-      "manifest": ".",
-      "status": "supplied audit; changed locked graph checked against supplied advisory ranges"
+      "path": ".",
+      "scanner": "pnpm-audit",
+      "error": null
     }
   ]
 }
