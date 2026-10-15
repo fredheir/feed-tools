@@ -72,6 +72,17 @@ describe("workflow trust boundaries", () => {
     }
   });
 
+  it("installs the pinned Bash runtime before checking the contract", () => {
+    const workflow = readWorkflow("contract.yml");
+    const install = workflow.indexOf(
+      "run: .repo-standards/markolo-shared/scripts/ci/install-bash",
+    );
+    expect(install).toBeGreaterThan(-1);
+    expect(install).toBeLessThan(
+      workflow.indexOf("run: scripts/ci/just doctor"),
+    );
+  });
+
   it("keeps standards-only jobs private", () => {
     for (const [name, jobName] of [
       ["actions-hygiene.yml", "actions-hygiene"],

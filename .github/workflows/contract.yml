@@ -75,4 +75,6 @@ jobs:
           apm install --target agent-skills
       - name: Install repo guard tools
         run: scripts/ci/just --version
+      - name: Install canonical Bash runtime
+        run: .repo-standards/markolo-shared/scripts/ci/install-bash
       - run: scripts/ci/just doctor
