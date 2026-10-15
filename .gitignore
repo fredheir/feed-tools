@@ -31,3 +31,7 @@ apm_modules/
 
 # dependency-scan scratch output
 tmp/
+
+# Local development: nested git worktrees. Left untracked they pollute
+# typecheck, lint and test collection with a second copy of the tree.
+.worktrees/

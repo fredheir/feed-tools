@@ -12,7 +12,6 @@ import {
   getCaptureBrowserOptions,
   getCaptureDefaults,
   getCurationPreferences,
-  getDefaultSource,
   getEnabledSourceNames,
   parseConfigPayload,
   readConfigDocument,
@@ -66,7 +65,6 @@ describe("config helpers", () => {
     };
 
     expect(getEnabledSourceNames(config)).toEqual(["x"]);
-    expect(getDefaultSource(config)).toBe("x");
     expect(getCaptureDefaults(config, "x")).toEqual({
       assets_dir: undefined,
       save_dir: path.join(repoRoot, "var/x-archive"),
@@ -188,6 +186,35 @@ describe("config helpers", () => {
       default_limit: undefined,
       save_dir: undefined,
     });
+  });
+
+  test.each([
+    0,
+    -1,
+    1.5,
+    "12foo",
+  ])("rejects invalid capture default_limit %p", (defaultLimit) => {
+    expect(() =>
+      parseConfigPayload(
+        JSON.stringify({
+          user_preferences: {
+            sources: [{ name: "x", capture: { default_limit: defaultLimit } }],
+          },
+        }),
+        "/tmp/config.json",
+      ),
+    ).toThrow(`Invalid default_limit: ${String(defaultLimit)}`);
+  });
+
+  test("preserves the default capture limit when config omits it", () => {
+    const config = parseConfigPayload(
+      JSON.stringify({
+        user_preferences: { sources: [{ name: "x" }] },
+      }),
+      "/tmp/config.json",
+    );
+
+    expect(getCaptureDefaults(config, "x").default_limit).toBeUndefined();
   });
 
   test("resolves browser path defaults from the config file directory", () => {

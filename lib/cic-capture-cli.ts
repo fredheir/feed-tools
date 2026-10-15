@@ -21,6 +21,7 @@
  */
 
 import fs from "node:fs";
+import { DEFAULT_CAPTURE_LIMIT, parseCaptureLimit } from "./capture-limit.ts";
 import { requireArgValue } from "./cli-args.ts";
 import {
   loadOptionalConfig,
@@ -99,12 +100,14 @@ function cmdExtract(
 }
 
 function parsePositiveInteger(value: string, name: string): number {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0 || String(parsed) !== value) {
-    console.error(`Invalid ${name}: ${value}`);
+  try {
+    return parseCaptureLimit(value, name);
+  } catch (error) {
+    console.error(
+      error instanceof Error ? error.message : `Invalid ${name}: ${value}`,
+    );
     process.exit(1);
   }
-  return parsed;
 }
 
 async function cmdIngest(
@@ -186,7 +189,7 @@ if (subcommand === "prep") {
     );
     process.exit(1);
   }
-  let limit = 12;
+  let limit = DEFAULT_CAPTURE_LIMIT;
   let limitWasSet = false;
   const flags: {
     downloadFilename?: string;

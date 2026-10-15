@@ -9,7 +9,6 @@ import {
   buildAgentBrowserArgs,
   getCdpVersionUrl,
   getCdpVersionUrls,
-  getRuntimeBrowserOptions,
   readCdpVersionPayload,
 } from "../lib/browser.ts";
 import { getBrowserStatus } from "../lib/browser-status.ts";
@@ -68,26 +67,6 @@ describe("buildAgentBrowserArgs", () => {
     );
 
     expect(args).toEqual(["--cdp", "9222", "snapshot", "-i"]);
-  });
-
-  test("strips startup-only options from runtime session reuse", () => {
-    const runtime = getRuntimeBrowserOptions({
-      autoConnect: false,
-      session: "feed-x",
-      statePath: "./.auth/x.json",
-      profile: "./.profiles/x",
-      args: ["--no-sandbox"],
-      headed: true,
-    });
-
-    expect(runtime).toMatchObject({
-      autoConnect: false,
-      session: "feed-x",
-      statePath: null,
-      profile: null,
-      args: [],
-      headed: false,
-    });
   });
 
   test("builds optional browser args from canonical config options", () => {
@@ -197,20 +176,6 @@ describe("buildAgentBrowserArgs", () => {
         chromeBin,
       }),
     ).rejects.toThrow(/Chrome binary not found/);
-  });
-
-  test("normalizes cdp config to disable headed and auto-connect", () => {
-    const runtime = getRuntimeBrowserOptions({
-      cdp: "9222",
-      autoConnect: true,
-      headed: true,
-    });
-
-    expect(runtime).toMatchObject({
-      cdp: "9222",
-      autoConnect: false,
-      headed: false,
-    });
   });
 
   test("builds CDP probe URLs from port and host forms", () => {

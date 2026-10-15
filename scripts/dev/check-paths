@@ -1,141 +1,176 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root="$(realpath "$PWD")"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
 
-canonicalize_path() {
-  local raw="$1"
-  local candidate component physical resolved="$root"
-  local -a parts
+if (($# == 0)); then
+  echo "Usage: scripts/dev/check-paths <path> [<path> ...]" >&2
+  exit 2
+fi
 
-  if [[ "$raw" == /* ]]; then
-    resolved="/"
-  fi
+repo_root="$(realpath -m -- "$ROOT_DIR")"
+checked_paths=()
+biome_paths=()
+eslint_paths=()
+prettier_paths=()
+test_paths=()
+skipped_paths=()
+ignored_paths=()
 
-  IFS="/" read -r -a parts <<< "$raw"
-  for component in "${parts[@]}"; do
-    case "$component" in
-      ""|.) ;;
-      ..)
-        if [[ "$resolved" != "/" ]]; then
-          resolved="${resolved%/*}"
-          [[ -n "$resolved" ]] || resolved="/"
-        fi
-        ;;
-      *)
-        if [[ "$resolved" == "/" ]]; then
-          candidate="/$component"
-        else
-          candidate="$resolved/$component"
-        fi
+directory_contains_code() {
+  local search_path="$1"
 
-        if [[ -e "$candidate" ]] &&
-          physical="$(realpath "$candidate" 2>/dev/null)"; then
-          resolved="$physical"
-        else
-          resolved="$candidate"
-        fi
-        ;;
-    esac
-  done
-
-  printf '%s\n' "$resolved"
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( \
+        -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' -o \
+        -path 'tests/fixtures/*.html' -o -path '*/tests/fixtures/*.html' \
+      \) -prune -o \
+      -type f \( \
+        -name '*.cjs' -o -name '*.cts' -o -name '*.css' -o -name '*.html' -o \
+        -name '*.js' -o -name '*.json' -o -name '*.jsonc' -o -name '*.jsx' -o \
+        -name '*.mjs' -o -name '*.mts' -o -name '*.ts' -o -name '*.tsx' \
+      \) -print0
+  )
+  return 1
 }
 
-check_paths_select() {
-  local raw resolved path
+directory_contains_lintable_code() {
+  local search_path="$1"
 
-  if [ "$#" -eq 0 ]; then
-    echo "Usage: scripts/dev/check-paths <path> [<path> ...]" >&2
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( \
+        -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' -o \
+        -path 'tests/fixtures/*.html' -o -path '*/tests/fixtures/*.html' \
+      \) -prune -o \
+      -type f \( \
+        -name '*.cjs' -o -name '*.cts' -o -name '*.js' -o -name '*.jsx' -o \
+        -name '*.mjs' -o -name '*.mts' -o -name '*.ts' -o -name '*.tsx' \
+      \) -print0
+  )
+  return 1
+}
+
+directory_contains_docs() {
+  local search_path="$1"
+
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' \) -prune -o \
+      -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' \) -print0
+  )
+  return 1
+}
+
+directory_contains_tests() {
+  local search_path="$1"
+
+  while IFS= read -r -d '' _; do
+    return 0
+  done < <(
+    find "$search_path" \
+      \( -path '*/.git' -o -path '*/node_modules' -o -path '*/.local' \) -prune -o \
+      -type f \( \
+        -name '*.test.cjs' -o -name '*.test.js' -o -name '*.test.mjs' -o \
+        -name '*.test.mts' -o -name '*.test.ts' -o -name '*.test.tsx' \
+      \) -print0
+  )
+  return 1
+}
+
+for raw_path in "$@"; do
+  resolved_path="$(realpath -m -- "$raw_path")"
+  if [[ "$resolved_path" == "$repo_root" ]]; then
+    relative_path="."
+  elif [[ "$resolved_path" == "$repo_root"/* ]]; then
+    relative_path="${resolved_path#"$repo_root"/}"
+  else
+    echo "Path escapes repository root: $raw_path" >&2
     exit 2
   fi
 
-  paths=()
-  for raw in "$@"; do
-    resolved="$(canonicalize_path "$raw")"
-    if [[ "$resolved" == "$root" ]]; then
-      paths+=(".")
-    elif [[ "$resolved" == "$root"/* ]]; then
-      paths+=("${resolved#"$root"/}")
-    else
-      echo "Path escapes repository root: $raw" >&2
-      exit 2
+  if [[ ! -e "$relative_path" && ! -L "$relative_path" ]]; then
+    echo "Path does not exist: $raw_path" >&2
+    exit 2
+  fi
+  checked_paths+=("$relative_path")
+
+  if [[ -d "$relative_path" ]]; then
+    if directory_contains_code "$relative_path"; then
+      biome_paths+=("$relative_path")
     fi
-  done
-
-  # Existence is validated before any routing so a mistyped configuration
-  # path is rejected instead of silently widening to the full suite. The
-  # change collector sets REPO_STANDARDS_FULL_CHECK=1 for tracked deletions.
-  for path in "${paths[@]}"; do
-    if [[ ! -e "$path" && "${REPO_STANDARDS_FULL_CHECK:-}" != 1 ]]; then
-      echo "Path does not exist: $path; use check-worktree or check-branch for deletions" >&2
-      exit 2
+    if directory_contains_lintable_code "$relative_path"; then
+      eslint_paths+=("$relative_path")
     fi
-  done
-}
-
-check_paths_select "$@"
-
-python_paths=()
-test_paths=()
-shell_paths=()
-full_check=false
-workflow_check=false
-for path in "${paths[@]}"; do
-  name="$(basename "$path")"
-  if [[ -d "$path" ]]; then
-    echo "Directory scope: $path -> full local suite (just check)"
-    full_check=true
+    if directory_contains_docs "$relative_path"; then
+      prettier_paths+=("$relative_path")
+    fi
+    if [[ "$relative_path" == tests || "$relative_path" == tests/* ]] &&
+      directory_contains_tests "$relative_path"; then
+      test_paths+=("$relative_path")
+    fi
     continue
   fi
-  case "$path" in
-    *.py) python_paths+=("$path") ;;
-    *.md|*.txt)
-      echo "Exempt: $path (prose; review content and links manually)" ;;
-    *.sh|scripts/ci/*|scripts/dev/*|scripts/guards/*)
-      if [[ -e "$path" ]] && head -n 1 "$path" | grep -q python; then
-        python_paths+=("$path")
-      else
-        shell_paths+=("$path")
-      fi ;;
-    .github/workflows/*.yml|.github/workflows/*.yaml)
-      workflow_check=true ;;
-    *.yaml|*.yml|*.json|*.toml|*.lock|*.xml|justfile|.python-version|.gitignore|.repo-standards-ref)
-      echo "Configuration scope: $path -> full local suite (just check)"
-      full_check=true ;;
-    *) echo "Unhandled path: $path; add a routing rule or explicit exemption" >&2; exit 2 ;;
+
+  case "$relative_path" in
+    tests/fixtures/*.html)
+      ignored_paths+=("$relative_path")
+      ;;
+    *.cjs|*.cts|*.css|*.html|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
+      biome_paths+=("$relative_path")
+      ;;
   esac
-  if [[ "$path" == tests/* && ( "$name" == test_*.py || "$name" == *_test.py ) ]]; then
-    test_paths+=("$path")
-  fi
+  case "$relative_path" in
+    *.cjs|*.cts|*.js|*.jsx|*.mjs|*.mts|*.ts|*.tsx)
+      eslint_paths+=("$relative_path")
+      ;;
+  esac
+  case "$relative_path" in
+    *.md|*.yml|*.yaml)
+      prettier_paths+=("$relative_path")
+      ;;
+  esac
+  case "$relative_path" in
+    tests/*.test.cjs|tests/*.test.js|tests/*.test.mjs|tests/*.test.mts|tests/*.test.ts|tests/*.test.tsx)
+      test_paths+=("$relative_path")
+      ;;
+    *)
+      case "$relative_path" in
+        *.cjs|*.cts|*.css|*.html|*.js|*.json|*.jsonc|*.jsx|*.mjs|*.mts|*.ts|*.tsx|*.md|*.yml|*.yaml)
+          ;;
+        *)
+          skipped_paths+=("$relative_path")
+          ;;
+      esac
+      ;;
+  esac
 done
 
-if [[ "${REPO_STANDARDS_FULL_CHECK:-}" == 1 ]]; then
-  echo "All changed paths routed; the change collector will run the full suite."
-  exit 0
+if ((${#biome_paths[@]} > 0)); then
+  pnpm exec biome ci -- "${biome_paths[@]}"
 fi
-if [[ "$full_check" == true ]]; then
-  exec just check
+if ((${#eslint_paths[@]} > 0)); then
+  pnpm exec eslint --no-warn-ignored -- "${eslint_paths[@]}"
 fi
-if [[ "$workflow_check" == true ]]; then
-  just actions-hygiene
+if ((${#prettier_paths[@]} > 0)); then
+  pnpm exec prettier --check -- "${prettier_paths[@]}"
 fi
-if [[ "${#shell_paths[@]}" -gt 0 ]]; then
-  shellcheck -- "${shell_paths[@]}"
+if ((${#test_paths[@]} > 0)); then
+  scripts/dev/test-one "${test_paths[@]}"
 fi
-
-if [ "${#python_paths[@]}" -gt 0 ]; then
-  printf 'Python lint/format/types: %s\n' "${python_paths[@]}"
-  uv run --locked ruff check -- "${python_paths[@]}"
-  uv run --locked ruff format --check -- "${python_paths[@]}"
-  uv run --locked ty check --force-exclude -- "${python_paths[@]}"
-else
-  echo "No Python paths passed; skipped ruff and ty."
+if ((${#skipped_paths[@]} > 0)); then
+  printf 'Skipped unsupported paths: %s\n' "${skipped_paths[*]}"
+fi
+if ((${#ignored_paths[@]} > 0)); then
+  printf 'Skipped formatter-ignored paths: %s\n' "${ignored_paths[*]}"
 fi
 
-if [ "${#test_paths[@]}" -gt 0 ]; then
-  printf 'Selected pytest target: %s\n' "${test_paths[@]}"
-  uv run --locked -m pytest -q -- "${test_paths[@]}"
-else
-  echo "No test paths passed; skipped pytest."
-fi
+printf 'Checked %d path(s).\n' "${#checked_paths[@]}"

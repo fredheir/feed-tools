@@ -1,66 +1,11 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import {
   assignCategories,
   groupPickedRowsByCategory,
-  loadAllocationFromDocument,
-  loadAllocationFromPath,
   mergeAllocations,
-  saveAllocationToDocument,
-  saveAllocationToPath,
 } from "../../lib/allocation.ts";
 
-const tempDirs = [];
-
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-});
-
 describe("allocation helpers", () => {
-  test("returns an empty allocation when no file exists", () => {
-    const missingPath = path.join(
-      os.tmpdir(),
-      "does-not-exist",
-      "allocation.json",
-    );
-    expect(loadAllocationFromPath(missingPath)).toEqual({
-      version: 1,
-      source: null,
-      items: {},
-    });
-  });
-
-  test("saves and reloads allocations through explicit paths", () => {
-    const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-allocation-"));
-    tempDirs.push(saveDir);
-    const allocationPath = path.join(saveDir, "allocation.json");
-    const allocation = {
-      version: 1,
-      source: "x",
-      items: {
-        "x:1": { category: "Coding" },
-      },
-    };
-
-    saveAllocationToPath(allocationPath, allocation);
-
-    expect(loadAllocationFromPath(allocationPath)).toEqual(allocation);
-    expect(
-      loadAllocationFromDocument({ source: "x", items: [] }, allocationPath),
-    ).toEqual(allocation);
-    expect(
-      saveAllocationToDocument(
-        { source: "x", items: [] },
-        allocation,
-        allocationPath,
-      ),
-    ).toBe(path.resolve(allocationPath));
-  });
-
   test("merges and assigns only rows present in the document", () => {
     const document = {
       schema_version: 1,

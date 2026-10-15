@@ -4,5 +4,33 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-pnpm install --frozen-lockfile
+scripts/guards/deps-check-fast
+
+# Dependency installation belongs to the explicit `just sync` recipe; this
+# proof only inspects the existing lockfile and installed package graph.
+if [[ ! -f node_modules/.modules.yaml ]]; then
+  echo "node_modules is incomplete; run: just sync" >&2
+  exit 1
+fi
+
+fail() {
+  echo "dependency check: $1" >&2
+  exit 1
+}
+
+repo_root="$(realpath -m -- "$ROOT_DIR")"
+while IFS= read -r package_name; do
+  package_path="node_modules/$package_name"
+  [[ -e "$package_path" ]] || fail "missing direct dependency: $package_name"
+  resolved_package="$(realpath -- "$package_path" 2>/dev/null)" ||
+    fail "unresolvable direct dependency: $package_name"
+  [[ "$resolved_package" == "$repo_root/node_modules/.pnpm/"* ]] ||
+    fail "direct dependency escapes pnpm store: $package_name"
+done < <(jq -r '[(.dependencies // {} | keys[]), (.devDependencies // {} | keys[])] | .[]' package.json)
+
+while IFS= read -r -d '' symlink_path; do
+  [[ -e "$symlink_path" ]] || fail "broken dependency link: $symlink_path"
+done < <(find node_modules -type l -print0)
+
+pnpm list --depth=Infinity --json >/dev/null
 pnpm ignored-builds

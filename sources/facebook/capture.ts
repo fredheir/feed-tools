@@ -471,7 +471,6 @@ const source = {
   name: "facebook",
   captureDocument,
 } satisfies CaptureAdapter;
-const prepareFeed = prepareFacebookFeed;
 
 // CiC path reads the rendered DOM directly because the accessibility-tree
 // snapshot used by the default adapter has no equivalent inside Chrome.
@@ -774,7 +773,6 @@ export function normalizeFacebookExtractionDocument(
 
 export {
   source,
-  prepareFeed,
   extractFacebookSourceItemId,
   isFacebookItemWorthKeeping,
   scoreFacebookItemQuality,

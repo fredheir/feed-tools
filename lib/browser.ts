@@ -70,33 +70,6 @@ export function normalizeBrowserOptions(
   };
 }
 
-export function getRuntimeBrowserOptions(
-  options: FeedBrowserConfig = {},
-): NormalizedBrowserOptions {
-  const normalized = normalizeBrowserOptions(options);
-  const {
-    autoConnect,
-    session,
-    sessionName,
-    allowFileAccess,
-    colorScheme,
-    cdp,
-  } = normalized;
-  return {
-    autoConnect,
-    session,
-    sessionName,
-    profile: null,
-    statePath: null,
-    headed: false,
-    allowFileAccess,
-    colorScheme,
-    executablePath: null,
-    cdp,
-    args: [],
-  };
-}
-
 export function buildAgentBrowserArgs(
   options: FeedBrowserConfig = {},
   commandArgs: string[] = [],

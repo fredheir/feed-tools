@@ -7,7 +7,7 @@ import {
   SOURCE_SIGNIN_TARGETS,
 } from "../lib/source-metadata.ts";
 import { getSourceConfig } from "../lib/cic/source-config.ts";
-import { getBootstrapHandler, getCaptureHandler } from "../sources/registry.ts";
+import { getCaptureHandler } from "../sources/registry.ts";
 
 describe("source registry", () => {
   test("lists the supported capture sources from the canonical registry", () => {
@@ -26,7 +26,6 @@ describe("source registry", () => {
     for (const source of SOURCE_NAMES) {
       expect(SOURCE_NAME_SET.has(source)).toBe(true);
       expect(typeof getCaptureHandler(source)).toBe("function");
-      expect(typeof getBootstrapHandler(source)).toBe("function");
     }
   });
 

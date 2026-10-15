@@ -45,7 +45,7 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 
 - SSH clone requires a GitHub SSH key; in sandboxed or keyless environments use the HTTPS-with-token method from the Cloning section above.
 - If `corepack enable` fails in a read-only environment, install pnpm with npm into the repo-local `.local` directory and prepend `.local/bin` to `PATH`.
-- `pnpm install` is expected to work in non-interactive agent/sandbox environments: `agent-browser` and `esbuild` are allowlisted in `pnpm-workspace.yaml`, while `lefthook` remains ignored.
+- `pnpm install` is expected to work in non-interactive agent/sandbox environments: `agent-browser` and `esbuild` are allowlisted in `pnpm-workspace.yaml`.
 - If pnpm still reports blocked builds because an older pnpm version ignored the repo policy, run `node node_modules/agent-browser/scripts/postinstall.js` and `pnpm rebuild esbuild`.
 - Run wrappers as `./bin/feed-capture`, `./bin/feed-curate`, `./bin/feed-classify`, `./bin/feed-render`.
 - In Cowork sandboxes, run `./bin/feed-signin <source>...` before capture when auth is uncertain; it relaunches workspace Chrome, opens the platform pages, and waits until source-specific auth cookies are visible on disk.
@@ -104,8 +104,9 @@ curl -sf http://127.0.0.1:9222/json/version || curl -sf http://localhost:9222/js
 
 ## Git / PRs
 
-- Use `just fix` during edits, `just check-changed` before handoff, and `just check` before commit/CI handoff.
-- Normal feed commands and `pnpm install` only need this repository's dependencies; consumers do not need `markolo-shared`. Maintainer-only standards recipes such as `just doctor`, `just check`, and `just hooks-install` require `REPO_STANDARDS_LOCAL` pointing at a `markolo-shared` checkout or a `repo-standards` binary on `PATH`. `just sync-if-needed` skips cleanly when that tooling is unavailable.
+- Start with bare `just` to discover the safe, documented recipe list. Use `just check-paths PATH...` and `just test-one TARGET` for focused work, `just check-worktree` for read-only staged/unstaged/renamed/untracked verification (including TypeScript typecheck), and `just check` before commit/CI handoff. Mutation is explicit through `just fix-worktree` or intentional whole-repository `just fix-all`; there is no legacy `fix` or `check-changed` recipe.
+- `just test-fast` runs the complete deterministic Vitest suite. It is the bounded local lane because the suite has no live browser/feed integrations; `just test` currently has the same scope for CI.
+- Normal feed commands and `pnpm install` only need this repository's dependencies; consumers do not need `markolo-shared`. Maintainer-only standards recipes such as `just doctor`, `just check`, and `just hooks-install` use the pinned `.repo-standards-ref` cache by default, or an explicit `REPO_STANDARDS_LOCAL` checkout. They fail loudly when the pinned tooling is unavailable; use `just sync-if-needed` only after the standards cache is available.
 - Run `just hooks-install` after clone or after hook migration changes.
 - Commit hooks require Conventional Commits. Use messages like `feat: add feed doctor` or `fix: handle missing render input`.
 
@@ -400,3 +401,7 @@ feed-curate --sources x,bluesky
 # feed-classify --category "Tech & AI:1,3" --category "Politics:5,8,12"
 feed-render --pick 8,5,12,1,3,all --tab
 ```
+
+## Releases
+
+Do not edit `CHANGELOG.md` in feature branches or PRs; the changelog is written at release time. PR titles and commit messages are the source; use the `changelog-audit` skill and `parse-changelog --release X.Y.Z` when cutting a release.

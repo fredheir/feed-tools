@@ -1,8 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import { DEFAULT_SAVE_DIR, loadConfig, getSaveDir } from "./config.ts";
 import { getDocumentSources } from "./document-sources.ts";
-import { loadAllocationFromDb, saveAllocationToDb } from "./sqlite-store.ts";
+import { loadAllocationFromDb } from "./sqlite-store.ts";
 import { resolveSelectionList } from "./selection.ts";
 import { assertFeedDocument, isPlainObject } from "./item-shape.ts";
 import type {
@@ -24,45 +22,6 @@ function getAllocationItems(
   return allocation && isPlainObject(allocation.items)
     ? (allocation.items as FeedAllocation["items"])
     : {};
-}
-
-function loadAllocationFromPath(allocationPath: string): FeedAllocation {
-  try {
-    const parsed = JSON.parse(
-      fs.readFileSync(allocationPath, "utf8"),
-    ) as unknown;
-    if (!isPlainObject(parsed)) {
-      throw new Error(`Invalid allocation object: ${allocationPath}`);
-    }
-    const version = typeof parsed.version === "number" ? parsed.version : 1;
-    const source = typeof parsed.source === "string" ? parsed.source : null;
-    return {
-      version,
-      source,
-      items: getAllocationItems({
-        version,
-        source,
-        items: parsed.items,
-      } as unknown as FeedAllocation),
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return createEmptyAllocation();
-    }
-    throw error;
-  }
-}
-
-function saveAllocationToPath(
-  allocationPath: string,
-  allocation: FeedAllocation,
-): void {
-  fs.mkdirSync(path.dirname(allocationPath), { recursive: true });
-  fs.writeFileSync(
-    allocationPath,
-    `${JSON.stringify(allocation, null, 2)}\n`,
-    "utf8",
-  );
 }
 
 function mergeAllocations(
@@ -105,12 +64,7 @@ function getDocumentSaveDirs(
   );
 }
 
-function loadAllocationFromDocument(
-  document: FeedDocument,
-  explicitPath: string | null = null,
-): FeedAllocation {
-  if (explicitPath) return loadAllocationFromPath(explicitPath);
-
+function loadAllocationFromDocument(document: FeedDocument): FeedAllocation {
   assertFeedDocument(document, "loadAllocationFromDocument");
   const config = loadConfig();
   const saveDirs = getDocumentSaveDirs(config, document);
@@ -155,39 +109,6 @@ function assignCategories(
   }
 
   return next;
-}
-
-function saveAllocationToDocument(
-  document: FeedDocument,
-  allocation: FeedAllocation,
-  explicitPath: string | null = null,
-): string {
-  if (explicitPath) {
-    saveAllocationToPath(explicitPath, allocation);
-    return path.resolve(explicitPath);
-  }
-
-  assertFeedDocument(document, "saveAllocationToDocument");
-  const config = loadConfig();
-  const sources = getDocumentSources(document);
-  const resolvedLocations = new Set<string>();
-
-  for (const sourceName of sources) {
-    const sourceDocument =
-      document.source === "combined"
-        ? {
-            ...document,
-            source: sourceName,
-            items: document.items.filter((item) => item.source === sourceName),
-          }
-        : document;
-    const sourceAllocation = mergeAllocations(sourceDocument, [allocation]);
-    const saveDir = getSaveDir(config, sourceName);
-    saveAllocationToDb(saveDir, sourceDocument, sourceAllocation);
-    resolvedLocations.add(path.resolve(saveDir, "feed.sqlite"));
-  }
-
-  return Array.from(resolvedLocations).join("\n");
 }
 
 function hasNewUnclassifiedItems(
@@ -252,9 +173,6 @@ export {
   assignCategories,
   groupPickedRowsByCategory,
   hasNewUnclassifiedItems,
-  loadAllocationFromPath,
   loadAllocationFromDocument,
   mergeAllocations,
-  saveAllocationToPath,
-  saveAllocationToDocument,
 };
