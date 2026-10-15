@@ -80,10 +80,6 @@ extract_binary() {
 }
 
 ensure_ripgrep() {
-  if command -v rg >/dev/null 2>&1; then
-    return 0
-  fi
-
   local archive="$BIN_DIR/$RG_ARCHIVE"
   if [[ ! -f "$archive" ]] || ! sha256_matches "$RG_SHA256" "$archive"; then
     download_verified \

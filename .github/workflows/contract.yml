@@ -11,7 +11,7 @@ permissions:
   packages: read
 
 env:
-  MARKOLO_SHARED_STANDARDS_REF: 292e07694d059d9049744bb6ad0c078b15d3a491
+  MARKOLO_SHARED_STANDARDS_REF: 2b77a57790e85905c2460ad27941e26490112d07
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -75,4 +75,6 @@ jobs:
           apm install --target agent-skills
       - name: Install repo guard tools
         run: scripts/ci/just --version
+      - name: Install canonical Bash runtime
+        run: .repo-standards/markolo-shared/scripts/ci/install-bash
       - run: scripts/ci/just doctor

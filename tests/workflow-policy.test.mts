@@ -7,7 +7,10 @@ const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const sharedRef = "292e07694d059d9049744bb6ad0c078b15d3a491";
+const sharedRef = readFileSync(
+  path.join(repoRoot, ".repo-standards-ref"),
+  "utf8",
+).trim();
 const trustedCondition =
   "github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')";
 const publicCondition =
@@ -40,9 +43,7 @@ function jobBody(workflow: string, jobName: string): string {
 
 describe("workflow trust boundaries", () => {
   it("pins every shared standards checkout to the repository pin", () => {
-    expect(
-      readFileSync(path.join(repoRoot, ".repo-standards-ref"), "utf8").trim(),
-    ).toBe(sharedRef);
+    expect(sharedRef).toMatch(/^[a-f0-9]{40}$/);
 
     for (const [name] of publicValidationWorkflows) {
       expect(readWorkflow(name)).toContain(
@@ -69,6 +70,17 @@ describe("workflow trust boundaries", () => {
       expect(workflow).toContain(`if: ${publicCondition}`);
       expect(workflow).toContain("pnpm install --frozen-lockfile");
     }
+  });
+
+  it("installs the pinned Bash runtime before checking the contract", () => {
+    const workflow = readWorkflow("contract.yml");
+    const install = workflow.indexOf(
+      "run: .repo-standards/markolo-shared/scripts/ci/install-bash",
+    );
+    expect(install).toBeGreaterThan(-1);
+    expect(install).toBeLessThan(
+      workflow.indexOf("run: scripts/ci/just doctor"),
+    );
   });
 
   it("keeps standards-only jobs private", () => {

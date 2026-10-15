@@ -1,0 +1,128 @@
+{
+  "schema_version": 2,
+  "repo": "feed_tools",
+  "scan_date": "2026-10-13",
+  "generated_at": "2026-10-13T07:36:56.113827+00:00",
+  "source": "Fresh dep-scan-repo audit of canonical worktree; affected roots re-audited after remediation.",
+  "canonical_base": "d37dc30333e031f0132312895fe2b2eb7c842ea2",
+  "scan_head": "0af80b2aa211b301aaac090be2c5d2bc6972e5e2",
+  "guard": {
+    "uv_exclude_newer_days": 3,
+    "bypass_env": "UV_NO_EXCLUDE_NEWER=1"
+  },
+  "summary": {
+    "python_findings": 0,
+    "node_findings": 1,
+    "critical_findings": 0,
+    "direct_findings": 0
+  },
+  "delta": {
+    "new": [],
+    "resolved": [],
+    "unchanged": ["braces"]
+  },
+  "findings": [
+    {
+      "package": "braces",
+      "installed_version": "3.0.3",
+      "ids": ["GHSA-vfj7-8cjw-p6xm"],
+      "severity": "high",
+      "fixed_versions": ["<0.0.0"],
+      "ecosystem": "node",
+      "path": ".",
+      "direct": false,
+      "exposure": "transitive/tooling",
+      "paths": [".>slop-scan>globby>fast-glob>micromatch>braces"]
+    }
+  ],
+  "verified_advisories": [
+    {
+      "package": "fast-uri",
+      "installed": "3.1.5",
+      "severity": "high",
+      "ids": [
+        "GHSA-5jgf-p345-68v8",
+        "GHSA-f65p-4m7j-42xc",
+        "GHSA-fph4-wmhf-6fwf",
+        "GHSA-jqff-g426-hqxp"
+      ],
+      "fixed_version": "3.1.6",
+      "status": "remediated",
+      "verified_url": "https://github.com/advisories/GHSA-5jgf-p345-68v8",
+      "verified_at": "2026-09-07"
+    },
+    {
+      "package": "smol-toml",
+      "installed_version": "1.6.1/1.7.0",
+      "fixed_version": "1.8.0",
+      "severity": "high",
+      "ids": ["GHSA-7w5x-hrqm-74c2"],
+      "status": "remediated",
+      "verified_url": "https://github.com/advisories/GHSA-7w5x-hrqm-74c2",
+      "verified_at": "2026-09-14"
+    },
+    {
+      "package": "fast-uri",
+      "verified_url": "https://github.com/fastify/fast-uri/security/advisories/GHSA-qw65-cvwx-89v3",
+      "verified_at": "2026-10-05",
+      "status": "remediated"
+    },
+    {
+      "package": "js-yaml",
+      "verified_url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj",
+      "verified_at": "2026-10-05",
+      "status": "remediated"
+    },
+    {
+      "package": "brace-expansion",
+      "verified_url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+      "verified_at": "2026-10-05",
+      "status": "remediated"
+    },
+    {
+      "package": "braces",
+      "verified_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "verified_at": "2026-10-05",
+      "status": "residual"
+    },
+    {
+      "package": "smol-toml",
+      "ids": ["GHSA-r4xh-jqrq-34v2"],
+      "severity": "moderate",
+      "verified_url": "https://github.com/advisories/GHSA-r4xh-jqrq-34v2",
+      "verified_at": "2026-10-12",
+      "status": "remediated"
+    },
+    {
+      "package": "source-map-js",
+      "ids": ["GHSA-68fv-2mgg-jv7q"],
+      "severity": "high",
+      "verified_url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+      "verified_at": "2026-10-12",
+      "status": "remediated"
+    }
+  ],
+  "remediation_applied": [],
+  "guard_assessment": [],
+  "thinning_candidates": [],
+  "decisions_needed": [],
+  "validation": [
+    "Fresh affected-package audit passed; JSON baseline parsed; git diff --check passed."
+  ],
+  "notes": [
+    "Configured checkout and old scan branches preserved. Remote CI is pending after push. No deployed checkout build or deployment performed."
+  ],
+  "coverage": [
+    {
+      "ecosystem": "python",
+      "scanner": null,
+      "error": null
+    },
+    {
+      "ecosystem": "node",
+      "path": ".",
+      "scanner": "pnpm-audit",
+      "error": null
+    }
+  ]
+}

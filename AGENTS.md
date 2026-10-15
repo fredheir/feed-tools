@@ -1,5 +1,7 @@
 # Feed Tool
 
+Do not edit `CHANGELOG.md` in feature branches or PRs; the changelog is written at release time.
+
 ## Success criteria
 
 - Access the necessary feeds and persist new posts to sqlite
