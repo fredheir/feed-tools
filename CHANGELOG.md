@@ -4,10 +4,33 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-28
+
+### Added
+
+- Added read-only `just check-paths` and `just check-worktree`, targeted `just test-one`, and explicit `fix-worktree`/`fix-all` commands; bare `just` now lists the available recipes instead of formatting files (PR [#117](https://github.com/fredheir/feed-tools/pull/117)).
+
 ### Changed
 
-- Raised the supported runtime, CI, and type-definition baseline from Node 24 to Node 26, keeping local and hosted execution on one current runtime contract (PR [#96](https://github.com/fredheir/feed-tools/pull/96)).
-- Replaced the mutating `check-changed` workflow and PATH-dependent CI Just bootstrap with the Just agent API v2: bare `just` now lists a safe command surface, `fix-worktree`/`fix-all`, read-only `check-worktree`/`check-paths`, targeted Vitest runs, and CI now uses checksum-verified Just 1.58.0 with pinned shared standards (PR [#117](https://github.com/fredheir/feed-tools/pull/117)).
+- Dependency verification now inspects the installed pnpm graph without running an install; use `just sync` explicitly when dependencies need installing (PR [#117](https://github.com/fredheir/feed-tools/pull/117)).
+- Maintainer checks now use a verified, commit-pinned shared standards cache and checksum-verified Just 1.58.0 in CI; missing standards fail explicitly instead of silently skipping checks (PR [#117](https://github.com/fredheir/feed-tools/pull/117)).
+- Maintainer hooks now use the managed Lefthook executable instead of a repository-local pnpm dependency; install hooks through `just hooks-install` ([467dbf1](https://github.com/fredheir/feed-tools/commit/467dbf10295d8edcc6f787d17b1c282a803a71ed)).
+
+### Fixed
+
+- Capture limits in the CLI, CiC extraction, and configuration now require positive safe integers, rejecting values such as `0`, `-1`, `1.5`, and `12foo` instead of accepting partial or invalid limits; omitted limits still default to 12 (PR [#115](https://github.com/fredheir/feed-tools/pull/115)).
+- Malformed MCP tool arguments now return JSON-RPC error `-32602` before invoking a handler, preventing invalid calls from writing configuration or appearing as ordinary tool results (PR [#116](https://github.com/fredheir/feed-tools/pull/116)).
+- Path checks now use Biome's non-mutating CI mode, preventing verification from applying formatter changes (PR [#119](https://github.com/fredheir/feed-tools/pull/119)).
+- Shared standards bootstrap now uses HTTPS while preserving configured Git authentication, avoiding private standards fetch failures caused by forcing SSH or discarding credential configuration (PR [#119](https://github.com/fredheir/feed-tools/pull/119)).
+- Commitlint now relaxes only generated body-line length for Dependabot PRs verified through GitHub metadata; human commits can no longer bypass lint by copying a bot sign-off (PR [#105](https://github.com/fredheir/feed-tools/pull/105)).
+- Safe Chain and the 72-hour package-age policy now cover every package-installing CI job, closing the gaps left when only the test job protected installs ([3675897](https://github.com/fredheir/feed-tools/commit/3675897a37e92e86042d777a425c846cbec8ea0f)).
+- Updated the development-tool dependency graph, including `fast-uri`, `js-yaml`, `brace-expansion`, `smol-toml`, and `source-map-js`, to address recorded security findings; the tracked scan still records a residual `braces` finding in the slop-scan toolchain (PR [#124](https://github.com/fredheir/feed-tools/pull/124)).
+- CI now refreshes the latest Node 26 patch before installs instead of accepting an older cached runner runtime (PR [#127](https://github.com/fredheir/feed-tools/pull/127)).
+
+### Breaking
+
+- Node 26 is now required (`>=26 <27`), replacing the previous Node 22.12–24 engine range and Node 24 type baseline; upgrade the local runtime before installing or running feed commands (PR [#96](https://github.com/fredheir/feed-tools/pull/96)).
+- Removed the legacy `just fix`, `just check-changed`, and `just ci` recipes. Use `fix-worktree` or `fix-all` for edits, `check-worktree` for verification, and `check` for the complete local checks (PR [#117](https://github.com/fredheir/feed-tools/pull/117)).
 
 ## [0.5.1] - 2026-07-11
 
