@@ -435,7 +435,7 @@ async function handleMessage(message: JsonRpcMessage): Promise<void> {
       success(message.id, {
         protocolVersion: stringValue(params.protocolVersion) || "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "feed-tools", version: "0.1.0" },
+        serverInfo: { name: "feed-tools", version: "0.6.0" },
       });
       return;
     }
