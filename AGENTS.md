@@ -404,4 +404,4 @@ feed-render --pick 8,5,12,1,3,all --tab
 
 ## Releases
 
-Do not edit `CHANGELOG.md` in feature branches or PRs; the changelog is written at release time. PR titles and commit messages are the source; use the canonical `changelog-audit` skill in `unified_docs` for release preparation. Update `CHANGELOG.md` and the package version together. `parse-changelog` is a read-only extractor, not a release writer.
+Do not edit `CHANGELOG.md` in feature branches or PRs; the changelog is written at release time. Full first-parent diffs are the evidence; PR titles and commit messages are navigation aids; use the canonical `changelog-audit` skill in `unified_docs` for release preparation. Update `CHANGELOG.md` and the package version together. `parse-changelog` is a read-only extractor, not a release writer.
