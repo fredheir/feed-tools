@@ -37,7 +37,7 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
    - If neither is available but the host has Chrome connector MCP tools, use the CiC flow below.
 5. If using CDP, confirm the port exposes Chrome DevTools Protocol with `curl -sf http://127.0.0.1:<port>/json/version || curl -sf http://localhost:<port>/json/version || curl -sf http://[::1]:<port>/json/version`.
 6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`.
-7. Default `capture.browser.args` to `["--no-sandbox"]` only when launching a dedicated browser, not when reusing an existing daemon.
+7. Keep Chromium sandboxing enabled. Run Chrome as a non-root user and repair namespace/AppArmor permissions when launch fails; never add `--no-sandbox`. Use maintained Chrome 156.0.8078.73 or newer.
 8. For video sources (youtube, tiktok, x, instagram), install yt-dlp with curl_cffi impersonation and local media tools: `pnpm setup:yt-dlp` (requires `uv`) and `pnpm setup:ffmpeg`
 9. Access each platform specified in `config.json`
 
@@ -70,7 +70,6 @@ DISPLAY=:0 <WORKSPACE>/chrome-install/opt/google/chrome/google-chrome \
   --remote-debugging-address=127.0.0.1 \
   --user-data-dir=<WORKSPACE>/chrome-profile \
   --disable-features=LockProfileCookieDatabase \
-  --no-sandbox \
   > <WORKSPACE>/chrome.log 2>&1
 ```
 

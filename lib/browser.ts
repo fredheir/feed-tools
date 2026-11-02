@@ -2,6 +2,12 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createBrowserSession as createSession } from "./browser/session.ts";
+import {
+  assertChromeBinaryVersion,
+  assertSandboxArgs,
+  assertSupportedChromeVersion,
+  resolveChromeBin,
+} from "./chrome-runtime.ts";
 import type {
   BrowserSession,
   FeedBrowserConfig,
@@ -55,6 +61,7 @@ export function normalizeBrowserOptions(
   options: FeedBrowserConfig = {},
 ): NormalizedBrowserOptions {
   const cdp = pickStringOption(options.cdp ?? null);
+  assertSandboxArgs(toStringList(options.args ?? null));
   return {
     autoConnect: options.autoConnect !== false && !cdp,
     session: pickStringOption(options.session ?? null),
@@ -200,6 +207,20 @@ function runAgentBrowser(
       ...normalized,
       cdp: assertCdpEndpoint(normalized.cdp),
     };
+  }
+  if (effectiveOptions.cdp) {
+    const payload = JSON.parse(
+      readCdpVersionPayload(getCdpVersionUrl(effectiveOptions.cdp)),
+    ) as { Browser?: string };
+    assertSupportedChromeVersion(payload.Browser || "unknown");
+  } else if (!effectiveOptions.autoConnect) {
+    const chromeBin = effectiveOptions.executablePath || resolveChromeBin();
+    if (!chromeBin)
+      throw new Error(
+        "Chrome binary not found. Install Chrome or set FEED_TOOLS_CHROME_BIN.",
+      );
+    assertChromeBinaryVersion(chromeBin);
+    effectiveOptions = { ...effectiveOptions, executablePath: chromeBin };
   }
   return execFileSync(
     agentBrowserCommand(),

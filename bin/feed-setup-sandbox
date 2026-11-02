@@ -5,6 +5,7 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { assertChromeBinaryVersion } from "../lib/chrome-runtime.ts";
 
 const rootDir = path.resolve(import.meta.dirname, "..");
 const localPrefix = path.join(rootDir, ".local");
@@ -152,10 +153,7 @@ function ensureUv() {
 function chromeIsRunnable() {
   try {
     fs.accessSync(chromeBin, fs.constants.X_OK);
-    execFileSync(chromeBin, ["--version"], {
-      stdio: "ignore",
-      timeout: 5000,
-    });
+    assertChromeBinaryVersion(chromeBin);
     return true;
   } catch {
     return false;
@@ -262,7 +260,6 @@ function launchWorkspaceChrome(cdpPort) {
       "--no-first-run",
       "--no-default-browser-check",
       "--disable-features=LockProfileCookieDatabase",
-      "--no-sandbox",
     ],
     {
       detached: true,

@@ -12,14 +12,38 @@ import {
   readCdpVersionPayload,
 } from "../lib/browser.ts";
 import { getBrowserStatus } from "../lib/browser-status.ts";
+import { startBrowser } from "../lib/browser-launch-service.ts";
 import {
   resolveChromeBin,
-  startBrowser,
-} from "../lib/browser-launch-service.ts";
+  assertSupportedChromeVersion,
+} from "../lib/chrome-runtime.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
 describe("buildAgentBrowserArgs", () => {
+  test("rejects browser arguments that disable Chrome sandboxing", () => {
+    for (const flag of [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--single-process",
+    ]) {
+      expect(() => buildAgentBrowserArgs({ args: [flag] })).toThrow(
+        /requires Chrome sandboxing/,
+      );
+    }
+  });
+
+  test("rejects vulnerable and unknown browsers while accepting patched Chrome", () => {
+    expect(() => assertSupportedChromeVersion("Chrome/156.0.8078.4")).toThrow(
+      /Update Chrome/,
+    );
+    expect(() => assertSupportedChromeVersion("unknown")).toThrow(
+      /Update Chrome/,
+    );
+    assertSupportedChromeVersion("Google Chrome 156.0.8078.73");
+    assertSupportedChromeVersion("Google Chrome for Testing 156.0.8078.80");
+    assertSupportedChromeVersion("Chrome/157.0.0.1");
+  });
   test("builds session-oriented browser args from config-style options", () => {
     const args = buildAgentBrowserArgs(
       {
@@ -28,7 +52,7 @@ describe("buildAgentBrowserArgs", () => {
         sessionName: "feed",
         statePath: "./.auth/x.json",
         profile: "./.profiles/x",
-        args: ["--no-sandbox", "--disable-dev-shm-usage"],
+        args: ["--disable-dev-shm-usage"],
         headed: true,
       },
       ["snapshot", "-i"],
@@ -45,7 +69,7 @@ describe("buildAgentBrowserArgs", () => {
       path.join(repoRoot, ".auth/x.json"),
       "--headed",
       "--args",
-      "--no-sandbox,--disable-dev-shm-usage",
+      "--disable-dev-shm-usage",
       "snapshot",
       "-i",
     ]);
@@ -77,7 +101,7 @@ describe("buildAgentBrowserArgs", () => {
         allowFileAccess: true,
         colorScheme: "dark",
         executablePath: "/bin/chrome",
-        args: ["--no-sandbox"],
+        args: ["--disable-gpu"],
       },
       ["snapshot"],
     );
@@ -94,12 +118,12 @@ describe("buildAgentBrowserArgs", () => {
       "/bin/chrome",
       "--auto-connect",
       "--args",
-      "--no-sandbox",
+      "--disable-gpu",
       "snapshot",
     ]);
   });
 
-  test("resolves workspace Chrome under FEED_TOOLS_WORKDIR", () => {
+  test("resolves explicitly configured workspace Chrome", () => {
     const workdir = fs.mkdtempSync(
       path.join(os.tmpdir(), "feed-browser-workdir-"),
     );
@@ -119,7 +143,7 @@ describe("buildAgentBrowserArgs", () => {
       [
         "--input-type=module",
         "-e",
-        "import { resolveChromeBin } from './lib/browser-launch-service.ts'; process.stdout.write(resolveChromeBin() || '');",
+        "import { resolveChromeBin } from './lib/chrome-runtime.ts'; process.stdout.write(resolveChromeBin() || '');",
       ],
       {
         cwd: repoRoot,
@@ -127,7 +151,7 @@ describe("buildAgentBrowserArgs", () => {
         env: {
           ...process.env,
           FEED_TOOLS_WORKDIR: workdir,
-          FEED_TOOLS_CHROME_BIN: "",
+          FEED_TOOLS_CHROME_BIN: chromeBin,
         },
       },
     );
@@ -297,7 +321,7 @@ nonCdpServer.listen(0, "127.0.0.1", () => {
 import http from "node:http";
 const server = http.createServer((_request, response) => {
   response.setHeader("content-type", "application/json");
-  response.end('{"Browser":"Fixture Chrome","webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');
+  response.end('{"Browser":"Chrome/156.0.8078.73","webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');
 });
 server.listen(0, "127.0.0.1", () => {
   process.stdout.write(String(server.address().port) + "\\n");
@@ -338,7 +362,7 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
 import http from "node:http";
 const server = http.createServer((_request, response) => {
   response.setHeader("content-type", "application/json");
-  response.end('{"Browser":"Fixture Chrome","webSocketDebuggerUrl":"ws://[::1]/devtools/browser"}');
+  response.end('{"Browser":"Chrome/156.0.8078.73","webSocketDebuggerUrl":"ws://[::1]/devtools/browser"}');
 });
 server.listen(0, "::1", () => {
   process.stdout.write(String(server.address().port) + "\\n");
@@ -380,7 +404,11 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
       fs.mkdtempSync(path.join(os.tmpdir(), "feed-chrome-exits-")),
       "chrome",
     );
-    fs.writeFileSync(chromeBin, "#!/bin/sh\nexit 42\n", { mode: 0o755 });
+    fs.writeFileSync(
+      chromeBin,
+      '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "Google Chrome 156.0.8078.73"; exit 0; fi\nexit 42\n',
+      { mode: 0o755 },
+    );
 
     await expect(
       startBrowser({
@@ -412,6 +440,7 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
     fs.writeFileSync(
       chromeBin,
       `#!/bin/sh
+if [ \"$1\" = \"--version\" ]; then echo \"Google Chrome 156.0.8078.73\"; exit 0; fi
 printf '%s\\n' "$@" > '${argsPath}'
 port=""
 for arg in "$@"; do
@@ -424,7 +453,7 @@ exec '${process.execPath}' -e '
   const port = Number(process.argv[1]);
   http.createServer((_request, response) => {
     response.setHeader("content-type", "application/json");
-    response.end("{\\"Browser\\":\\"Fixture Chrome\\",\\"webSocketDebuggerUrl\\":\\"ws://127.0.0.1/devtools/browser\\"}");
+    response.end("{\\"Browser\\":\\"Chrome/156.0.8078.73\\",\\"webSocketDebuggerUrl\\":\\"ws://127.0.0.1/devtools/browser\\"}");
   }).listen(port, "127.0.0.1");
 ' "$port"
 `,
@@ -441,6 +470,7 @@ exec '${process.execPath}' -e '
 
     try {
       expect(result.launched).toBe(true);
+      expect(fs.readFileSync(argsPath, "utf8")).not.toContain("--no-sandbox");
       expect(result.cdp).toBe(String(port));
       expect(fs.readFileSync(argsPath, "utf8")).toContain(
         `--remote-debugging-port=${port}`,

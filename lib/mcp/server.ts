@@ -282,7 +282,6 @@ const TOOLS: McpToolDefinition[] = [
         chrome_bin: { type: "string" },
         urls: { type: "array", items: { type: "string" } },
         reuse_existing: { type: "boolean" },
-        no_sandbox: { type: "boolean" },
       },
     },
     handler: async (args) =>
@@ -294,7 +293,6 @@ const TOOLS: McpToolDefinition[] = [
           logPath: DEFAULT_CHROME_LOG,
           urls: stringList(args.urls),
           reuseExisting: booleanValue(args.reuse_existing),
-          noSandbox: booleanValue(args.no_sandbox),
         }),
       ),
   },
@@ -309,7 +307,6 @@ const TOOLS: McpToolDefinition[] = [
         cdp_port: { type: "number" },
         profile_dir: { type: "string" },
         reuse_existing: { type: "boolean" },
-        no_sandbox: { type: "boolean" },
       },
     },
     handler: async (args) => {
@@ -325,7 +322,6 @@ const TOOLS: McpToolDefinition[] = [
         logPath: DEFAULT_CHROME_LOG,
         urls: Object.values(openedUrls),
         reuseExisting: booleanValue(args.reuse_existing),
-        noSandbox: booleanValue(args.no_sandbox),
       });
       const auth = getSigninStatus(sources, resolvedProfileDir);
       return {
