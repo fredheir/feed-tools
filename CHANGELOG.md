@@ -4,7 +4,9 @@ All notable changes to this repo will be documented in this file.
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-10-28
+## [0.6.0]
+
+Draft release preparation; the publication date is not set.
 
 ### Added
 
