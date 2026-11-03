@@ -32,11 +32,14 @@ function agentBrowserCommand(): string {
 }
 
 function toStringList(value: string | string[] | null | undefined): string[] {
-  if (Array.isArray(value)) {
-    return value.map((entry) => String(entry || "")).filter(Boolean);
-  }
-  if (value == null || value === "") return [];
-  return [String(value)];
+  const entries = Array.isArray(value) ? value : [value];
+  // Match agent-browser's separators without splitting comma-valued flags.
+  return entries.flatMap((entry) =>
+    String(entry || "")
+      .split(/[\r\n]|,(?=[ \t]*--)/)
+      .map((arg) => arg.replace(/^[,\s]+|[,\s]+$/g, ""))
+      .filter(Boolean),
+  );
 }
 
 function pickStringOption(
@@ -61,7 +64,8 @@ export function normalizeBrowserOptions(
   options: FeedBrowserConfig = {},
 ): NormalizedBrowserOptions {
   const cdp = pickStringOption(options.cdp ?? null);
-  assertSandboxArgs(toStringList(options.args ?? null));
+  const args = toStringList(options.args ?? null);
+  assertSandboxArgs(args);
   return {
     autoConnect: options.autoConnect !== false && !cdp,
     session: pickStringOption(options.session ?? null),
@@ -73,7 +77,7 @@ export function normalizeBrowserOptions(
     colorScheme: pickStringOption(options.colorScheme ?? null),
     executablePath: resolveConfigPath(options.executablePath ?? null),
     cdp,
-    args: toStringList(options.args ?? null),
+    args,
   };
 }
 
@@ -131,14 +135,36 @@ const url = process.argv[1];
 const timeoutMs = Number(process.argv[2]);
 const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), timeoutMs);
-	fetch(url, { signal: controller.signal })
-	  .then(async (response) => {
-	    if (!response.ok) {
-	      process.stderr.write(String(response.status));
-	      process.exit(1);
-	    }
-	    process.stdout.write(await response.text());
-	  })
+async function readVersion() {
+  if (!/^wss?:/.test(url)) {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(String(response.status));
+    return response.text();
+  }
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket(url);
+    controller.signal.addEventListener("abort", () => {
+      socket.close();
+      reject(new Error("CDP version probe timed out"));
+    }, { once: true });
+    socket.addEventListener("open", () => socket.send(JSON.stringify({ id: 1, method: "Browser.getVersion" })));
+    socket.addEventListener("error", () => reject(new Error("CDP WebSocket probe failed")));
+    socket.addEventListener("close", () => reject(new Error("CDP WebSocket closed before reporting its version")));
+    socket.addEventListener("message", ({ data }) => {
+      try {
+        const response = JSON.parse(String(data));
+        if (response.id !== 1) return;
+        if (typeof response.result?.product !== "string") throw new Error("CDP browser version unavailable");
+        resolve(JSON.stringify({ Browser: response.result.product, webSocketDebuggerUrl: url }));
+      } catch (error) {
+        reject(error);
+      }
+      socket.close();
+    });
+  });
+}
+readVersion()
+      .then((payload) => process.stdout.write(payload))
 	  .catch((error) => {
 	    process.stderr.write(error instanceof Error ? error.message : "CDP probe failed");
 	    process.exit(1);
@@ -202,18 +228,21 @@ function runAgentBrowser(
     options;
   const normalized = normalizeBrowserOptions(browserOptions);
   let effectiveOptions = normalized;
-  if (normalized.cdp) {
-    effectiveOptions = {
-      ...normalized,
-      cdp: assertCdpEndpoint(normalized.cdp),
-    };
+  let endpoint = normalized.cdp ? assertCdpEndpoint(normalized.cdp) : null;
+  if (normalized.autoConnect) {
+    // Connect without navigating, then inspect and pin the actual selected browser.
+    executeAgentBrowser(normalized, ["get", "url"], commandTimeoutMs);
+    endpoint = executeAgentBrowser(
+      normalized,
+      ["get", "cdp-url"],
+      commandTimeoutMs,
+    );
+    if (!endpoint)
+      throw new Error("Auto-connected browser did not report its CDP endpoint");
   }
-  if (effectiveOptions.cdp) {
-    const payload = JSON.parse(
-      readCdpVersionPayload(getCdpVersionUrl(effectiveOptions.cdp)),
-    ) as { Browser?: string };
-    assertSupportedChromeVersion(payload.Browser || "unknown");
-  } else if (!effectiveOptions.autoConnect) {
+  if (endpoint) {
+    effectiveOptions = { ...normalized, autoConnect: false, cdp: endpoint };
+  } else {
     const chromeBin = effectiveOptions.executablePath || resolveChromeBin();
     if (!chromeBin)
       throw new Error(
@@ -222,12 +251,26 @@ function runAgentBrowser(
     assertChromeBinaryVersion(chromeBin);
     effectiveOptions = { ...effectiveOptions, executablePath: chromeBin };
   }
+  return executeAgentBrowser(effectiveOptions, commandArgs, commandTimeoutMs);
+}
+
+function executeAgentBrowser(
+  options: FeedBrowserConfig,
+  commandArgs: string[],
+  timeout: number,
+): string {
+  if (options.cdp) {
+    const payload = JSON.parse(
+      readCdpVersionPayload(getCdpVersionUrl(options.cdp)),
+    ) as { Browser?: string };
+    assertSupportedChromeVersion(payload.Browser || "unknown");
+  }
   return execFileSync(
     agentBrowserCommand(),
-    buildAgentBrowserArgs(effectiveOptions, commandArgs),
+    buildAgentBrowserArgs(options, commandArgs),
     {
       encoding: "utf8",
-      timeout: commandTimeoutMs,
+      timeout,
       maxBuffer: 20 * 1024 * 1024,
     },
   )

@@ -48,7 +48,7 @@ After the initial run, offer to render a feed about a particular topic (see Topi
 
 - Read [AGENTS.md](./AGENTS.md) before doing anything else
 - If `config.json` is missing, commands fall back to `config.json.example` for bootstrap only; create a tailored `config.json` before live capture
-- Feed browsing requires maintained Chrome/Chromium **156.0.8078.73 or newer**, with Chromium sandboxing enabled. Run Chrome as a non-root user and repair namespace/AppArmor permissions instead of passing `--no-sandbox`. System Chrome is preferred to the extracted workspace copy. Explicit CDP endpoints are version checked; externally launched/reused browsers retain their own sandbox configuration.
+- Feed browsing requires maintained Chrome/Chromium **156.0.8078.73 or newer**, with Chromium sandboxing enabled. Run Chrome as a non-root user and repair namespace/AppArmor permissions instead of passing `--no-sandbox`. System Chrome is preferred to the extracted workspace copy. Explicit and auto-discovered CDP connections are version checked before navigation; externally launched/reused browsers retain their own sandbox configuration.
 - `pnpm install` is configured for non-interactive setup: required native builds for `agent-browser` and `esbuild` are allowlisted, while maintainer hooks stay disabled by default
 - Run `./bin/feed-doctor` to choose the capture path before the first capture
 - For MCP hosts, run `pnpm mcp:config` to print a local server configuration for setup, browser, sign-in, and config tools
