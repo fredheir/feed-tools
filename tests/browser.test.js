@@ -2,24 +2,56 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import net from "node:net";
-import { spawn, spawnSync } from "node:child_process";
-import { describe, expect, test } from "vitest";
+import childProcess, { spawn, spawnSync } from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+import { describe, expect, test, vi } from "vitest";
 import {
   assertCdpEndpoint,
   buildAgentBrowserArgs,
   getCdpVersionUrl,
   getCdpVersionUrls,
   readCdpVersionPayload,
+  createBrowserSession,
 } from "../lib/browser.ts";
 import { getBrowserStatus } from "../lib/browser-status.ts";
+import { startBrowser } from "../lib/browser-launch-service.ts";
 import {
   resolveChromeBin,
-  startBrowser,
-} from "../lib/browser-launch-service.ts";
+  assertSupportedChromeVersion,
+} from "../lib/chrome-runtime.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
 describe("buildAgentBrowserArgs", () => {
+  test("rejects browser arguments that disable Chrome sandboxing", () => {
+    for (const flag of [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--single-process",
+      "--disable-gpu,--no-sandbox",
+      "--disable-gpu, \t--disable-setuid-sandbox",
+      "--disable-gpu\n--disable-seccomp-filter-sandbox",
+      "--disable-gpu\r--single-process",
+    ]) {
+      for (const args of [flag, [flag]]) {
+        expect(() => buildAgentBrowserArgs({ args })).toThrow(
+          /requires Chrome sandboxing/,
+        );
+      }
+    }
+  });
+
+  test("rejects vulnerable and unknown browsers while accepting patched Chrome", () => {
+    expect(() => assertSupportedChromeVersion("Chrome/156.0.8078.4")).toThrow(
+      /Update Chrome/,
+    );
+    expect(() => assertSupportedChromeVersion("unknown")).toThrow(
+      /Update Chrome/,
+    );
+    assertSupportedChromeVersion("Google Chrome 156.0.8078.73");
+    assertSupportedChromeVersion("Google Chrome for Testing 156.0.8078.80");
+    assertSupportedChromeVersion("Chrome/157.0.0.1");
+  });
   test("builds session-oriented browser args from config-style options", () => {
     const args = buildAgentBrowserArgs(
       {
@@ -28,7 +60,7 @@ describe("buildAgentBrowserArgs", () => {
         sessionName: "feed",
         statePath: "./.auth/x.json",
         profile: "./.profiles/x",
-        args: ["--no-sandbox", "--disable-dev-shm-usage"],
+        args: ["--disable-dev-shm-usage"],
         headed: true,
       },
       ["snapshot", "-i"],
@@ -45,7 +77,7 @@ describe("buildAgentBrowserArgs", () => {
       path.join(repoRoot, ".auth/x.json"),
       "--headed",
       "--args",
-      "--no-sandbox,--disable-dev-shm-usage",
+      "--disable-dev-shm-usage",
       "snapshot",
       "-i",
     ]);
@@ -54,6 +86,66 @@ describe("buildAgentBrowserArgs", () => {
   test("keeps auto-connect enabled by default for ad hoc browsing", () => {
     const args = buildAgentBrowserArgs({}, ["get", "url"]);
     expect(args).toEqual(["--auto-connect", "get", "url"]);
+  });
+
+  test("preserves comma-valued flags while normalizing launch argument separators", () => {
+    expect(
+      buildAgentBrowserArgs({
+        args: "--disable-features=A,B, --disable-gpu\n--window-position=-32000,-32000",
+      }),
+    ).toEqual([
+      "--auto-connect",
+      "--args",
+      "--disable-features=A,B,--disable-gpu,--window-position=-32000,-32000",
+    ]);
+  });
+
+  test.each([
+    "Chrome/156.0.8078.4",
+    "unknown",
+    "Chrome/156.0.8078.73",
+  ])("checks the auto-connected browser before executing a navigation (%s)", (version) => {
+    const endpoint = "ws://127.0.0.1:49222/devtools/browser/fixture";
+    const calls = [];
+    const exec = vi
+      .spyOn(childProcess, "execFileSync")
+      .mockImplementation((command, args) => {
+        if (command === process.execPath) {
+          calls.push("version");
+          return JSON.stringify({
+            Browser: version,
+            webSocketDebuggerUrl: endpoint,
+          });
+        }
+        calls.push(args);
+        if (args.includes("cdp-url")) return endpoint;
+        return "https://existing.example.test/";
+      });
+    syncBuiltinESMExports();
+    try {
+      const session = createBrowserSession();
+      if (version === "Chrome/156.0.8078.73") {
+        session.openNewTab("https://new.example.test/");
+        expect(calls.at(-1)).toEqual([
+          "--cdp",
+          endpoint,
+          "tab",
+          "new",
+          "https://new.example.test/",
+        ]);
+      } else {
+        expect(() => session.openNewTab("https://new.example.test/")).toThrow(
+          /Update Chrome/,
+        );
+        expect(
+          calls.filter((args) => Array.isArray(args) && args.includes("new")),
+        ).toEqual([]);
+      }
+      expect(calls).toContain("version");
+    } finally {
+      exec.mockRestore();
+      syncBuiltinESMExports();
+    }
   });
 
   test("treats cdp as mutually exclusive with headed and auto-connect", () => {
@@ -77,7 +169,7 @@ describe("buildAgentBrowserArgs", () => {
         allowFileAccess: true,
         colorScheme: "dark",
         executablePath: "/bin/chrome",
-        args: ["--no-sandbox"],
+        args: ["--disable-gpu"],
       },
       ["snapshot"],
     );
@@ -94,12 +186,12 @@ describe("buildAgentBrowserArgs", () => {
       "/bin/chrome",
       "--auto-connect",
       "--args",
-      "--no-sandbox",
+      "--disable-gpu",
       "snapshot",
     ]);
   });
 
-  test("resolves workspace Chrome under FEED_TOOLS_WORKDIR", () => {
+  test("resolves explicitly configured workspace Chrome", () => {
     const workdir = fs.mkdtempSync(
       path.join(os.tmpdir(), "feed-browser-workdir-"),
     );
@@ -119,7 +211,7 @@ describe("buildAgentBrowserArgs", () => {
       [
         "--input-type=module",
         "-e",
-        "import { resolveChromeBin } from './lib/browser-launch-service.ts'; process.stdout.write(resolveChromeBin() || '');",
+        "import { resolveChromeBin } from './lib/chrome-runtime.ts'; process.stdout.write(resolveChromeBin() || '');",
       ],
       {
         cwd: repoRoot,
@@ -127,7 +219,7 @@ describe("buildAgentBrowserArgs", () => {
         env: {
           ...process.env,
           FEED_TOOLS_WORKDIR: workdir,
-          FEED_TOOLS_CHROME_BIN: "",
+          FEED_TOOLS_CHROME_BIN: chromeBin,
         },
       },
     );
@@ -193,14 +285,36 @@ describe("buildAgentBrowserArgs", () => {
     );
   });
 
-  test("reads CDP version JSON through node runtime", async () => {
+  test.each([
+    "http",
+    "ws",
+  ])("reads CDP browser version through %s", async (protocol) => {
     const server = spawn(process.execPath, [
+      "--input-type=module",
       "-e",
       `
 import http from "node:http";
+import { createHash } from "node:crypto";
 const server = http.createServer((_request, response) => {
   response.setHeader("content-type", "application/json");
   response.end('{"webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');
+});
+server.on("upgrade", (request, socket) => {
+  const accept = createHash("sha1").update(request.headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
+  socket.write("HTTP/1.1 101 Switching Protocols\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\nSec-WebSocket-Accept: " + accept + "\\r\\n\\r\\n");
+  socket.once("data", (frame) => {
+    const mask = frame.subarray(2, 6);
+    const decoded = frame.subarray(6).map((byte, index) => byte ^ mask[index % 4]);
+    const command = JSON.parse(decoded.toString());
+    if (command.method !== "Browser.getVersion") process.exit(2);
+    const send = (payload) => {
+      const body = Buffer.from(JSON.stringify(payload));
+      socket.write(Buffer.concat([Buffer.from([0x81, body.length]), body]));
+    };
+    send({ method: "fixture.event" });
+    setTimeout(() => send({ id: command.id, result: { product: "Chrome/156.0.8078.73" } }), 20);
+  });
+  socket.on("data", (frame) => { if ((frame[0] & 15) === 8) socket.end(); });
 });
 server.listen(0, "127.0.0.1", () => {
   process.stdout.write(String(server.address().port) + "\\n");
@@ -226,12 +340,14 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
       });
     });
     try {
-      const payload = readCdpVersionPayload(
-        `http://127.0.0.1:${port}/json/version`,
-      );
+      const endpoint = `${protocol}://127.0.0.1:${port}/${protocol === "http" ? "json/version" : "devtools/browser"}`;
+      const payload = readCdpVersionPayload(endpoint);
       expect(JSON.parse(payload)).toMatchObject({
-        webSocketDebuggerUrl: "ws://127.0.0.1/devtools/browser",
+        webSocketDebuggerUrl:
+          protocol === "http" ? "ws://127.0.0.1/devtools/browser" : endpoint,
       });
+      if (protocol === "ws")
+        expect(JSON.parse(payload).Browser).toBe("Chrome/156.0.8078.73");
     } finally {
       server.kill("SIGTERM");
     }
@@ -297,7 +413,7 @@ nonCdpServer.listen(0, "127.0.0.1", () => {
 import http from "node:http";
 const server = http.createServer((_request, response) => {
   response.setHeader("content-type", "application/json");
-  response.end('{"Browser":"Fixture Chrome","webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');
+  response.end('{"Browser":"Chrome/156.0.8078.73","webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser"}');
 });
 server.listen(0, "127.0.0.1", () => {
   process.stdout.write(String(server.address().port) + "\\n");
@@ -338,7 +454,7 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
 import http from "node:http";
 const server = http.createServer((_request, response) => {
   response.setHeader("content-type", "application/json");
-  response.end('{"Browser":"Fixture Chrome","webSocketDebuggerUrl":"ws://[::1]/devtools/browser"}');
+  response.end('{"Browser":"Chrome/156.0.8078.73","webSocketDebuggerUrl":"ws://[::1]/devtools/browser"}');
 });
 server.listen(0, "::1", () => {
   process.stdout.write(String(server.address().port) + "\\n");
@@ -380,7 +496,11 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
       fs.mkdtempSync(path.join(os.tmpdir(), "feed-chrome-exits-")),
       "chrome",
     );
-    fs.writeFileSync(chromeBin, "#!/bin/sh\nexit 42\n", { mode: 0o755 });
+    fs.writeFileSync(
+      chromeBin,
+      '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "Google Chrome 156.0.8078.73"; exit 0; fi\nexit 42\n',
+      { mode: 0o755 },
+    );
 
     await expect(
       startBrowser({
@@ -412,6 +532,7 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
     fs.writeFileSync(
       chromeBin,
       `#!/bin/sh
+if [ \"$1\" = \"--version\" ]; then echo \"Google Chrome 156.0.8078.73\"; exit 0; fi
 printf '%s\\n' "$@" > '${argsPath}'
 port=""
 for arg in "$@"; do
@@ -424,7 +545,7 @@ exec '${process.execPath}' -e '
   const port = Number(process.argv[1]);
   http.createServer((_request, response) => {
     response.setHeader("content-type", "application/json");
-    response.end("{\\"Browser\\":\\"Fixture Chrome\\",\\"webSocketDebuggerUrl\\":\\"ws://127.0.0.1/devtools/browser\\"}");
+    response.end("{\\"Browser\\":\\"Chrome/156.0.8078.73\\",\\"webSocketDebuggerUrl\\":\\"ws://127.0.0.1/devtools/browser\\"}");
   }).listen(port, "127.0.0.1");
 ' "$port"
 `,
@@ -441,6 +562,7 @@ exec '${process.execPath}' -e '
 
     try {
       expect(result.launched).toBe(true);
+      expect(fs.readFileSync(argsPath, "utf8")).not.toContain("--no-sandbox");
       expect(result.cdp).toBe(String(port));
       expect(fs.readFileSync(argsPath, "utf8")).toContain(
         `--remote-debugging-port=${port}`,

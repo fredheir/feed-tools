@@ -9,6 +9,11 @@ import path from "node:path";
 
 import { getBrowserStatus } from "./browser-status.ts";
 import {
+  assertChromeBinaryVersion,
+  assertSupportedChromeVersion,
+  resolveChromeBin,
+} from "./chrome-runtime.ts";
+import {
   SOURCE_NAMES,
   SOURCE_SIGNIN_TARGETS,
   type SourceSigninTarget,
@@ -16,14 +21,6 @@ import {
 import type { FeedSourceName } from "./types.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-const CHROME_BIN = path.join(
-  REPO_ROOT,
-  "chrome-install",
-  "opt",
-  "google",
-  "chrome",
-  "google-chrome",
-);
 export const CHROME_PROFILE = path.join(REPO_ROOT, "chrome-profile");
 const CHROME_LOG = path.join(REPO_ROOT, "chrome.log");
 export const DEFAULT_CDP_PORT = "9222";
@@ -96,7 +93,15 @@ export async function waitForCdp(
   let status = getBrowserStatus(cdpPort);
   while (Date.now() < deadline) {
     status = getBrowserStatus(cdpPort);
-    if (status.ok) return;
+    if (status.ok) {
+      try {
+        assertSupportedChromeVersion(status.browser || "unknown");
+      } catch (error) {
+        child.kill("SIGTERM");
+        throw error;
+      }
+      return;
+    }
     if (child.exitCode !== null) {
       throw new Error(`Chrome exited before CDP was ready; see ${CHROME_LOG}`);
     }
@@ -207,7 +212,7 @@ function formatStatus(
 export function launchChrome({
   sources,
   cdpPort = DEFAULT_CDP_PORT,
-  chromeBin = CHROME_BIN,
+  chromeBin = resolveChromeBin() || "",
   profileDir = CHROME_PROFILE,
   logPath = CHROME_LOG,
 }: {
@@ -234,6 +239,7 @@ export function launchChrome({
       `CDP port ${cdpPort} is occupied by a non-CDP browser endpoint: ${existing.detail}`,
     );
   }
+  assertChromeBinaryVersion(chromeBin);
   fs.mkdirSync(profileDir, { recursive: true });
   const logFd = fs.openSync(logPath, "a");
   const child = spawn(
@@ -245,7 +251,6 @@ export function launchChrome({
       "--no-first-run",
       "--no-default-browser-check",
       "--disable-features=LockProfileCookieDatabase",
-      "--no-sandbox",
       ...sources.map((source) => SOURCE_TARGETS[source].url),
     ],
     {

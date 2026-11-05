@@ -35,8 +35,8 @@ importers:
         specifier: "26"
         version: 26.1.1
       agent-browser:
-        specifier: ^0.26.0
-        version: 0.26.0
+        specifier: ^0.41.1
+        version: 0.41.1
       eslint:
         specifier: ^10.2.1
         version: 10.2.1(jiti@2.6.1)
@@ -1396,11 +1396,12 @@ packages:
     engines: { node: ">=0.4.0" }
     hasBin: true
 
-  agent-browser@0.26.0:
+  agent-browser@0.41.1:
     resolution:
       {
-        integrity: sha512-pdqSfjwbFSp+qnwlb2g23e9wXveIOfMi19xpPA9xZUbzEAUp6W4YBZj6Ybj8z4M7WkcbGDDYc+oDIHDt9R3EDQ==,
+        integrity: sha512-9DhCeIhcpxu3Mj+f25Bolk6N+BT5SpOttRSZw0Ytz5MZ8zpKeVp2bv9Zxo1gajlvZE3l//rOoiRdq+qTYHBg1Q==,
       }
+    engines: { node: ">=24.0.0", pnpm: ">=11.0.0" }
     hasBin: true
 
   ajv@6.15.0:
@@ -3496,7 +3497,7 @@ snapshots:
 
   acorn@8.16.0: {}
 
-  agent-browser@0.26.0: {}
+  agent-browser@0.41.1: {}
 
   ajv@6.15.0:
     dependencies:

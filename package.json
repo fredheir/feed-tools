@@ -61,7 +61,7 @@
     "@commitlint/config-conventional": "^20.5.3",
     "@eslint/js": "^10.0.1",
     "@types/node": "26",
-    "agent-browser": "^0.26.0",
+    "agent-browser": "^0.41.1",
     "eslint": "^10.2.1",
     "globals": "^17.5.0",
     "knip": "^6.9.0",
