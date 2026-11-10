@@ -223,6 +223,7 @@ export function assertCdpEndpoint(cdp: string): string {
 function runAgentBrowser(
   commandArgs: string[],
   options: FeedBrowserConfig & { commandTimeoutMs?: number } = {},
+  autoConnectedEndpoints?: Map<string | null, string>,
 ): string {
   const { commandTimeoutMs = DEFAULT_COMMAND_TIMEOUT_MS, ...browserOptions } =
     options;
@@ -230,15 +231,22 @@ function runAgentBrowser(
   let effectiveOptions = normalized;
   let endpoint = normalized.cdp ? assertCdpEndpoint(normalized.cdp) : null;
   if (normalized.autoConnect) {
-    // Connect without navigating, then inspect and pin the actual selected browser.
-    executeAgentBrowser(normalized, ["get", "url"], commandTimeoutMs);
-    endpoint = executeAgentBrowser(
-      normalized,
-      ["get", "cdp-url"],
-      commandTimeoutMs,
-    );
-    if (!endpoint)
-      throw new Error("Auto-connected browser did not report its CDP endpoint");
+    endpoint = autoConnectedEndpoints?.get(normalized.session) ?? null;
+    if (!endpoint) {
+      // Alternating auto-connect and explicit CDP relaunches the agent-browser
+      // connection, discarding its element references.
+      executeAgentBrowser(normalized, ["get", "url"], commandTimeoutMs);
+      endpoint = executeAgentBrowser(
+        normalized,
+        ["get", "cdp-url"],
+        commandTimeoutMs,
+      );
+      if (!endpoint)
+        throw new Error(
+          "Auto-connected browser did not report its CDP endpoint",
+        );
+      autoConnectedEndpoints?.set(normalized.session, endpoint);
+    }
   }
   if (endpoint) {
     effectiveOptions = { ...normalized, autoConnect: false, cdp: endpoint };
@@ -301,10 +309,12 @@ export function closeBrowserSession(options: FeedBrowserConfig = {}): boolean {
 export function createBrowserSession(
   options: FeedBrowserConfig = {},
 ): BrowserSession {
+  const autoConnectedEndpoints = new Map<string | null, string>();
   return createSession(
     {
       normalizeBrowserOptions,
-      runAgentBrowser,
+      runAgentBrowser: (args, config) =>
+        runAgentBrowser(args, config, autoConnectedEndpoints),
     },
     options,
   );

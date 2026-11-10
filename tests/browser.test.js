@@ -104,7 +104,7 @@ describe("buildAgentBrowserArgs", () => {
     "Chrome/156.0.8078.4",
     "unknown",
     "Chrome/156.0.8078.73",
-  ])("checks the auto-connected browser before executing a navigation (%s)", (version) => {
+  ])("checks and pins the auto-connected browser for the session (%s)", (version) => {
     const endpoint = "ws://127.0.0.1:49222/devtools/browser/fixture";
     const calls = [];
     const exec = vi
@@ -126,12 +126,17 @@ describe("buildAgentBrowserArgs", () => {
       const session = createBrowserSession();
       if (version === "Chrome/156.0.8078.73") {
         session.openNewTab("https://new.example.test/");
-        expect(calls.at(-1)).toEqual([
-          "--cdp",
-          endpoint,
-          "tab",
-          "new",
-          "https://new.example.test/",
+        session.snapshotText();
+        session.getHtml("@e1");
+        expect(calls).toEqual([
+          ["--auto-connect", "get", "url"],
+          ["--auto-connect", "get", "cdp-url"],
+          "version",
+          ["--cdp", endpoint, "tab", "new", "https://new.example.test/"],
+          "version",
+          ["--cdp", endpoint, "snapshot", "-c"],
+          "version",
+          ["--cdp", endpoint, "get", "html", "@e1"],
         ]);
       } else {
         expect(() => session.openNewTab("https://new.example.test/")).toThrow(
