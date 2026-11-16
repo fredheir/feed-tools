@@ -33,7 +33,7 @@ git clone https://oauth2:$(gh auth token)@github.com/fredheir/feed-tools.git
 3. Ensure chrome/chromium is installed
 4. Run `./bin/feed-doctor` to choose the capture path:
    - If a `cdp:<port>` check is OK, set `capture.browser.cdp` to that port.
-   - If CDP is unavailable but `agent-browser` is OK, use `capture.browser: {}` or omit the browser block.
+   - If CDP is unavailable, start a dedicated Chrome with `feed_browser_start` and use its returned CDP endpoint. Agent-browser-managed Chrome startup is refused because upstream can disable sandboxing. `capture.browser: {}` or omitting it uses auto-connect and requires an existing browser.
    - If neither is available but the host has Chrome connector MCP tools, use the CiC flow below.
 5. If using CDP, confirm the port exposes Chrome DevTools Protocol with `curl -sf http://127.0.0.1:<port>/json/version || curl -sf http://localhost:<port>/json/version || curl -sf http://[::1]:<port>/json/version`.
 6. When `capture.browser.cdp` is set, do not also set `capture.browser.headed` or `capture.browser.auto_connect`.

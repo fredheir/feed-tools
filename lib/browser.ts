@@ -3,10 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { createBrowserSession as createSession } from "./browser/session.ts";
 import {
-  assertChromeBinaryVersion,
   assertSandboxArgs,
   assertSupportedChromeVersion,
-  resolveChromeBin,
 } from "./chrome-runtime.ts";
 import type {
   BrowserSession,
@@ -251,13 +249,11 @@ function runAgentBrowser(
   if (endpoint) {
     effectiveOptions = { ...normalized, autoConnect: false, cdp: endpoint };
   } else {
-    const chromeBin = effectiveOptions.executablePath || resolveChromeBin();
-    if (!chromeBin)
-      throw new Error(
-        "Chrome binary not found. Install Chrome or set FEED_TOOLS_CHROME_BIN.",
-      );
-    assertChromeBinaryVersion(chromeBin);
-    effectiveOptions = { ...effectiveOptions, executablePath: chromeBin };
+    // agent-browser can inject sandbox-disabling flags after our option checks.
+    // Only the owned launcher may start Chrome; capture attaches over CDP.
+    throw new Error(
+      "Start Chrome with feed_browser_start and set capture.browser.cdp, or use auto-connect with an existing browser. Feed tools refuses agent-browser-managed Chrome startup because it cannot guarantee sandboxing.",
+    );
   }
   return executeAgentBrowser(effectiveOptions, commandArgs, commandTimeoutMs);
 }
