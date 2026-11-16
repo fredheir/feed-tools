@@ -496,6 +496,58 @@ process.on("SIGTERM", () => server.close(() => process.exit(0)));
     }
   });
 
+  test.each([
+    "true",
+    "false",
+  ])("refuses unowned Chrome startup before invoking a binary (CI=%s)", (ci) => {
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-sandbox-"));
+    const chromeBin = path.join(workdir, "chrome");
+    const argsPath = path.join(workdir, "args");
+    fs.writeFileSync(
+      chromeBin,
+      `#!/bin/sh
+if [ "$1" = "--version" ]; then echo "Google Chrome 156.0.8078.73"; exit 0; fi
+printf '%s\\n' "$@" > '${argsPath}'
+exit 42
+`,
+      { mode: 0o755 },
+    );
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `
+import { createBrowserSession } from "./lib/browser.ts";
+createBrowserSession({ autoConnect: false, executablePath: ${JSON.stringify(chromeBin)}, session: ${JSON.stringify(`sandbox-proof-${process.pid}-${ci}`)} }).openNewTab("https://example.test/");
+`,
+        ],
+        {
+          cwd: repoRoot,
+          encoding: "utf8",
+          timeout: 10000,
+          env: { ...process.env, CI: ci },
+        },
+      );
+      expect(result.status, result.stderr).toBe(1);
+      expect(result.stderr).toContain("Start Chrome with feed_browser_start");
+      expect(fs.existsSync(argsPath)).toBe(false);
+    } finally {
+      fs.rmSync(workdir, { recursive: true, force: true });
+    }
+  });
+
+  test.each([
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--single-process",
+  ])("rejects a flag-like startup URL before probing or launching (%s)", async (url) => {
+    await expect(
+      startBrowser({ chromeBin: process.execPath, urls: [url] }),
+    ).rejects.toThrow(/Browser URLs must not be command-line options/);
+  });
+
   test("fails fast when Chrome exits before CDP is ready", async () => {
     const chromeBin = path.join(
       fs.mkdtempSync(path.join(os.tmpdir(), "feed-chrome-exits-")),
@@ -563,11 +615,15 @@ exec '${process.execPath}' -e '
       profileDir: path.join(workdir, "profile"),
       logPath: path.join(workdir, "chrome.log"),
       reuseExisting: false,
+      urls: ["https://example.test/", "about:blank"],
     });
 
     try {
       expect(result.launched).toBe(true);
       expect(fs.readFileSync(argsPath, "utf8")).not.toContain("--no-sandbox");
+      expect(
+        fs.readFileSync(argsPath, "utf8").trim().split("\n").slice(-3),
+      ).toEqual(["--", "https://example.test/", "about:blank"]);
       expect(result.cdp).toBe(String(port));
       expect(fs.readFileSync(argsPath, "utf8")).toContain(
         `--remote-debugging-port=${port}`,

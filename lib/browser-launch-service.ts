@@ -77,6 +77,9 @@ function openUrls(cdp: string, urls: string[] | undefined): void {
 export async function startBrowser(
   options: BrowserStartOptions = {},
 ): Promise<BrowserStartResult> {
+  if (options.urls?.some((url) => url.startsWith("-"))) {
+    throw new Error("Browser URLs must not be command-line options.");
+  }
   const cdp = options.cdp || String(options.cdpPort || defaultCdp());
   const launchCdp = cdpLaunchPort(cdp);
   const profileDir = path.resolve(options.profileDir || defaultProfileDir());
@@ -128,6 +131,7 @@ export async function startBrowser(
     "--no-first-run",
     "--no-default-browser-check",
     "--disable-features=LockProfileCookieDatabase",
+    "--",
     ...(options.urls || []),
   ];
   const child: ChildProcess = spawn(chromeBin, args, {
